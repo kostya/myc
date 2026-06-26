@@ -11,3 +11,4 @@ license: Apache License Version 2.0
 dependencies:
   clang:
     github: crystal-lang/clang.cr
+    branch: master
