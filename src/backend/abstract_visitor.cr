@@ -94,7 +94,7 @@ abstract class Myc::Backend::AbstractVisitor
 
     case val = op.value
     when String
-      if val.starts_with?('P')
+      if val.starts_with?('M')
         case val
         when "MYC_BACKEND"
           val = @builder.backend.name

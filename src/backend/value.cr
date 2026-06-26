@@ -61,7 +61,7 @@ class Myc::Backend::Value
 
   def to_lhs(visitor : AbstractVisitor) : Value
     case @mm
-    in .val? then raise visitor.error("cant use #{@pp.to_s} as LHS#{@type.is_a?(Type::PtrType) ? ", maybe forgot DEREF?" : ""}")
+    in .val? then raise visitor.error("cant use #{@pp.short_name} as LHS#{@type.is_a?(Type::PtrType) ? ", maybe forgot DEREF?" : ""}")
     in .ref? then self
     end
   end
@@ -115,14 +115,14 @@ class Myc::Backend::Value
         v = visitor.bb.load_ref(self)
         visitor.bb.deref(v, t.target_type)
       else
-        raise visitor.error("Cannot dereference #{@mm.to_s.downcase}")
+        raise visitor.error("Cannot dereference #{@mm.short_name}")
       end
     in .val?
       case t = @type
       when Type::PtrType
         visitor.bb.deref(self, t.target_type)
       else
-        raise visitor.error("Cannot dereference #{@mm.to_s.downcase}")
+        raise visitor.error("Cannot dereference #{@mm.short_name}")
       end
     end
   end
