@@ -311,6 +311,9 @@ crystal spec
 
 ## Usage
 
+<details>
+<summary><strong>Usage</strong></summary>
+
 ```
 Usage: ./myc-llvm COMMAND [OPTIONS] INPUT [INPUT]* [OUTPUT]
 
@@ -348,6 +351,8 @@ OPTIONS:
   --release ; compile in performance mode (optimizations enabled)
   --target=TARGET   (TARGET: arm64, x86_64, x86, wasm32, ...; default: native)
 ```
+
+</details>
 
 ## License
 
