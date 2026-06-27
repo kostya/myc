@@ -15,7 +15,7 @@ class Myc::Backend::QBE::Backend < Myc::Backend::AbstractBackend
       build(mod, tmp)
 
       self.class.with_tempfile_path("myc", "s") do |tmp2|
-        Myc.measure("qbe_ams") do
+        Myc.measure("qbe_asm") do
           self.class.run_cmd(QBE, ["-o", tmp2, tmp])
         end
         Myc.measure("asm_obj") do
