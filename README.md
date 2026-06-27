@@ -134,6 +134,9 @@ python3 bf2myc.py mandel.bf | ../../myc-llvm run --release
 
 ### Example: factorial in mycIR, examples/ir/fact.myc, translation
 
+<details>
+<summary><strong>examples/ir/fact.myc</strong></summary>
+
 ```myc
 FUNC fact
   ARGS
@@ -165,6 +168,7 @@ FUNC main
     INSPECT
 ENDFUNC
 ```
+</details>
 
 <details>
 <summary><strong>LLVM Backend `./myc-llvm dump examples/ir/fact.myc`</strong></summary>
