@@ -33,18 +33,18 @@ Beat LLVM (joke). Real goal: beat gcc :).
 
 ## Benchmark: 
 
-Mandelbrot renderer from mandel.bf (by Erik Bosman). All IR represent the same program. Shows whether Myc adds overhead over direct backend usage. Running on Macbook M1 in benchmark/brainfuck-compiler.
+Mandelbrot renderer from mandel.bf (by Erik Bosman). All IR represent the same program. Shows whether Myc adds overhead over direct backend usage. Running on Ryzen3800+Linux in benchmark/brainfuck-compiler.
 
 | IR | Compiler | IR size, Kb | Compile time | Run time |
 |:---------:|:---------:|:---------:|:---------:|:---------:|
-| llvm-ll | clang(-O3) | 1529 | 1302ms | 638ms |
-| myc | myc-llvm(--release) | 443 | 1093ms | 613ms |
-| qbe-ssa | qbe + clang(as+linker) | 345 | 240ms + 91ms | 770ms |
-| myc | myc-qbe(--release) | 443 | 760ms | 785ms |
-| c | clang(-O3) | 128 | 1420ms | 638ms |
-| myc | myc-c(--release) | 443 | 1445ms | 636ms |
+| llvm-ll | clang(-O3) | 1529 | 1645ms | 619ms |
+| myc | myc-llvm(--release) | 486 | 1555ms | 631ms |
+| qbe-ssa | qbe + clang(as+linker) | 345 | 199ms + 58ms | 807ms |
+| myc | myc-qbe(--release) | 486 | 1038ms | 834ms |
+| c | clang(-O3) | 128 | 1689ms | 643ms |
+| myc | myc-c(--release) | 486 | 1899ms | 618ms |
 
-Myc adds zero overhead over LLVM and C backends. QBE is an exception: ~400-700ms compile overhead due to suboptimal code generation (will be fixed by future peephole passes).
+Myc adds "zero" overhead over the LLVM and C backends. The myc-qbe backend adds overhead due to suboptimal code generation, which will be addressed by future peephole optimization passes.
 
 ## More benchmarks from examples/
 
@@ -56,15 +56,15 @@ Myc adds zero overhead over LLVM and C backends. QBE is an exception: ~400-700ms
 
 | Benchmark | Backend | Compile | Run |
 |:----------|:-------:|--------:|----:|
-| mandel | myc-llvm | 1031ms | 609ms |
-| | myc-qbe | 905ms | 769ms |
-| | myc-c | 1477ms | 639ms |
-| bf | myc-llvm | 104ms | 1291ms |
-| | myc-qbe | 115ms | 3996ms |
-| | myc-c | 121ms | 1445ms |
-| loop | myc-llvm | 95ms | 338ms |
-| | myc-qbe | 106ms | 377ms |
-| | myc-c | 111ms | 244ms |
+| mandel | myc-llvm | 1580ms | 636ms |
+| | myc-qbe | 1005ms | 833ms |
+| | myc-c | 1198ms | 672ms |
+| bf | myc-llvm | 57ms | 2566ms |
+| | myc-qbe | 25ms | 4213ms |
+| | myc-c | 174ms | 1309ms |
+| loop | myc-llvm | 42ms | 177ms |
+| | myc-qbe | 23ms | 2437ms |
+| | myc-c | 48ms | 145ms |
 
 ## Install
 
