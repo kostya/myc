@@ -327,10 +327,12 @@ class Myc::Backend::QBE::BB < Myc::Backend::AbstractBB
     when {Type::BoolType, Type::IntType}
       if val == "0" || val == "1"
         emit "#{t} =#{to_qbe} copy #{val}"
+      elsif to_type.bytes_count == 4
+        emit "#{t} =w copy #{val}"
       else
         temp_bool = new_temp
         emit "#{temp_bool} =w copy #{val}"
-        emit "#{t} =#{to_qbe} extuw #{temp_bool}"
+        emit "#{t} =l extuw #{temp_bool}"
       end
       wrap_res(t, to_type, value.pp)
     when {Type::IntType, Type::BoolType}

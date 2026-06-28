@@ -206,7 +206,7 @@ class Myc::Backend::Llvm::BB < Myc::Backend::AbstractBB
     in .lnot?
       case rhs.type
       when Type::IntType, Type::BoolType
-        is_zero = @llvm_builder.icmp(LLVM::IntPredicate::EQ, v, builder.context.int32.const_int(0))
+        is_zero = @llvm_builder.icmp(LLVM::IntPredicate::EQ, v, llvm_type(rhs.type).const_int(0))
         wrap_res(@llvm_builder.zext(is_zero, llvm_type(rhs.type)), t, rhs.pp)
       end
     in .bnot?
@@ -281,11 +281,11 @@ class Myc::Backend::Llvm::BB < Myc::Backend::AbstractBB
       val = @llvm_builder.zext(v, tt)
       wrap_res(val, to_type, value.pp)
     when {Type::IntType, Type::BoolType}
-      cmp = @llvm_builder.icmp(LLVM::IntPredicate::NE, v, builder.context.int32.const_int(0))
+      cmp = @llvm_builder.icmp(LLVM::IntPredicate::NE, v, llvm_type(from_type).const_int(0))
       val = @llvm_builder.zext(cmp, tt)
       wrap_res(val, to_type, value.pp)
     when {Type::FloatType, Type::BoolType}
-      cmp = @llvm_builder.fcmp(LLVM::RealPredicate::ONE, v, builder.context.double.const_float(0))
+      cmp = @llvm_builder.fcmp(LLVM::RealPredicate::ONE, v, llvm_type(from_type).const_float(0))
       val = @llvm_builder.zext(cmp, tt)
       wrap_res(val, to_type, value.pp)
     when {Type::PtrType, Type::PtrType}

@@ -9,7 +9,7 @@ FUNC :main
     PUSH -1
     UNARY :lnot
     INSPECT
-    PUSH 42
+    PUSH 42 :u8
     UNARY :lnot
     INSPECT
     PUSH -42

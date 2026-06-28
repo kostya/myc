@@ -1,0 +1,11 @@
+FUNC :main
+  BODY
+    PUSH 1 :i32
+    LOCAL :x :i32
+    STORE
+    LOCAL :x
+    AS :bool
+    UNARY :lnot
+    INSPECT
+ENDFUNC
+

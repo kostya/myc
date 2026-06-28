@@ -1,0 +1,7 @@
+FUNC :main
+  BODY
+    PUSH 1 :u8
+    AS :bool
+    INSPECT
+ENDFUNC
+
