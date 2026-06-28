@@ -137,30 +137,26 @@ class Myc::Backend::Llvm::BB < Myc::Backend::AbstractBB
       when Type::IntType, Type::BoolType
         wrap_res(@llvm_builder.shl(l, r), ltype, lhs.pp)
       end
-    in .l_shr?
+    in .shr?
       case ltype
       when Type::IntType, Type::BoolType
         wrap_res(@llvm_builder.lshr(l, r), ltype, lhs.pp)
       end
-    in .a_shr?
+    in .sar?
       case ltype
       when Type::IntType, Type::BoolType
         wrap_res(@llvm_builder.ashr(l, r), ltype, lhs.pp)
       end
     in .eq?
       case ltype
-      when Type::IntType, Type::BoolType
-        wrap_res(@llvm_builder.icmp(LLVM::IntPredicate::EQ, l, r), typer.bool, lhs.pp)
-      when Type::PtrType
+      when Type::IntType, Type::BoolType, Type::PtrType
         wrap_res(@llvm_builder.icmp(LLVM::IntPredicate::EQ, l, r), typer.bool, lhs.pp)
       when Type::FloatType
         wrap_res(@llvm_builder.fcmp(LLVM::RealPredicate::OEQ, l, r), typer.bool, lhs.pp)
       end
     in .not_eq?
       case ltype
-      when Type::IntType, Type::BoolType
-        wrap_res(@llvm_builder.icmp(LLVM::IntPredicate::NE, l, r), typer.bool, lhs.pp)
-      when Type::PtrType
+      when Type::IntType, Type::BoolType, Type::PtrType
         wrap_res(@llvm_builder.icmp(LLVM::IntPredicate::NE, l, r), typer.bool, lhs.pp)
       when Type::FloatType
         wrap_res(@llvm_builder.fcmp(LLVM::RealPredicate::ONE, l, r), typer.bool, lhs.pp)
@@ -312,25 +308,33 @@ class Myc::Backend::Llvm::BB < Myc::Backend::AbstractBB
       from_size = from_type.bytes_count
       to_size = to_type.bytes_count
 
-      if to_size >= from_size
+      if to_size > from_size
         val = if from_type.signed
                 @llvm_builder.sext(v, tt)
               else
                 @llvm_builder.zext(v, tt)
               end
         wrap_res(val, to_type, value.pp)
+      elsif to_size == from_size && from_type.signed == to_type.signed
+        wrap_res(v, to_type, value.pp)
       end
     when {Type::IntType, Type::FloatType}
-      val = if from_type.signed
-              @llvm_builder.si2fp(v, tt)
-            else
-              @llvm_builder.ui2fp(v, tt)
-            end
-      wrap_res(val, to_type, value.pp)
+      if to_type.bytes_count >= from_type.bytes_count
+        val = if from_type.signed
+                @llvm_builder.si2fp(v, tt)
+              else
+                @llvm_builder.ui2fp(v, tt)
+              end
+        wrap_res(val, to_type, value.pp)
+      end
     when {Type::FloatType, Type::FloatType}
       if to_type.bytes_count >= from_type.bytes_count
-        val = @llvm_builder.fpext(v, tt)
-        wrap_res(val, to_type, value.pp)
+        if to_type.bytes_count > from_type.bytes_count
+          val = @llvm_builder.fpext(v, tt)
+          wrap_res(val, to_type, value.pp)
+        else
+          wrap_res(v, to_type, value.pp)
+        end
       end
     when {Type::PtrType, Type::PtrType}
       if to_type.target_type.is_a?(Type::VoidType)
@@ -365,8 +369,6 @@ class Myc::Backend::Llvm::BB < Myc::Backend::AbstractBB
   def bitcast(value : Value, to_type : Type) : Value
     wrap_ref(llvm_val(value), to_type, value.pp)
   end
-
-  # ------------------------- Helpers ---------------------------------------
 
   private def builder
     @builder.as(Builder)

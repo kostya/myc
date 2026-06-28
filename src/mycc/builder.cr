@@ -15,7 +15,7 @@ class Myc::Mycc::Builder
     "<" => "less", ">" => "more", "<=" => "less_eq", ">=" => "more_eq",
     "==" => "eq", "!=" => "not_eq", "%" => "rem",
     "&&" => "and", "||" => "or",
-    "&" => "and", "|" => "or", "^" => "xor", "<<" => "shl", ">>" => "lshr",
+    "&" => "and", "|" => "or", "^" => "xor", "<<" => "shl", ">>" => "shr",
   }
 
   def initialize(@source, @tu)

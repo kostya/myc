@@ -59,11 +59,7 @@ class Myc::Backend::C::Builder < Myc::Backend::AbstractBuilder
   def constant_value?(value : Source::Token::ArgType, type : Type) : Value?
     val = case value
           when String
-            escaped = value
-              .gsub("\\", "\\\\")
-              .gsub("\"", "\\\"")
-              .gsub("\n", "\\n")
-            "\"#{escaped}\""
+            "\"#{escaped_string(value)}\""
           when Bool
             value ? "1" : "0"
           when Int, Int64

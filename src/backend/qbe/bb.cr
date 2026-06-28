@@ -166,12 +166,12 @@ class Myc::Backend::QBE::BB < Myc::Backend::AbstractBB
       else
         return
       end
-    when .and?   then emit "#{t} =#{qbe_type} and #{l}, #{r}"
-    when .or?    then emit "#{t} =#{qbe_type} or #{l}, #{r}"
-    when .xor?   then emit "#{t} =#{qbe_type} xor #{l}, #{r}"
-    when .shl?   then emit "#{t} =#{qbe_type} shl #{l}, #{r}"
-    when .l_shr? then emit "#{t} =#{qbe_type} shr #{l}, #{r}"
-    when .a_shr? then emit "#{t} =#{qbe_type} sar #{l}, #{r}"
+    when .and? then emit "#{t} =#{qbe_type} and #{l}, #{r}"
+    when .or?  then emit "#{t} =#{qbe_type} or #{l}, #{r}"
+    when .xor? then emit "#{t} =#{qbe_type} xor #{l}, #{r}"
+    when .shl? then emit "#{t} =#{qbe_type} shl #{l}, #{r}"
+    when .shr? then emit "#{t} =#{qbe_type} shr #{l}, #{r}"
+    when .sar? then emit "#{t} =#{qbe_type} sar #{l}, #{r}"
     when .eq?
       emit "#{t} =w ceq#{qbe_type} #{l}, #{r}"
       return wrap_res(t, typer.bool, lhs.pp)
@@ -363,54 +363,45 @@ class Myc::Backend::QBE::BB < Myc::Backend::AbstractBB
       from_size = from_type.bytes_count
       to_size = to_type.bytes_count
 
-      if to_size >= from_size
-        if to_size == from_size
-          wrap_res(val, to_type, value.pp)
+      if to_size > from_size
+        if from_type.signed
+          ext = case from_size
+                when 4 then "extsw"
+                when 2 then "extsh"
+                else        "extsb"
+                end
+          emit "#{t} =#{to_qbe} #{ext} #{val}"
         else
-          if from_type.signed
-            ext = case from_size
-                  when 4 then "extsw"
-                  when 2 then "extsh"
-                  else        "extsb"
-                  end
-            emit "#{t} =#{to_qbe} #{ext} #{val}"
-          else
-            ext = case from_size
-                  when 4 then "extuw"
-                  when 2 then "extuh"
-                  else        "extub"
-                  end
-            emit "#{t} =#{to_qbe} #{ext} #{val}"
-          end
-          wrap_res(t, to_type, value.pp)
+          ext = case from_size
+                when 4 then "extuw"
+                when 2 then "extuh"
+                else        "extub"
+                end
+          emit "#{t} =#{to_qbe} #{ext} #{val}"
         end
+        wrap_res(t, to_type, value.pp)
+      elsif to_size == from_size && from_type.signed == to_type.signed
+        wrap_res(val, to_type, value.pp)
       end
     when {Type::IntType, Type::FloatType}
-      conv = if from_type.bytes_count == 8
-               from_type.signed ? "sltof" : "ultof"
-             else
-               from_type.signed ? "swtof" : "uwtof"
-             end
-      emit "#{t} =#{to_qbe} #{conv} #{val}"
-      wrap_res(t, to_type, value.pp)
+      if to_type.bytes_count >= from_type.bytes_count
+        conv = if from_type.bytes_count == 8
+                 from_type.signed ? "sltof" : "ultof"
+               else
+                 from_type.signed ? "swtof" : "uwtof"
+               end
+        emit "#{t} =#{to_qbe} #{conv} #{val}"
+        wrap_res(t, to_type, value.pp)
+      end
     when {Type::FloatType, Type::FloatType}
       if to_type.bytes_count >= from_type.bytes_count
         if to_type.bytes_count > from_type.bytes_count
           emit "#{t} =#{to_qbe} exts #{val}"
+          wrap_res(t, to_type, value.pp)
         else
           wrap_res(val, to_type, value.pp)
         end
-        wrap_res(t, to_type, value.pp)
       end
-    when {Type::BoolType, Type::IntType}
-      if val == "0" || val == "1"
-        emit "#{t} =#{to_qbe} copy #{val}"
-      else
-        temp_bool = new_temp
-        emit "#{temp_bool} =w copy #{val}"
-        emit "#{t} =#{to_qbe} extuw #{temp_bool}"
-      end
-      wrap_res(t, to_type, value.pp)
     when {Type::PtrType, Type::PtrType}
       if to_type.target_type.is_a?(Type::VoidType)
         wrap_res(val, to_type, value.pp)
@@ -477,8 +468,6 @@ class Myc::Backend::QBE::BB < Myc::Backend::AbstractBB
   def bitcast(value : Value, to_type : Type) : Value
     wrap_ref(qbe_val(value), to_type, value.pp)
   end
-
-  # ------------------------- Helpers ---------------------------------------
 
   def builder
     @builder.as(Builder)

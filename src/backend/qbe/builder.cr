@@ -87,11 +87,7 @@ class Myc::Backend::QBE::Builder < Myc::Backend::AbstractBuilder
     @string_constants.put_if_absent(str) do
       name = "str_#{@str_counter}"
       @str_counter += 1
-      escaped = str
-        .gsub("\\", "\\\\") # \ → \\
-        .gsub("\"", "\\\"")
-        .gsub("\n", "\\n")
-      @data_io << "data $#{name} = { b \"#{escaped}\", b 0 }\n"
+      @data_io << "data $#{name} = { b \"#{escaped_string(str)}\", b 0 }\n"
       "$#{name}"
     end
   end

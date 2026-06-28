@@ -1,0 +1,72 @@
+FUNC :main
+  BODY
+    PUSH true
+    PUSH true
+    BINARY :and
+    INSPECT
+    PUSH true
+    PUSH false
+    BINARY :and
+    INSPECT
+    PUSH true
+    PUSH true
+    BINARY :and
+    INSPECT
+    PUSH true
+    PUSH false
+    BINARY :and
+    INSPECT
+    PUSH 6
+    PUSH 3
+    BINARY :and
+    INSPECT
+    PUSH true
+    PUSH false
+    BINARY :or
+    INSPECT
+    PUSH false
+    PUSH false
+    BINARY :or
+    INSPECT
+    PUSH 6
+    PUSH 3
+    BINARY :or
+    INSPECT
+    PUSH 6
+    PUSH 3
+    BINARY :xor
+    INSPECT
+    PUSH 2
+    PUSH 8
+    BINARY :shl
+    INSPECT
+    PUSH 1
+    PUSH -8
+    BINARY :sar
+    INSPECT
+    PUSH 1
+    PUSH 8
+    BINARY :shr
+    INSPECT
+    PUSH 5
+    PUSH 3
+    BINARY :less
+    INSPECT
+    PUSH 5
+    PUSH 3
+    BINARY :more_eq
+    INSPECT
+    PUSH 0
+    PUSH 1
+    BINARY :not_eq
+    INSPECT
+    PUSH 3
+    PUSH 10
+    BINARY :div
+    INSPECT
+    PUSH 3
+    PUSH 10
+    BINARY :rem
+    INSPECT
+ENDFUNC
+

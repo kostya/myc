@@ -82,13 +82,26 @@ class Myc::Backend::Linter::BB < Myc::Backend::AbstractBB
   def to?(value : Value, from_type : Type, to_type : Type) : Value?
     case {from_type, to_type}
     when {Type::IntType, Type::IntType}
-      wrap_res(FAKE_VAL, to_type, value.pp) if to_type.bytes_count >= from_type.bytes_count
+      from_size = from_type.bytes_count
+      to_size = to_type.bytes_count
+
+      if to_size > from_size
+        wrap_res(FAKE_VAL, to_type, value.pp)
+      elsif to_size == from_size && from_type.signed == to_type.signed
+        wrap_res(FAKE_VAL, to_type, value.pp)
+      end
     when {Type::IntType, Type::FloatType}
-      wrap_res(FAKE_VAL, to_type, value.pp)
+      if to_type.bytes_count >= from_type.bytes_count
+        wrap_res(FAKE_VAL, to_type, value.pp)
+      end
     when {Type::FloatType, Type::FloatType}
-      wrap_res(FAKE_VAL, to_type, value.pp) if to_type.bytes_count >= from_type.bytes_count
+      if to_type.bytes_count >= from_type.bytes_count
+        wrap_res(FAKE_VAL, to_type, value.pp)
+      end
     when {Type::PtrType, Type::PtrType}
-      wrap_res(FAKE_VAL, to_type, value.pp) if to_type.target_type.is_a?(Type::VoidType)
+      if to_type.target_type.is_a?(Type::VoidType)
+        wrap_res(FAKE_VAL, to_type, value.pp)
+      end
     end
   end
 

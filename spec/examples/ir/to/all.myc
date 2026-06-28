@@ -1,0 +1,32 @@
+FUNC :main
+  BODY
+    PUSH 42 :i8
+    PUSH 42 :i16
+    BINARY :add
+    INSPECT
+    PUSH 255 :u8
+    PUSH 1 :u32
+    BINARY :add
+    INSPECT
+    PUSH -1 :i16
+    PUSH 1 :i64
+    BINARY :add
+    INSPECT
+    PUSH 42 :i32
+    PUSH 3.14 :f64
+    BINARY :add
+    INSPECT
+    PUSH 255 :u8
+    PUSH 1.5 :f32
+    BINARY :add
+    INSPECT
+    PUSH 1.5 :f32
+    PUSH 2.5 :f64
+    BINARY :add
+    INSPECT
+    PUSH 0
+    AS :ptr<u8>
+    AS :ptr<void>
+    INSPECT
+ENDFUNC
+

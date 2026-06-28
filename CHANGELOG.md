@@ -5,6 +5,8 @@
 * add SIZEOF opcode
 * add opcode TO, and RET, STORE, BINARY, CALL use it to auto safe cast
 * added mycc, remove python c compiler
+* `TO` safe coercions only: widening with same sign, no sign change at same size
+* `BINARY`: renamed `l_shr` → `shr`, `a_shr` → `sar`
 
 ## 0.2.0 (24.06.2026)
 * Added linter for auto-annotating stack state (beautify --annotate)

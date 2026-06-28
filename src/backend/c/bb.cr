@@ -89,23 +89,23 @@ class Myc::Backend::C::BB < Myc::Backend::AbstractBB
     r = c_val(rhs)
 
     op_str = case op
-             when .add?            then "+"
-             when .sub?            then "-"
-             when .mul?            then "*"
-             when .div?            then "/"
-             when .rem?            then "%"
-             when .and?            then "&"
-             when .or?             then "|"
-             when .xor?            then "^"
-             when .shl?            then "<<"
-             when .l_shr?, .a_shr? then ">>"
-             when .eq?             then "=="
-             when .not_eq?         then "!="
-             when .less?           then "<"
-             when .less_eq?        then "<="
-             when .more?           then ">"
-             when .more_eq?        then ">="
-             else                       return nil
+             when .add?        then "+"
+             when .sub?        then "-"
+             when .mul?        then "*"
+             when .div?        then "/"
+             when .rem?        then "%"
+             when .and?        then "&"
+             when .or?         then "|"
+             when .xor?        then "^"
+             when .shl?        then "<<"
+             when .shr?, .sar? then ">>"
+             when .eq?         then "=="
+             when .not_eq?     then "!="
+             when .less?       then "<"
+             when .less_eq?    then "<="
+             when .more?       then ">"
+             when .more_eq?    then ">="
+             else                   return nil
              end
 
     is_cmp = op.value >= Opcode::Binary::Op::Eq.value
@@ -210,27 +210,23 @@ class Myc::Backend::C::BB < Myc::Backend::AbstractBB
       from_size = from_type.bytes_count
       to_size = to_type.bytes_count
 
-      if to_size >= from_size
-        if from_type.signed && !to_type.signed
-          temp_unsigned = builder.new_temp
-          emit "#{c_type(from_type.to_unsigned)} #{temp_unsigned} = (unsigned)(#{val});"
-          emit "#{c_to} #{temp} = (#{c_to})#{temp_unsigned};"
-        else
-          emit "#{c_to} #{temp} = (#{c_to})(#{val});"
-        end
+      if to_size > from_size
+        emit "#{c_to} #{temp} = (#{c_to})(#{val});"
+        wrap_res(temp, to_type, value.pp)
+      elsif to_size == from_size && from_type.signed == to_type.signed
+        emit "#{c_to} #{temp} = (#{c_to})(#{val});"
         wrap_res(temp, to_type, value.pp)
       end
     when {Type::IntType, Type::FloatType}
-      emit "#{c_to} #{temp} = (#{c_to})(#{val});"
-      wrap_res(temp, to_type, value.pp)
+      if to_type.bytes_count >= from_type.bytes_count
+        emit "#{c_to} #{temp} = (#{c_to})(#{val});"
+        wrap_res(temp, to_type, value.pp)
+      end
     when {Type::FloatType, Type::FloatType}
       if to_type.bytes_count >= from_type.bytes_count
         emit "#{c_to} #{temp} = (#{c_to})(#{val});"
         wrap_res(temp, to_type, value.pp)
       end
-    when {Type::BoolType, Type::IntType}
-      emit "#{c_to} #{temp} = (#{c_to})(#{val});"
-      wrap_res(temp, to_type, value.pp)
     when {Type::PtrType, Type::PtrType}
       if to_type.target_type.is_a?(Type::VoidType)
         emit "#{c_to} #{temp} = (#{c_to})(#{val});"
@@ -272,8 +268,6 @@ class Myc::Backend::C::BB < Myc::Backend::AbstractBB
     new_val = "(*(#{c_type(to_type)}*)(#{c_val(value)}))"
     wrap_ref(new_val, to_type, value.pp)
   end
-
-  # ------------------------- Helpers ---------------------------------------
 
   def builder
     @builder.as(Builder)

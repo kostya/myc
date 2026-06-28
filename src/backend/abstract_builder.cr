@@ -53,4 +53,8 @@ abstract class Myc::Backend::AbstractBuilder
   abstract def find_global(name : String) : Value?
   abstract def new_func(func_def : Mod::FuncDef) : AbstractFunc
   abstract def func_register(name : String, type_fn : Type::Fn)
+
+  protected def escaped_string(s : String)
+    s.gsub("\\", "\\\\").gsub("\"", "\\\"").gsub("\n", "\\n")
+  end
 end

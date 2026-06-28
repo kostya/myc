@@ -15,7 +15,13 @@ class Myc::Backend::C::Backend < Myc::Backend::AbstractBackend
   def obj(mod : Mod, output : String)
     self.class.with_tempfile_path("myc", "c") do |tmp|
       build(mod, tmp)
-      args = ["-c", "-fno-strict-aliasing", "-Wno-main-return-type", "-Wno-pointer-sign", "-Wno-constant-conversion", "-o", output, tmp]
+      args = ["-c",
+              "-fno-strict-aliasing",
+              "-Wno-main-return-type",
+              "-Wno-pointer-sign",
+              "-Wno-constant-conversion",
+              "-o", output,
+              tmp]
       args << "-O3" if common_options.release
       if c_flgs = ENV["C_FLAGS"]?
         args += c_flgs.split(" ")
