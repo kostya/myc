@@ -370,6 +370,13 @@ class Myc::Mycc::CodeGenerator
     emit("CREATE #{type_s(expr.type)}")
   end
 
+  def generate_expr(expr : TypedAST::Conditional)
+    generate_expr(expr.else_expr)
+    generate_expr(expr.then_expr)
+    generate_expr(expr.condition)
+    emit("SELECT")
+  end
+
   private def returns_void?(call : TypedAST::Call) : Bool
     call.type.id_name == "void"
   end

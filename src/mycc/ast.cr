@@ -202,6 +202,19 @@ module Myc::Mycc::TypedAST
     end
   end
 
+  class Conditional < Node
+    getter condition : Node
+    getter then_expr : Node
+    getter else_expr : Node
+
+    def initialize(@condition, @then_expr, @else_expr, @type, @location)
+    end
+
+    private def inspect_fields(io : IO)
+      {condition, then_expr, else_expr}.inspect(io)
+    end
+  end
+
   abstract class Stmt
     getter location : Location
 

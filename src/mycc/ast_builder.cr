@@ -86,6 +86,7 @@ class Myc::Mycc::ASTBuilder
     when .unary_expr?           then build_sizeof(cursor)
     when .init_list_expr?       then build_init_list(cursor)
     when .member_ref_expr?      then build_field(cursor)
+    when .conditional_operator? then build_conditional(cursor)
     when .paren_expr?, .first_expr?
       children = children(cursor)
       children.size == 1 ? build_node(children[0]) : nil
@@ -411,6 +412,17 @@ class Myc::Mycc::ASTBuilder
       .gsub("\\\"", "\"")
       .gsub("\\\\", "\\")
     TypedAST::StringLiteral.new(value, mod.typer.u8p, location(cursor))
+  end
+
+  private def build_conditional(cursor : Clang::Cursor) : TypedAST::Node
+    children_list = children(cursor)
+
+    condition = ensure_bool(build_node(children_list[0]).not_nil!)
+    then_expr = build_node(children_list[1]).not_nil!
+    else_expr = build_node(children_list[2]).not_nil!
+
+    type = then_expr.type
+    TypedAST::Conditional.new(condition, then_expr, else_expr, type, location(cursor))
   end
 
   private def build_var_ref(cursor : Clang::Cursor) : TypedAST::VarRef
