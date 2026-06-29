@@ -130,6 +130,14 @@ class Myc::Mycc::ASTBuilder
             if stmt = build_stmt(child)
               stmts << stmt
             end
+          when .label_stmt?
+            stmts << TypedAST::Label.new(child.spelling, location(child))
+
+            children(child).each do |label_child|
+              if s = build_stmt(label_child)
+                stmts << s
+              end
+            end
           end
         end
       end
@@ -188,6 +196,14 @@ class Myc::Mycc::ASTBuilder
       TypedAST::Break.new(location(cursor))
     when .continue_stmt?
       TypedAST::Continue.new(location(cursor))
+    when .goto_stmt?
+      label_name = ""
+      children(cursor).each do |child|
+        if child.kind.label_ref?
+          label_name = child.spelling
+        end
+      end
+      TypedAST::Goto.new(label_name, location(cursor))
     when .compound_stmt?
       nil
     when .compound_assign_operator?

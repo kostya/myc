@@ -208,6 +208,14 @@ class Myc::Mycc::CodeGenerator
     emit("STORE")
   end
 
+  def generate_stmt(stmt : TypedAST::Goto)
+    emit("GOTO \"#{stmt.label}\"")
+  end
+
+  def generate_stmt(stmt : TypedAST::Label)
+    emit("LABEL \"#{stmt.label}\"")
+  end
+
   def generate_expr(expr : TypedAST::IntLiteral)
     if expr.type.eq?(typer.i32)
       emit("PUSH #{expr.value}")

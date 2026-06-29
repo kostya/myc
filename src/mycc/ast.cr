@@ -351,6 +351,26 @@ module Myc::Mycc::TypedAST
     def initialize(@location); end
   end
 
+  class Goto < Stmt
+    getter label : String
+
+    def initialize(@label, @location); end
+
+    private def inspect_fields(io : IO)
+      io << label
+    end
+  end
+
+  class Label < Stmt
+    getter label : String
+
+    def initialize(@label, @location); end
+
+    private def inspect_fields(io : IO)
+      io << label
+    end
+  end
+
   class Function
     getter name : String
     getter params : Array({String, Type})
