@@ -151,6 +151,13 @@ class Myc::Mycc::ASTBuilder
     when .call_expr?
       expr = build_call(cursor)
       TypedAST::ExprStmt.new(expr, location(cursor))
+    when .decl_stmt?
+      children(cursor).each do |child|
+        if child.kind.var_decl?
+          return build_var_decl(child)
+        end
+      end
+      nil
     when .return_stmt?
       build_return(cursor)
     when .if_stmt?
@@ -340,7 +347,7 @@ class Myc::Mycc::ASTBuilder
       build_stmts(cursor)
     else
       if stmt = build_stmt(cursor)
-        [stmt]
+        [stmt] of TypedAST::Stmt
       else
         [] of TypedAST::Stmt
       end
@@ -350,7 +357,11 @@ class Myc::Mycc::ASTBuilder
   private def build_while(cursor : Clang::Cursor) : TypedAST::While
     children_list = children(cursor)
     condition = ensure_bool(build_node(children_list[0]).not_nil!)
-    body = build_stmts(children_list[1])
+    body = if children_list.size > 1
+             build_stmt_or_stmts(children_list[1])
+           else
+             [] of TypedAST::Stmt
+           end
 
     TypedAST::While.new(condition, body, location(cursor))
   end
@@ -376,23 +387,33 @@ class Myc::Mycc::ASTBuilder
   private def build_for(cursor : Clang::Cursor) : TypedAST::For
     children_list = children(cursor)
 
+    body = build_stmt_or_stmts(children_list.last)
+
+    parts = children_list[0...-1]
+
     init = nil
-    if children_list.size > 0
-      init_cursor = children_list[0]
-      if init_cursor.kind.decl_stmt?
-        children(init_cursor).each do |decl_child|
-          if decl_child.kind.var_decl?
-            init = build_var_decl(decl_child)
-          end
-        end
+    condition = nil
+    update = nil
+
+    if parts.size >= 1
+      if parts[0].kind.decl_stmt? || (parts[0].kind.binary_operator? && parts[0].spelling == "=")
+        init = build_stmt(parts[0])
       else
-        init = build_stmt(init_cursor)
+        condition = ensure_bool(build_node(parts[0]).not_nil!)
       end
     end
-
-    condition = children_list.size > 1 ? ensure_bool(build_node(children_list[1]).not_nil!) : nil
-    update = children_list.size > 2 ? build_stmt(children_list[2]) : nil
-    body = children_list.size > 3 ? build_stmts(children_list[3]) : [] of TypedAST::Stmt
+    if parts.size >= 2
+      if init
+        condition = ensure_bool(build_node(parts[1]).not_nil!)
+      elsif parts[1].kind.binary_operator?
+        update = build_stmt(parts[1])
+      else
+        condition = ensure_bool(build_node(parts[1]).not_nil!)
+      end
+    end
+    if parts.size >= 3
+      update = build_stmt(parts[2])
+    end
 
     TypedAST::For.new(init, condition, update, body, location(cursor))
   end
