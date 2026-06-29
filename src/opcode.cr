@@ -29,6 +29,7 @@ class Myc::Opcode
     ADDR
     SIZEOF
     TO
+    INVOKE
 
     UNDEF    = 500
     TYPE

@@ -57,7 +57,7 @@ struct Myc::Backend::C::TypeTranslator
   end
 
   private def do_simple_translate(type : Type::Fn)
-    translate(type.ret) + "(*)"
+    "void*"
   end
 
   private def do_simple_translate(type : Type::PtrType)

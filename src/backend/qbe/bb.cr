@@ -78,6 +78,37 @@ class Myc::Backend::QBE::BB < Myc::Backend::AbstractBB
     end
   end
 
+  def invoke(fn : Value, type_fn : Type::Fn, args : Array(Value)) : Value?
+    return if @dead_end
+
+    ret_type = type_fn.ret
+    fn_val = qbe_val(fn)
+
+    arg_str = String.build do |s|
+      args.each_with_index do |arg, index|
+        s << ", " if index != 0
+        s << "..., " if type_fn.vaarg && (index == type_fn.args.size)
+        s << qbe_type(arg)
+        s << ' '
+        s << qbe_val(arg)
+      end
+    end
+
+    if ret_type.eq?(func_def.mod.typer.void)
+      emit "call #{fn_val}(#{arg_str})"
+      nil
+    else
+      t = new_temp
+      emit "#{t} =#{qbe_type(ret_type)} call #{fn_val}(#{arg_str})"
+      wrap_val(t, ret_type, Value::PP::CallResult.new("invoke"))
+    end
+  end
+
+  def fn_addr(name : String, type_fn : Type::Fn) : Value
+    val = "$#{name}"
+    wrap_val(val, type_fn, Value::PP::FnAddress.new(name))
+  end
+
   def cond(cond : Value, then_bb : AbstractBB, else_bb : AbstractBB)
     return if @dead_end
     emit "jnz #{qbe_val(cond)}, @#{then_bb.name}, @#{else_bb.name}"

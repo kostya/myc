@@ -533,7 +533,7 @@ abstract class Myc::Backend::AbstractVisitor
         if arg2 = @bb.to?(arg, arg.type, types[index])
           arg2
         else
-          raise error("bad arg #{index} type, expected: #{types[index]}, got: #{arg.type}, type_fn: #{type_fn.inspect}")
+          raise error("bad arg #{index} type, expected: #{types[index]}, got: #{arg.type}, type_fn: #{type_fn.id_name}")
         end
       end
     end.to_a
@@ -556,6 +556,57 @@ abstract class Myc::Backend::AbstractVisitor
 
     if value = @bb.call(op.name, type_fn, args)
       self << value
+    end
+  end
+
+  def visit(op : Opcode::Invoke)
+    fn_ptr = pop_rhs
+
+    case type_fn = fn_ptr.type
+    when Type::Fn
+    else
+      raise error("INVOKE expected fn type, got #{type_fn}")
+    end
+
+    types = type_fn.args
+    args = types.size.times.map do |index|
+      arg = pop_rhs
+      if arg.type.eq?(types[index])
+        arg
+      else
+        if arg2 = @bb.to?(arg, arg.type, types[index])
+          arg2
+        else
+          raise error("bad arg #{index} type, expected: #{types[index]}, got: #{arg.type}, type_fn: #{type_fn.id_name}")
+        end
+      end
+    end.to_a
+
+    if type_fn.vaarg
+      op.vaargs_count.times do
+        case t = last.type
+        when Type::FloatType
+          if t.bytes_count == 4
+            visit Opcode::To.new(mod.typer.f64)
+          end
+        end
+        args << pop_rhs
+      end
+    else
+      if op.vaargs_count > 0
+        raise error("function pointer has no vaargs, but passes #{op.vaargs_count}")
+      end
+    end
+
+    case _pp = fn_ptr.pp
+    when Value::PP::FnAddress
+      if value = @bb.call(_pp.name, type_fn, args)
+        self << value
+      end
+    else
+      if value = @bb.invoke(fn_ptr, type_fn, args)
+        self << value
+      end
     end
   end
 
@@ -784,7 +835,15 @@ abstract class Myc::Backend::AbstractVisitor
   end
 
   def visit(op : Opcode::Addr)
-    self << pop._to_ref(self).addr(self)
+    if fn = op.func_name
+      if func_def = mod.func_defs[fn]?
+        self << @bb.fn_addr(fn, func_def.type_fn)
+      else
+        raise error("`#{fn}` not found")
+      end
+    else
+      self << pop._to_ref(self).addr(self)
+    end
   end
 
   def visit(op : Opcode::Field)

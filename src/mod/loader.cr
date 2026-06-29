@@ -153,6 +153,11 @@ class Myc::Mod::Loader
     end
 
     type_fn = Type::Fn.new(arg_types, ret_type || @mod.typer.void, !!attributes.try(&.includes?("vaarg")))
+    if t = mod.typer.types_cache[type_fn.id_name]?
+      type_fn = t.as(Type::Fn)
+    else
+      mod.typer.types_cache[type_fn.id_name] = type_fn
+    end
     func = Mod::FuncDef.new(node, mod, func_name, type_fn, attributes)
 
     if body = body_node
@@ -191,6 +196,12 @@ class Myc::Mod::Loader
         Opcode::Call.new(get_string_value(node, values.first), get_int_value(node, values[1]).to_i32).with_position(node)
       else
         raise error("#{node.code} expected 1 or 2 values", node)
+      end
+    when Opcode::Code::INVOKE
+      if values = node.values
+        Opcode::Invoke.new(get_only_one_int_value(node).to_i32).with_position(node)
+      else
+        Opcode::Invoke.new.with_position(node)
       end
     when Opcode::Code::FIELD
       Opcode::Field.new(get_only_one_int_value(node).to_i32).with_position(node)
@@ -277,8 +288,11 @@ class Myc::Mod::Loader
     when Opcode::Code::CREATE
       Opcode::Create.new(find_type(get_only_one_string_value(node), node)).with_position(node)
     when Opcode::Code::ADDR
-      expect_zero_values(node)
-      Opcode::Addr.new.with_position(node)
+      if values = node.values
+        Opcode::Addr.new(get_only_one_string_value(node)).with_position(node)
+      else
+        Opcode::Addr.new.with_position(node)
+      end
     when Opcode::Code::TO
       Opcode::To.new(find_type(get_only_one_string_value(node), node)).with_position(node)
     else

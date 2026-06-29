@@ -21,6 +21,7 @@ class Myc::Backend::Value
       in PP::LocalUninitialized then "Lu"
       in PP::Local              then "Lo"
       in PP::CallResult         then "Ca"
+      in PP::FnAddress          then "Fa"
       in PP::Unknown, PP        then "??"
       end
     end
@@ -33,6 +34,7 @@ class Myc::Backend::Value
     record Local < PP, name : String
     record LocalUninitialized < PP, name : String
     record CallResult < PP, name : String
+    record FnAddress < PP, name : String
   end
 
   getter bbval : AbstractBBVal

@@ -1,0 +1,37 @@
+FUNC :apply
+  ARGS
+    TYPE "fn<i32, i32, i32>"
+    TYPE :i32
+    TYPE :i32
+  RETURN
+    TYPE :i32
+  BODY
+    PARAM 2
+    PARAM 1
+    PARAM 0
+    INVOKE
+    RET
+ENDFUNC
+
+FUNC :add
+  ARGS
+    TYPE :i32
+    TYPE :i32
+  RETURN
+    TYPE :i32
+  BODY
+    PARAM 1
+    PARAM 0
+    BINARY :add
+    RET
+ENDFUNC
+
+FUNC :main
+  BODY
+    PUSH 4
+    PUSH 3
+    ADDR :add
+    CALL :apply
+    INSPECT
+ENDFUNC
+

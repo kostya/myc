@@ -1,4 +1,4 @@
 FUNC main ARGS TYPE "crab" ENDFUNC
                ^
-               not found type crab
+               type not found `crab`
                (at

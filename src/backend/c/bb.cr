@@ -46,6 +46,31 @@ class Myc::Backend::C::BB < Myc::Backend::AbstractBB
     end
   end
 
+  def invoke(fn : Value, type_fn : Type::Fn, args : Array(Value)) : Value?
+    return if @dead_end
+
+    ret_type = type_fn.ret
+    ret_c_type = c_type(ret_type)
+    fn_val = c_val(fn)
+    arg_str = args.map { |a| c_val(a) }.join(", ")
+
+    fn_type_str = format_fn_type(type_fn, nil)
+    casted_fn = "((#{fn_type_str})(#{fn_val}))"
+
+    if ret_type.eq?(func_def.mod.typer.void)
+      emit "#{casted_fn}(#{arg_str});"
+      nil
+    else
+      temp = builder.new_temp
+      emit "#{ret_c_type} #{temp} = #{casted_fn}(#{arg_str});"
+      wrap_val(temp, ret_type, Value::PP::CallResult.new("invoke"))
+    end
+  end
+
+  def fn_addr(name : String, type_fn : Type::Fn) : Value
+    wrap_val(name, type_fn, Value::PP::FnAddress.new(name))
+  end
+
   def cond(cond : Value, then_bb : AbstractBB, else_bb : AbstractBB)
     return if @dead_end
     emit "if (#{c_val(cond)}) goto #{then_bb.name}; else goto #{else_bb.name};"
@@ -313,5 +338,19 @@ class Myc::Backend::C::BB < Myc::Backend::AbstractBB
 
   private def typer : Mod::Typer
     @func_def.mod.typer
+  end
+
+  private def format_fn_type(type : Type::Fn, name : String? = nil) : String
+    ret_type = c_type(type.ret)
+    args = type.args.map { |t| c_type(t) }.join(", ")
+    if type.vaarg
+      args += ", ..." unless args.empty?
+    end
+
+    if name
+      "#{ret_type}(*#{name})(#{args})"
+    else
+      "#{ret_type}(*)(#{args})"
+    end
   end
 end

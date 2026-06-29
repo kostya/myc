@@ -830,4 +830,42 @@ context "Validate" do
     ENDFUNC
     _____________________________res
   end
+
+  it "ADDR with fnname" do
+    validate(<<-'_____________________________src').should eq <<-'_____________________________res'
+    FUNC :add ARGS TYPE :i32 RETURN TYPE :f64 ENDFUNC
+    FUNC :test
+    BODY
+      ADDR :add
+    ENDFUNC
+    _____________________________src
+    FUNC :add
+      ARGS
+        TYPE :i32
+      RETURN
+        TYPE :f64
+    ENDFUNC
+
+    FUNC :test
+      BODY
+        ADDR :add
+    ENDFUNC
+    _____________________________res
+  end
+
+  it "INVOKE" do
+    validate(<<-'_____________________________src').should eq <<-'_____________________________res'
+    FUNC :test
+    BODY
+      LOCAL x "fn<i32,i32>"
+      INVOKE
+    ENDFUNC
+    _____________________________src
+    FUNC :test
+      BODY
+        LOCAL :x "fn<i32, i32>"
+        INVOKE
+    ENDFUNC
+    _____________________________res
+  end
 end

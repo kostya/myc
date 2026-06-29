@@ -1,0 +1,15 @@
+FUNC :greet
+  ARGS
+    TYPE :ptr<u8>
+  BODY
+    PARAM 0
+    PRINTF 0
+ENDFUNC
+
+FUNC :main
+  BODY
+    PUSH "hello\n"
+    ADDR :greet
+    INVOKE
+ENDFUNC
+

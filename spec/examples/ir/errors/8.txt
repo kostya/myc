@@ -1,1 +1,1 @@
-not found type undefined_type
+type not found `undefined_type`

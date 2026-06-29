@@ -1,1 +1,1 @@
-not found type UnknownType
+type not found `UnknownType`

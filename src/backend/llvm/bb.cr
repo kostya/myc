@@ -47,6 +47,24 @@ class Myc::Backend::Llvm::BB < Myc::Backend::AbstractBB
     end
   end
 
+  def invoke(fn : Value, type_fn : Type::Fn, args : Array(Value)) : Value?
+    return if @dead_end
+
+    vals = args.map { |arg| llvm_val(arg) }
+    llvm_function = LLVM::Function.new(llvm_val(fn).to_unsafe)
+    val = @llvm_builder.call(fn_signature(type_fn), llvm_function, vals)
+
+    unless type_fn.ret.eq?(func_def.mod.typer.void)
+      wrap_val(val, type_fn.ret, Value::PP::CallResult.new("invoke"))
+    end
+  end
+
+  def fn_addr(name : String, type_fn : Type::Fn) : Value
+    link = builder.func_link(name, type_fn)
+    val = LLVM::Value.new(link.llvm_function.to_unsafe)
+    wrap_val(val, type_fn, Value::PP::FnAddress.new(name))
+  end
+
   def cond(cond : Value, then_bb : AbstractBB, else_bb : AbstractBB)
     return if @dead_end
 
@@ -392,5 +410,11 @@ class Myc::Backend::Llvm::BB < Myc::Backend::AbstractBB
 
   private def typer : Mod::Typer
     @func_def.mod.typer
+  end
+
+  private def fn_signature(type_fn : Type::Fn) : LLVM::Type
+    arg_types = type_fn.args.map { |t| llvm_type(t) }
+    ret_type = llvm_type(type_fn.ret)
+    LLVM::Type.function(arg_types, ret_type, type_fn.vaarg)
   end
 end

@@ -11,6 +11,8 @@ abstract class Myc::Backend::AbstractBB
   abstract def alloca(name : String, type : Type) : Value
   abstract def call(name : String, type_fn : Type::Fn, args : Array(Value)) : Value?
   abstract def store(lhs : Value, rhs : Value)
+  abstract def fn_addr(name : String, type_fn : Type::Fn) : Value
+  abstract def invoke(fn : Value, type_fn : Type::Fn, args : Array(Value)) : Value?
 
   abstract def next(name : String) : AbstractBB
   abstract def jmp(other : AbstractBB)

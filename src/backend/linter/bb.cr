@@ -26,6 +26,17 @@ class Myc::Backend::Linter::BB < Myc::Backend::AbstractBB
     end
   end
 
+  def invoke(fn : Value, type_fn : Type::Fn, args : Array(Value)) : Value?
+    return if @dead_end
+    unless type_fn.ret.eq?(func_def.mod.typer.void)
+      wrap_val(FAKE_VAL, type_fn.ret, Value::PP::CallResult.new("inkoke"))
+    end
+  end
+
+  def fn_addr(name : String, type_fn : Type::Fn) : Value
+    wrap_val(FAKE_VAL, type_fn, Value::PP::FnAddress.new(name))
+  end
+
   def cond(cond : Value, then_bb : AbstractBB, else_bb : AbstractBB)
     return if @dead_end
     @dead_end = true

@@ -66,13 +66,13 @@ describe "Typer" do
   end
 
   it "errors on invalid syntax" do
-    expect_raises(Myc::Error::ErrorLoc, /expected name got/) {
+    expect_raises(Myc::Error::ErrorLoc, /type not found `><`/) {
       spec_find_type("><")
     }
   end
 
   it "errors on unknown type" do
-    expect_raises(Myc::Error::ErrorLoc, /not found type/) {
+    expect_raises(Myc::Error::ErrorLoc, /type not found `unknown_type_xyz`/) {
       spec_find_type("unknown_type_xyz")
     }
   end
@@ -133,6 +133,79 @@ describe "Typer" do
     it "finds crazy nested type" do
       t = spec_find_type("ptr<struct<struct<flat<ptr<i32>, 3>, f64>, ptr<struct<bool, flat<u8, 10>>>>>")
       t.to_s.should eq "ptr<struct<struct<flat<ptr<i32>, 3>, f64>, ptr<struct<bool, flat<u8, 10>>>>>"
+    end
+  end
+
+  context "fn types" do
+    it "finds simple fn type" do
+      t = spec_find_type("fn<i32, i64, u64>")
+      t.should be_a(Myc::Type::Fn)
+      t.as(Myc::Type::Fn).args.map(&.to_s).should eq ["i32", "i64"]
+      t.as(Myc::Type::Fn).ret.to_s.should eq "u64"
+      t.as(Myc::Type::Fn).vaarg.should be_false
+    end
+
+    it "finds fn with void return" do
+      t = spec_find_type("fn<ptr<u8>, void>")
+      t.should be_a(Myc::Type::Fn)
+      t.as(Myc::Type::Fn).args.map(&.to_s).should eq ["ptr<u8>"]
+      t.as(Myc::Type::Fn).ret.to_s.should eq "void"
+    end
+
+    it "finds fn with variadic args" do
+      t = spec_find_type("fn<ptr<u8>, ..., i32>")
+      t.should be_a(Myc::Type::Fn)
+      t.as(Myc::Type::Fn).args.map(&.to_s).should eq ["ptr<u8>"]
+      t.as(Myc::Type::Fn).ret.to_s.should eq "i32"
+      t.as(Myc::Type::Fn).vaarg.should be_true
+    end
+
+    it "finds fn with no args" do
+      t = spec_find_type("fn<i32>")
+      t.should be_a(Myc::Type::Fn)
+      t.as(Myc::Type::Fn).args.should be_empty
+      t.as(Myc::Type::Fn).ret.to_s.should eq "i32"
+    end
+
+    it "finds fn with complex types" do
+      t = spec_find_type("fn<ptr<i32>, struct<i32, f64>, bool>")
+      t.should be_a(Myc::Type::Fn)
+      t.as(Myc::Type::Fn).args.map(&.to_s).should eq ["ptr<i32>", "struct<i32, f64>"]
+      t.as(Myc::Type::Fn).ret.to_s.should eq "bool"
+    end
+
+    it "finds fn returning fn pointer" do
+      t = spec_find_type("fn<i32, fn<i32, i32>>")
+      t.should be_a(Myc::Type::Fn)
+      t.as(Myc::Type::Fn).args.map(&.to_s).should eq ["i32"]
+      t.as(Myc::Type::Fn).ret.should be_a(Myc::Type::Fn)
+    end
+
+    it "finds ptr to fn" do
+      t = spec_find_type("ptr<fn<i32, i32>>")
+      t.should be_a(Myc::Type::PtrType)
+      t.as(Myc::Type::PtrType).target_type.should be_a(Myc::Type::Fn)
+    end
+
+    it "caches fn types" do
+      t = typer
+
+      t1 = t.find("fn<i32, i32, i32>", Myc::Location.new("/tmp/1", 0))
+      t2 = t.find("fn < i32 , i32 , i32 >", Myc::Location.new("/tmp/1", 0))
+
+      t1.should be t2
+    end
+
+    it "errors on fn without ret type" do
+      expect_raises(Myc::Error::ErrorLoc, /type not found `fn<>`/) {
+        spec_find_type("fn<>")
+      }
+    end
+
+    it "errors on fn with ret after vaarg" do
+      expect_raises(Myc::Error::ErrorLoc, /ret_type after vaargs already defined/) {
+        spec_find_type("fn<i32, ..., i32, i32>")
+      }
     end
   end
 end

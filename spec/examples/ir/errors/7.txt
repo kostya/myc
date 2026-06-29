@@ -1,1 +1,1 @@
-not found type bla
+type not found `bla`

@@ -20,6 +20,7 @@ class Myc::Backend::C::Backend < Myc::Backend::AbstractBackend
               "-Wno-main-return-type",
               "-Wno-pointer-sign",
               "-Wno-constant-conversion",
+              "-Wno-format-security",
               "-o", output,
               tmp]
       args << "-O3" if common_options.release

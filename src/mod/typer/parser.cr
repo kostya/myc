@@ -4,6 +4,7 @@ class Myc::Mod::Typer::Parser
   record Tkn::Name < Tkn, name : String
   record Tkn::Less < Tkn
   record Tkn::More < Tkn
+  record Tkn::TripleDot < Tkn
   record Tkn::Comma < Tkn
   record Tkn::Number < Tkn, number : Int64
   record Tkn::Undef < Tkn
@@ -70,6 +71,13 @@ class Myc::Mod::Typer::Parser
       when ','
         res << Tkn::Comma.new
         pos += 1
+      when '.'
+        if (pos + 2 < length) && chars[pos + 1] == '.' && chars[pos + 2] == '.'
+          res << Tkn::TripleDot.new
+          pos += 3
+        else
+          raise error("unexpected char `#{ch}` at #{pos}")
+        end
       else
         raise error("unexpected char `#{ch}` at #{pos} in `#{chars[pos..({chars.size - 1, pos + 10}.min)].join}`")
       end
@@ -79,12 +87,13 @@ class Myc::Mod::Typer::Parser
   end
 
   def get_type : Type
-    type = parse
+    type = parse_type
+    raise error("type not found `#{@id_name}`") unless type
     raise error("not all tokens processed #{@tokens[@pos..-1].inspect}") if @pos < @tokens.size
     type
   end
 
-  private def parse : Type
+  private def parse_type : Type?
     case ct = current_token
     when Tkn::Name
       case name = ct.name
@@ -94,16 +103,14 @@ class Myc::Mod::Typer::Parser
         parse_struct
       when "flat"
         parse_flat
+      when "fn"
+        parse_fn
       else
         if t = typer.find_in_caches(name)
           @pos += 1
           t
-        else
-          raise error("not found type #{name}")
         end
       end
-    else
-      raise error("expected name got #{ct.inspect}")
     end
   end
 
@@ -116,7 +123,8 @@ class Myc::Mod::Typer::Parser
       raise error("expected `<` for ptr, got #{ct.inspect}")
     end
 
-    inner_type = parse
+    inner_type = parse_type
+    raise error("type not found `#{@id_name}`") unless inner_type
 
     case ct = current_token
     when Tkn::More
@@ -145,7 +153,8 @@ class Myc::Mod::Typer::Parser
       raise error("expected `<` for flat, got #{ct.inspect}")
     end
 
-    inner_type = parse
+    inner_type = parse_type
+    raise error("type not found `#{@id_name}`") unless inner_type
 
     case ct = current_token
     when Tkn::Comma
@@ -193,7 +202,9 @@ class Myc::Mod::Typer::Parser
 
     inner_types = [] of Type
     while true
-      inner_types << parse
+      inner_type = parse_type
+      raise error("type not found `#{@id_name}`") unless inner_type
+      inner_types << inner_type
 
       case ct = current_token
       when Tkn::Comma
@@ -220,6 +231,73 @@ class Myc::Mod::Typer::Parser
       t.hidden = true
       t.data = inner_types
       typer.types_cache[id_name] = t
+      t
+    end
+  end
+
+  private def parse_fn : Type
+    @pos += 1
+    case ct = current_token
+    when Tkn::Less
+      @pos += 1
+    else
+      raise error("expected `<` for fn, got #{ct.inspect}")
+    end
+
+    inner_types = [] of Type
+    ret_type = nil
+    vaarg = false
+    while true
+      case ct = current_token
+      when Tkn::TripleDot
+        vaarg = true
+        @pos += 1
+      else
+        unless vaarg
+          inner_type = parse_type
+          raise error("type not found `#{@id_name}`") unless inner_type
+          inner_types << inner_type
+        else
+          if ret_type
+            raise error("ret_type after vaargs already defined #{ret_type.id_name}")
+          else
+            ret_type = parse_type
+            raise error("type not found `#{@id_name}`") unless ret_type
+          end
+        end
+      end
+
+      case ct = current_token
+      when Tkn::Comma
+        @pos += 1
+      when Tkn::More
+        break
+      else
+        raise error("expected `,` or '>' for fn, got #{ct.inspect}")
+      end
+    end
+
+    unless ret_type
+      if inner_types.size > 0
+        ret_type = inner_types.pop
+      else
+        raise error("undefined ret_type, add at least void")
+      end
+    end
+
+    case ct = current_token
+    when Tkn::More
+      @pos += 1
+    else
+      raise error("expected `>` for fn, got #{ct.inspect}")
+    end
+
+    t = Type::Fn.new(inner_types, ret_type, vaarg)
+    if finded_t = @typer.find_in_caches(t.id_name)
+      finded_t
+    else
+      t.hidden = true
+      typer.types_cache[t.id_name] = t
       t
     end
   end
