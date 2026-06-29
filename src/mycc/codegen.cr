@@ -236,6 +236,8 @@ class Myc::Mycc::CodeGenerator
       emit("PARAM #{param}")
     elsif g = @globals[name]?
       emit("GLOBAL :#{g.name}")
+    elsif expr.type.is_a?(Type::Fn)
+      emit("ADDR :#{name}")
     end
   end
 
@@ -297,10 +299,17 @@ class Myc::Mycc::CodeGenerator
   end
 
   def generate_expr(expr : TypedAST::Call)
-    expr.args.reverse.each { |arg| generate_expr(arg) }
-    if expr.func_name == "printf"
+    if expr.is_invoke
+      callee = expr.args.first
+      invoke_args = expr.args[1..]
+      invoke_args.reverse.each { |arg| generate_expr(arg) }
+      generate_expr(callee)
+      emit("INVOKE")
+    elsif expr.func_name == "printf"
+      expr.args.reverse.each { |arg| generate_expr(arg) }
       emit("PRINTF #{expr.args.size - 1}")
     else
+      expr.args.reverse.each { |arg| generate_expr(arg) }
       emit("CALL :#{expr.func_name}")
     end
   end
@@ -358,7 +367,7 @@ class Myc::Mycc::CodeGenerator
   end
 
   private def type_s(type : Type) : String
-    if type.needs_blit? || type.is_a?(Type::PtrType)
+    if type.needs_blit? || type.is_a?(Type::PtrType) || type.is_a?(Type::Fn)
       "\"#{type.id_name}\""
     else
       ":#{type.id_name}"

@@ -405,19 +405,50 @@ class Myc::Mycc::ASTBuilder
 
   private def build_call(cursor : Clang::Cursor) : TypedAST::Call
     func_name = cursor.spelling
-    args = [] of TypedAST::Node
+    children_list = children(cursor)
 
-    children(cursor).each do |child|
-      next if child.kind.decl_ref_expr? && child.spelling == func_name
-
-      if node = build_node(child)
-        next if node.is_a?(TypedAST::VarRef) && node.name == func_name
-        args << node
+    callee = children_list.find do |c|
+      if c.kind.decl_ref_expr?
+        c.spelling == func_name
+      elsif c.kind.member_ref_expr?
+        c.spelling == func_name
+      elsif c.kind.first_expr?
+        children(c).any? { |inner|
+          (inner.kind.decl_ref_expr? || inner.kind.member_ref_expr?) && inner.spelling == func_name
+        }
+      else
+        false
       end
     end
+    is_invoke = func_name.empty? || (callee && is_variable_callee?(callee, func_name))
 
-    ret_type = get_type(cursor, cursor.type)
-    TypedAST::Call.new(func_name, args, ret_type, location(cursor))
+    if is_invoke
+      args = [] of TypedAST::Node
+      if func_name.empty?
+        callee_node = build_node(children_list[0]).not_nil!
+        args = children_list[1..].map { |c| build_node(c).not_nil! }
+      elsif callee
+        callee_node = build_node(callee).not_nil!
+        args = children_list.reject { |c| c == callee }
+          .map { |c| build_node(c).not_nil! }
+      end
+      ret_type = get_type(cursor, cursor.type)
+      TypedAST::Call.new("", [callee_node.not_nil!] + args, ret_type, location(cursor), is_invoke: true)
+    else
+      args = [] of TypedAST::Node
+
+      children(cursor).each do |child|
+        next if child.kind.decl_ref_expr? && child.spelling == func_name
+
+        if node = build_node(child)
+          next if node.is_a?(TypedAST::VarRef) && node.name == func_name
+          args << node
+        end
+      end
+
+      ret_type = get_type(cursor, cursor.type)
+      TypedAST::Call.new(func_name, args, ret_type, location(cursor))
+    end
   end
 
   private def build_binary(cursor : Clang::Cursor) : TypedAST::Node
@@ -511,9 +542,12 @@ class Myc::Mycc::ASTBuilder
         raise error("Cannot dereference non-pointer type #{type}", cursor)
       end
     when "&"
-      type = operand.not_nil!.type
-      ptr_type = mod.typer.to_ptr(type, location(cursor).offset)
-      TypedAST::AddrOf.new(operand.not_nil!, ptr_type, location(cursor))
+      if operand && operand.type.is_a?(Type::Fn)
+        operand
+      else
+        ptr_type = mod.typer.to_ptr(operand.not_nil!.type, location(cursor).offset)
+        TypedAST::AddrOf.new(operand.not_nil!, ptr_type, location(cursor))
+      end
     when "++", "--"
       is_inc = op == "++"
       is_prefix = is_prefix_unary?(cursor)
@@ -704,17 +738,41 @@ class Myc::Mycc::ASTBuilder
     when .u_long?, .u_long_long? then mod.typer.u64
     when .float?                 then mod.typer.f32
     when .double?                then mod.typer.f64
-    when .pointer?               then mod.typer.to_ptr(get_type(cursor, canonical.pointee_type, count), location(cursor).offset)
+    when .pointer?
+      pointee = get_type(cursor, canonical.pointee_type, count)
+      if pointee.is_a?(Type::Fn)
+        pointee
+      else
+        mod.typer.to_ptr(get_type(cursor, canonical.pointee_type, count), location(cursor).offset)
+      end
     when .record?
       mod.typer.find(canonical.spelling.sub("struct ", ""), location(cursor))
     when .constant_array?
       mod.typer.find("flat<#{get_type(cursor, canonical.array_element_type, count)}, #{canonical.array_size}>", location(cursor))
     when .incomplete_array?
       mod.typer.to_ptr(get_type(cursor, canonical.array_element_type, count), location(cursor).offset)
-    when .function_proto?, .function_no_proto?
-      mod.typer.voidp
     when .elaborated?
       get_type(cursor, canonical.named_type, count)
+    when .function_proto?
+      ret = get_type(cursor, canonical.result_type, count)
+      arg_types = canonical.arguments.map { |t| get_type(cursor, t, count) }
+
+      id_name = String.build do |io|
+        io << "fn<"
+        arg_types.each_with_index do |t, i|
+          io << ", " if i > 0
+          io << t.id_name
+        end
+        io << ", "
+        io << ret.id_name
+        io << '>'
+      end
+
+      mod.typer.find(id_name, location(cursor))
+    when .function_no_proto?
+      ret = get_type(cursor, canonical.result_type, count)
+      id_name = "fn<#{ret.id_name}>"
+      mod.typer.find(id_name, location(cursor))
     when .typedef?
       get_type(cursor, canonical.canonical_type, count)
     else
@@ -748,5 +806,37 @@ class Myc::Mycc::ASTBuilder
     else
       value.to_i64
     end
+  end
+
+  private def is_function_pointer?(cursor : Clang::Cursor) : Bool
+    type = get_type(cursor, cursor.type)
+    _is_fn_type?(type)
+  end
+
+  private def _is_fn_type?(type : Type) : Bool
+    if type.is_a?(Type::Fn)
+      true
+    elsif type.is_a?(Type::PtrType)
+      _is_fn_type?(type.target_type)
+    else
+      false
+    end
+  end
+
+  private def is_variable_callee?(cursor : Clang::Cursor, func_name : String) : Bool
+    if cursor.kind.decl_ref_expr? && cursor.spelling == func_name
+      return !cursor.referenced.kind.function_decl?
+    elsif cursor.kind.member_ref_expr? && cursor.spelling == func_name
+      return true
+    elsif cursor.kind.first_expr?
+      children(cursor).each do |inner|
+        if inner.kind.decl_ref_expr? && inner.spelling == func_name
+          return !inner.referenced.kind.function_decl?
+        elsif inner.kind.member_ref_expr? && inner.spelling == func_name
+          return true
+        end
+      end
+    end
+    false
   end
 end

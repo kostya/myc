@@ -103,11 +103,15 @@ module Myc::Mycc::TypedAST
   class Call < Node
     getter func_name : String
     getter args : Array(Node)
+    getter is_invoke : Bool
 
-    def initialize(@func_name, @args, @type, @location); end
+    def initialize(@func_name, @args, @type, @location, @is_invoke = false); end
 
     private def inspect_fields(io : IO)
       func_name.inspect(io)
+      if @is_invoke
+        io << ", :is_invoke"
+      end
       io << ", "
       args.each_with_index do |arg, index|
         io << ", " if index != 0
