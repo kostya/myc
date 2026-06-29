@@ -17,6 +17,7 @@ class Myc::Mycc::CodeGenerator
     @vars = Hash(String, VarInfo).new
     @params = Hash(String, Int32).new
     @globals = Hash(String, TypedAST::VarDecl).new
+    @switch_count = 0
   end
 
   def generate(program : TypedAST::Program) : IO
@@ -232,6 +233,41 @@ class Myc::Mycc::CodeGenerator
 
   def generate_stmt(stmt : TypedAST::Label)
     emit("LABEL \"#{stmt.label}\"")
+  end
+
+  def generate_stmt(stmt : TypedAST::Switch)
+    end_label = "__switch_end_#{@switch_count}"
+    @switch_count += 1
+
+    stmt.cases.each do |c|
+      c.values.each_with_index do |val, idx|
+        emit("PUSH #{val} :i32")
+        generate_expr(stmt.value.dup)
+        emit("BINARY :eq")
+        if idx < c.values.size - 1
+        end
+      end
+
+      (c.values.size - 1).times { emit("BINARY :or") }
+      emit("AS :bool")
+      emit("IF")
+      @indent += 1
+      emit("THEN")
+      @indent += 1
+      c.body.each { |s| generate_stmt(s) }
+      if c.has_break
+        emit("GOTO \"#{end_label}\"")
+      end
+      @indent -= 1
+      @indent -= 1
+      emit("ENDIF")
+    end
+
+    if default = stmt.default
+      default.each { |s| generate_stmt(s) }
+    end
+
+    emit("LABEL \"#{end_label}\"")
   end
 
   def generate_expr(expr : TypedAST::IntLiteral)

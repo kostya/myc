@@ -168,6 +168,8 @@ class Myc::Mycc::ASTBuilder
       build_do_while(cursor)
     when .for_stmt?
       build_for(cursor)
+    when .switch_stmt?
+      build_switch(cursor)
     when .binary_operator?
       op = cursor.spelling
       if op == "="
@@ -731,6 +733,87 @@ class Myc::Mycc::ASTBuilder
     end
 
     TypedAST::FieldAccess.new(obj, field_name, field_index, field_type, location(cursor))
+  end
+
+  private def build_switch(cursor : Clang::Cursor) : TypedAST::Switch
+    children_list = children(cursor)
+    value = build_node(children_list[0]).not_nil!
+
+    cases = [] of TypedAST::Case
+    default = nil
+
+    current_values = [] of Int64
+    current_body = [] of TypedAST::Stmt
+    has_break = false
+
+    children(children_list[1]).each do |child|
+      case child.kind
+      when .case_stmt?
+        if current_body.any? || current_values.any?
+          cases << TypedAST::Case.new(current_values, current_body, has_break, location(child))
+        end
+
+        current_values = extract_case_values(child)
+        current_body = [] of TypedAST::Stmt
+        has_break = false
+
+        nested_values = [] of Int64
+        nested_body = [] of TypedAST::Stmt
+        nested_break = false
+        collect_case_body(child, nested_values, nested_body, nested_break)
+        current_values.concat(nested_values)
+        current_body.concat(nested_body)
+        has_break = nested_break if nested_break
+      when .default_stmt?
+        if current_body.any? || current_values.any?
+          cases << TypedAST::Case.new(current_values, current_body, has_break, location(child))
+        end
+        current_values = [] of Int64
+        current_body = [] of TypedAST::Stmt
+
+        default = [] of TypedAST::Stmt
+        children(child).each do |default_child|
+          if stmt = build_stmt(default_child)
+            default << stmt
+          end
+        end
+      when .break_stmt?
+        has_break = true
+      else
+        if stmt = build_stmt(child)
+          STDERR.puts "CASE body: #{stmt.class}"
+          current_body << stmt
+        end
+      end
+    end
+
+    TypedAST::Switch.new(value, cases, default, location(cursor))
+  end
+
+  private def collect_case_body(cursor, values, body, has_break)
+    children(cursor).each do |child|
+      case child.kind
+      when .case_stmt?
+        values.concat(extract_case_values(child))
+        collect_case_body(child, values, body, has_break)
+      when .break_stmt?
+        has_break = true
+      else
+        if stmt = build_stmt(child)
+          body << stmt
+        end
+      end
+    end
+  end
+
+  private def extract_case_values(cursor : Clang::Cursor) : Array(Int64)
+    values = [] of Int64
+    children(cursor).each do |child|
+      if child.kind.integer_literal?
+        values << extract_literal_value(child).to_i64
+      end
+    end
+    values
   end
 
   private def common_type(t1 : Type, t2 : Type) : Type

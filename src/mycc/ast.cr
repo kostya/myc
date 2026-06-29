@@ -397,6 +397,38 @@ module Myc::Mycc::TypedAST
     end
   end
 
+  class Switch < Stmt
+    getter value : Node
+    getter cases : Array(Case)
+    getter default : Array(Stmt)?
+
+    def initialize(@value, @cases, @default, @location); end
+
+    private def inspect_fields(io : IO)
+      value.inspect(io)
+      cases.each_with_index do |c, index|
+        io << ", "
+        io << "case("
+        {c.values, c.body, c.has_break}.inspect(io)
+        io << ")"
+      end
+      if d = default
+        io << ", default("
+        d.inspect(io)
+        io << ")"
+      end
+    end
+  end
+
+  class Case
+    getter values : Array(Int64)
+    getter body : Array(Stmt)
+    getter has_break : Bool
+
+    def initialize(@values, @body, @has_break, @location : Location)
+    end
+  end
+
   class Function
     getter name : String
     getter params : Array({String, Type})
