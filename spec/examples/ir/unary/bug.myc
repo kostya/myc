@@ -3,9 +3,9 @@ FUNC :main
     PUSH 1 :i32
     LOCAL :x :i32
     STORE
+    PUSH 0 :i32
     LOCAL :x
-    AS :bool
-    UNARY :lnot
+    BINARY :eq
     INSPECT
 ENDFUNC
 
