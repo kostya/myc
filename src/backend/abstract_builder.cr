@@ -25,7 +25,7 @@ abstract class Myc::Backend::AbstractBuilder
     h["printf"] = Type::Fn.new([u8p], i32, vaarg: true)
     h["fprintf"] = Type::Fn.new([voidp, u8p], i32, vaarg: true)
     h["sprintf"] = Type::Fn.new([u8p, u8p], i32, vaarg: true)
-
+    h["snprintf"] = Type::Fn.new([u8p, u64, u8p], i32, vaarg: true)
     h["malloc"] = Type::Fn.new([u64], voidp)
     h["calloc"] = Type::Fn.new([u64, u64], voidp)
     h["realloc"] = Type::Fn.new([voidp, u64], voidp)

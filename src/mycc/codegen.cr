@@ -144,9 +144,27 @@ class Myc::Mycc::CodeGenerator
     else
       @vars[stmt.name] = VarInfo.new(stmt.var_type)
       if init = stmt.init
-        generate_expr(init)
-        emit_local(stmt.name, stmt.var_type)
-        emit("STORE")
+        if stmt.var_type.is_a?(Type::FlatType) && init.is_a?(TypedAST::StringLiteral)
+          str = init.value
+          flat_type = stmt.var_type.as(Type::FlatType)
+          count = flat_type.elements_count.to_i
+
+          (count - str.size).times do
+            emit("PUSH 0 :u8")
+          end
+
+          str.bytes.reverse_each do |ch|
+            emit("PUSH #{ch} :u8")
+          end
+
+          emit("CREATE #{type_s(stmt.var_type)}")
+          emit_local(stmt.name, stmt.var_type)
+          emit("STORE")
+        else
+          generate_expr(init)
+          emit_local(stmt.name, stmt.var_type)
+          emit("STORE")
+        end
       end
     end
   end

@@ -61,6 +61,7 @@ class Myc::Mycc::ASTBuilder
   end
 
   private def auto_cast(node : TypedAST::Node, target_type : Type, loc : Location) : TypedAST::Node
+    node = auto_decay(node)
     return node if node.type.eq?(target_type)
     from = node.type
 
@@ -377,12 +378,16 @@ class Myc::Mycc::ASTBuilder
       end
     end
 
-    if init.is_a?(TypedAST::InitList)
-      init = resolve_init_list_types(init, var_type)
-    end
-
     if init
-      init = auto_cast(init, var_type, location(cursor))
+      if var_type.is_a?(Type::FlatType) && init.is_a?(TypedAST::IntLiteral)
+        init = nil
+      elsif var_type.is_a?(Type::FlatType) && init.is_a?(TypedAST::StringLiteral)
+      elsif init.is_a?(TypedAST::InitList)
+        init = resolve_init_list_types(init, var_type)
+        init = auto_cast(init, var_type, location(cursor)) if init.type != var_type
+      else
+        init = auto_cast(init, var_type, location(cursor))
+      end
     end
 
     if is_static
@@ -436,6 +441,7 @@ class Myc::Mycc::ASTBuilder
   end
 
   private def ensure_bool(node : TypedAST::Node) : TypedAST::Node
+    node = auto_decay(node)
     return node if node.type.is_a?(Type::BoolType)
 
     loc = node.location
@@ -492,10 +498,14 @@ class Myc::Mycc::ASTBuilder
             all_args[i + 1] = auto_cast(all_args[i + 1], pt, location(cursor))
           end
         end
+
         args = all_args[1..]
         callee_node = all_args[0]
       end
 
+      args.each_with_index do |arg, i|
+        args[i] = auto_decay(arg)
+      end
       TypedAST::Call.new("", [callee_node.not_nil!] + args, ret_type, location(cursor), is_invoke: true)
     else
       args = [] of TypedAST::Node
@@ -517,6 +527,9 @@ class Myc::Mycc::ASTBuilder
       end
 
       ret_type = get_type(cursor, cursor.type)
+      args.each_with_index do |arg, i|
+        args[i] = auto_decay(arg)
+      end
       TypedAST::Call.new(func_name, args, ret_type, location(cursor))
     end
   end
@@ -808,6 +821,8 @@ class Myc::Mycc::ASTBuilder
       .gsub("\\r", "\r")
       .gsub("\\\"", "\"")
       .gsub("\\\\", "\\")
+      .gsub(/\\[0-7]{1,3}/) { |m| m[1..].to_i(8).chr }
+      .gsub(/\\x[0-9a-fA-F]{1,2}/) { |m| m[2..].to_i(16).chr }
     TypedAST::StringLiteral.new(value, mod.typer.u8p, location(cursor))
   end
 
@@ -1209,5 +1224,15 @@ class Myc::Mycc::ASTBuilder
   end
 
   private def mark_param_changed(node : TypedAST::Node)
+  end
+
+  private def auto_decay(node : TypedAST::Node) : TypedAST::Node
+    if node.type.is_a?(Type::FlatType)
+      flat_type = node.type.as(Type::FlatType)
+      ptr_type = @mod.typer.to_ptr(flat_type.target_type, node.location.offset)
+      addr = TypedAST::AddrOf.new(node, ptr_type, node.location)
+      return TypedAST::Cast.new(addr, ptr_type, node.location)
+    end
+    node
   end
 end

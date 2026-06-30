@@ -1,0 +1,7 @@
+foo: Hi
+p: Hi
+buff+1: i
+bar: hello
+buff: Hi
+buff not null
+buff == p
