@@ -334,8 +334,10 @@ class Myc::Mycc::CodeGenerator
       generate_expr(expr.operand)
       emit("UNARY :bnot")
     when :postfix_inc, :postfix_dec
+      inc_type = expr.operand.type.is_a?(Type::PtrType) ? typer.u64 : expr.operand.type
+
       if expr.is_statement
-        emit("PUSH 1 :i32")
+        emit("PUSH 1 #{type_s(inc_type)}")
         generate_expr(expr.operand)
         bin_op = expr.op == :postfix_inc ? "add" : "sub"
         emit("BINARY :#{bin_op}")
@@ -348,7 +350,7 @@ class Myc::Mycc::CodeGenerator
         emit_local(tmp_name, expr.type)
         emit("STORE")
 
-        emit("PUSH 1 :i32")
+        emit("PUSH 1 #{type_s(inc_type)}")
         generate_expr(expr.operand)
         bin_op = expr.op == :postfix_inc ? "add" : "sub"
         emit("BINARY :#{bin_op}")
@@ -359,7 +361,8 @@ class Myc::Mycc::CodeGenerator
         @vars.delete(tmp_name)
       end
     when :prefix_inc, :prefix_dec
-      emit("PUSH 1 :i32")
+      inc_type = expr.operand.type.is_a?(Type::PtrType) ? typer.u64 : expr.operand.type
+      emit("PUSH 1 #{type_s(inc_type)}")
       generate_expr(expr.operand)
       bin_op = expr.op == :prefix_inc ? "add" : "sub"
       emit("BINARY :#{bin_op}")

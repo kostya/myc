@@ -541,6 +541,10 @@ abstract class Myc::Backend::AbstractVisitor
     if type_fn.vaarg
       op.vaargs_count.times do
         case t = last.type
+        when Type::IntType
+          if t.bytes_count < 4
+            visit Opcode::To.new(mod.typer.i32)
+          end
         when Type::FloatType
           if t.bytes_count == 4
             visit Opcode::To.new(mod.typer.f64)

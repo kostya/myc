@@ -1048,11 +1048,14 @@ class Myc::Mycc::ASTBuilder
     case canonical.kind
     when .void?                  then mod.typer.void
     when .bool?                  then mod.typer.bool
-    when .char_s?, .s_char?      then mod.typer.u8
-    when .w_char?                then mod.typer.u32
+    when .char_s?                then mod.typer.u8
+    when .s_char?                then mod.typer.i8
     when .char_u?, .u_char?      then mod.typer.u8
-    when .short?, .int?          then mod.typer.i32
-    when .u_short?, .u_int?      then mod.typer.u32
+    when .w_char?                then mod.typer.u32
+    when .short?                 then mod.typer.i16
+    when .int?                   then mod.typer.i32
+    when .u_short?               then mod.typer.u16
+    when .u_int?                 then mod.typer.u32
     when .long?, .long_long?     then mod.typer.i64
     when .u_long?, .u_long_long? then mod.typer.u64
     when .u_int128?, .int128?    then mod.typer.find("flat<i32, 4>", location(cursor))

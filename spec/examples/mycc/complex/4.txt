@@ -1,0 +1,27 @@
+char++: 3
+char--: 4
+uchar++: 251
+uchar--: 255
+short++: 1001
+short--: -1001
+ushort++: 65535
+ushort--: 65535
+prefix++: 11
+after prefix++: 11
+prefix--: 9
+after prefix--: 9
+postfix++ expr: 10
+after postfix++ expr: 11
+postfix-- expr: 10
+after postfix-- expr: 9
+int++: 43
+int--: 41
+longlong++: 1000000001
+ptr++: 20
+ptr--: 10
+*++p: 20
+*p++: 20
+after *p++: 30
+char overflow 127++: -128
+uchar overflow 255++: 0
+sum 0..9: 45
