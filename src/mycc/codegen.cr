@@ -409,13 +409,13 @@ class Myc::Mycc::CodeGenerator
       invoke_args = expr.args[1..]
       invoke_args.reverse.each { |arg| generate_expr(arg) }
       generate_expr(callee)
-      emit("INVOKE")
+      emit("INVOKE#{expr.vaargs_count > 0 ? " #{expr.vaargs_count}" : ""}")
     elsif expr.func_name == "printf"
       expr.args.reverse.each { |arg| generate_expr(arg) }
       emit("PRINTF #{expr.args.size - 1}")
     else
       expr.args.reverse.each { |arg| generate_expr(arg) }
-      emit("CALL :#{expr.func_name}")
+      emit("CALL :#{expr.func_name}#{expr.vaargs_count > 0 ? " #{expr.vaargs_count}" : ""}")
     end
   end
 

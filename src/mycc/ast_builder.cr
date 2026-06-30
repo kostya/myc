@@ -507,7 +507,9 @@ class Myc::Mycc::ASTBuilder
       args.each_with_index do |arg, i|
         args[i] = auto_decay(arg)
       end
-      TypedAST::Call.new("", [callee_node.not_nil!] + args, ret_type, location(cursor), is_invoke: true)
+
+      vaargs_count = param_types ? args.size - param_types.size : 0
+      TypedAST::Call.new("", [callee_node.not_nil!] + args, ret_type, location(cursor), is_invoke: true, vaargs_count: vaargs_count)
     else
       args = [] of TypedAST::Node
 
@@ -531,7 +533,9 @@ class Myc::Mycc::ASTBuilder
       args.each_with_index do |arg, i|
         args[i] = auto_decay(arg)
       end
-      TypedAST::Call.new(func_name, args, ret_type, location(cursor))
+
+      vaargs_count = param_types ? args.size - param_types.size : 0
+      TypedAST::Call.new(func_name, args, ret_type, location(cursor), vaargs_count: vaargs_count)
     end
   end
 

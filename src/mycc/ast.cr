@@ -104,13 +104,17 @@ module Myc::Mycc::TypedAST
     getter func_name : String
     getter args : Array(Node)
     getter is_invoke : Bool
+    getter vaargs_count : Int32
 
-    def initialize(@func_name, @args, @type, @location, @is_invoke = false); end
+    def initialize(@func_name, @args, @type, @location, @is_invoke = false, @vaargs_count = 0); end
 
     private def inspect_fields(io : IO)
       func_name.inspect(io)
       if @is_invoke
         io << ", :is_invoke"
+      end
+      if @vaargs_count > 0
+        io << ", vaargs: #{@vaargs_count}"
       end
       io << ", "
       args.each_with_index do |arg, index|
