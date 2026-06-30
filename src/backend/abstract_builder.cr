@@ -47,6 +47,7 @@ abstract class Myc::Backend::AbstractBuilder
     h["atoi"] = Type::Fn.new([u8p], i32)
     h["atof"] = Type::Fn.new([u8p], f64)
     h["abs"] = Type::Fn.new([i32], i32)
+    h["strchr"] = Type::Fn.new([u8p, i32], u8p)
 
     h
   end

@@ -254,7 +254,8 @@ class Myc::Mycc::CodeGenerator
 
     stmt.cases.each do |c|
       c.values.each_with_index do |val, idx|
-        emit("PUSH #{val} :i32")
+        val_type_s = type_s(stmt.value.type)
+        emit("PUSH #{val} #{val_type_s}")
         generate_expr(stmt.value.dup)
         emit("BINARY :eq")
       end

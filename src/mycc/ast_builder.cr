@@ -972,6 +972,9 @@ class Myc::Mycc::ASTBuilder
       case child.kind
       when .integer_literal?
         values << extract_literal_value(child).to_i64
+      when .character_literal?
+        ch = extract_character_value(child)
+        values << ch.to_i64
       when .decl_ref_expr?
         name = child.spelling
         values << @enum_values[name] if @enum_values.has_key?(name)
@@ -980,11 +983,23 @@ class Myc::Mycc::ASTBuilder
           if inner.kind.decl_ref_expr?
             name = inner.spelling
             values << @enum_values[name] if @enum_values.has_key?(name)
+          elsif inner.kind.character_literal?
+            ch = extract_character_value(inner)
+            values << ch.to_i64
           end
         end
       end
     end
     values
+  end
+
+  private def extract_character_value(cursor : Clang::Cursor) : Int32
+    value = extract_literal_value(cursor)
+    if value && value.size >= 3 && value[0] == '\''
+      value[1].ord
+    else
+      value.to_i
+    end
   end
 
   private def common_type(t1 : Type, t2 : Type) : Type
