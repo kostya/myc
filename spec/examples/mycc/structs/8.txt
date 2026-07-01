@@ -1,0 +1,7 @@
+bla 1 97
+bla 2 98
+point 10 20
+point ptr 30 40
+rect 0 0 100 200
+point partial 50 0
+test 42

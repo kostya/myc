@@ -197,20 +197,21 @@ class Myc::Mycc::ASTBuilder
 
   private def build_node(cursor : Clang::Cursor) : TypedAST::Node?
     case cursor.kind
-    when .integer_literal?      then build_int_literal(cursor)
-    when .floating_literal?     then build_float_literal(cursor)
-    when .character_literal?    then build_char_literal(cursor)
-    when .string_literal?       then build_string_literal(cursor)
-    when .decl_ref_expr?        then build_var_ref(cursor)
-    when .call_expr?            then build_call(cursor)
-    when .binary_operator?      then build_binary(cursor)
-    when .unary_operator?       then build_unary(cursor)
-    when .c_style_cast_expr?    then build_cast(cursor)
-    when .array_subscript_expr? then build_subscript(cursor)
-    when .unary_expr?           then build_sizeof(cursor)
-    when .init_list_expr?       then build_init_list(cursor)
-    when .member_ref_expr?      then build_field(cursor)
-    when .conditional_operator? then build_conditional(cursor)
+    when .integer_literal?       then build_int_literal(cursor)
+    when .floating_literal?      then build_float_literal(cursor)
+    when .character_literal?     then build_char_literal(cursor)
+    when .string_literal?        then build_string_literal(cursor)
+    when .decl_ref_expr?         then build_var_ref(cursor)
+    when .call_expr?             then build_call(cursor)
+    when .binary_operator?       then build_binary(cursor)
+    when .unary_operator?        then build_unary(cursor)
+    when .c_style_cast_expr?     then build_cast(cursor)
+    when .array_subscript_expr?  then build_subscript(cursor)
+    when .unary_expr?            then build_sizeof(cursor)
+    when .init_list_expr?        then build_init_list(cursor)
+    when .member_ref_expr?       then build_field(cursor)
+    when .conditional_operator?  then build_conditional(cursor)
+    when .compound_literal_expr? then build_compound_literal(cursor)
     when .paren_expr?, .first_expr?
       children = children(cursor)
       children.size == 1 ? build_node(children[0]) : nil
@@ -229,6 +230,8 @@ class Myc::Mycc::ASTBuilder
         children(child).each do |decl_child|
           if decl_child.kind.var_decl?
             stmts << build_var_decl(decl_child)
+          elsif decl_child.kind.struct_decl?
+            build_struct_decl(decl_child)
           end
         end
       else
@@ -302,6 +305,7 @@ class Myc::Mycc::ASTBuilder
         children_list = children(cursor)
         left = build_node(children_list[0]).not_nil!
         right = build_node(children_list[1]).not_nil!
+
         right = auto_cast(right, left.type, location(cursor))
         mark_param_changed(left)
         TypedAST::Assign.new(left, right, location(cursor))
@@ -593,6 +597,22 @@ class Myc::Mycc::ASTBuilder
       end
     end
     nil
+  end
+
+  private def build_compound_literal(cursor : Clang::Cursor) : TypedAST::Node?
+    target_type = get_type(cursor, cursor.type)
+
+    node = nil
+    cursor.visit_children do |child|
+      if child.kind.init_list_expr?
+        node = build_init_list(child, target_type)
+        Clang::ChildVisitResult::Break
+      else
+        Clang::ChildVisitResult::Continue
+      end
+    end
+
+    node
   end
 
   private def build_binary(cursor : Clang::Cursor) : TypedAST::Node
