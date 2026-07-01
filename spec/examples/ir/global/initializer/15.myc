@@ -1,0 +1,26 @@
+STRUCT :Inner
+  TYPE :i32
+  TYPE :u8
+ENDSTRUCT
+
+STRUCT :Middle
+  TYPE "flat<f64, 2>"
+  TYPE :Inner
+ENDSTRUCT
+
+STRUCT :Outer
+  TYPE :Middle
+  TYPE :ptr<u8>
+ENDSTRUCT
+
+GLOBAL :deep
+  TYPE :Outer
+  INITIAL 1.5 2.5 42 255 :hello
+ENDGLOBAL
+
+FUNC :main
+  BODY
+    GLOBAL :deep
+    INSPECT
+ENDFUNC
+

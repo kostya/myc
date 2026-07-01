@@ -1,0 +1,11 @@
+GLOBAL :bla
+  TYPE :f32
+  INITIAL 42
+ENDGLOBAL
+
+FUNC :main
+  BODY
+    GLOBAL :bla
+    INSPECT
+ENDFUNC
+

@@ -16,7 +16,7 @@ class Myc::Mod::Saver
       end
     end
 
-    @mod.global_defs.each do |global|
+    @mod.global_defs.each_value do |global|
       dom.sections << save_global(global)
     end
 
@@ -108,9 +108,10 @@ class Myc::Mod::Saver
     g_node = sequence(Opcode::Code::GLOBAL, global.name)
     g_node.list << save_type(global.type)
 
-    if init = global.initial_value
-      init_node = opcode(Opcode::Code::INITIAL, init)
-      g_node.list << init_node
+    if global.initial_keyword
+      node = Source::Node::Opcode.new(Opcode::Code::INITIAL)
+      node.values = global.initial_values
+      g_node.list << node
     end
 
     if global.constant

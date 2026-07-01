@@ -1,0 +1,11 @@
+GLOBAL :bla
+  TYPE "struct<i32, u8, f64>"
+  INITIAL 42 :A
+ENDGLOBAL
+
+FUNC :main
+  BODY
+    GLOBAL :bla
+    INSPECT
+ENDFUNC
+

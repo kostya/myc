@@ -140,6 +140,18 @@ context "Validate" do
     _____________________________res
   end
 
+  it "globals complex initial" do
+    validate(<<-'_____________________________src').should eq <<-'_____________________________res'
+    GLOBAL counter TYPE "struct<i32, struct<i32, u8>, flat<u8, 2>, ptr<u8>, fn<i32, void>>"
+    INITIAL 1 2 3 'a' 45 "str" :method ENDGLOBAL
+    _____________________________src
+    GLOBAL :counter
+      TYPE "struct<i32, struct<i32, u8>, flat<u8, 2>, ptr<u8>, fn<i32, void>>"
+      INITIAL 1 2 3 :a 45 :str :method
+    ENDGLOBAL
+    _____________________________res
+  end
+
   it "declare external func" do
     validate(<<-'_____________________________src').should eq <<-'_____________________________res'
     FUNC printf RETURN TYPE i32 ARGS TYPE "ptr<u8>" ENDFUNC

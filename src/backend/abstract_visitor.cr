@@ -108,11 +108,8 @@ abstract class Myc::Backend::AbstractVisitor
       end
     end
 
-    if val = builder.constant_value?(val, type)
-      self << val
-    else
-      raise error("cant push value: #{op.value.class.inspect} #{op.value.inspect}")
-    end
+    init_val = builder.init_val([val], type, mod, Location.new(mod.filename, op.offset))
+    self << builder.init_value(init_val)
   end
 
   def visit(op : Opcode::Seq)
@@ -177,7 +174,7 @@ abstract class Myc::Backend::AbstractVisitor
     f = if fname = builder.inspect_funcs[arg.type]?
           fname
         else
-          fname = "__myc_inspect_#{mod.name}_#{arg.type.backend_name}"
+          fname = generate_inspect_func_name(arg)
           builder.inspect_funcs[arg.type] = fname
           generate_inspect_func(arg.type, fname)
           fname
@@ -200,6 +197,10 @@ abstract class Myc::Backend::AbstractVisitor
     end
     visit Opcode::Stack.new(:swap2)
     visit Opcode::Call.new(f)
+  end
+
+  private def generate_inspect_func_name(arg : Value) : String
+    "__myc_inspect_#{mod.name}_#{arg.type.backend_name}"
   end
 
   private def generate_inspect_func(type : Type, func_name : String)
@@ -291,6 +292,9 @@ abstract class Myc::Backend::AbstractVisitor
           body << Opcode::Printf.new(1)
         end
       end
+    when Type::Fn
+      body << Opcode::Push.new("#{type.id_name}(?)")
+      body << Opcode::Printf.new(0)
     when Type::StructType
       body << Opcode::Push.new("#{type.id_name}(")
       body << Opcode::Printf.new(0)
@@ -791,11 +795,8 @@ abstract class Myc::Backend::AbstractVisitor
     end
 
     case_values = op.values.map do |value|
-      if val = builder.constant_value?(value, index.type)
-        val
-      else
-        raise error("cant create constant for #{value}, type: #{index.type}")
-      end
+      init_val = builder.init_val([value], index.type, mod, Location.new(mod.filename, op.offset))
+      builder.init_value(init_val)
     end
 
     case_bbs = op.cases_seq.map { @bb.next("switch_case") }

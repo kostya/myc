@@ -3,25 +3,17 @@ class Myc::Backend::Linter::Builder < Myc::Backend::AbstractBuilder
   property notes = Hash(Opcode, String).new
 
   def global_register(mod : Mod, global : Mod::GlobalDef)
+    if global.initial_keyword
+      if global.initial_values.size > 0
+        init_val(global.initial_values, global.type, mod, Location.new(mod.filename, global.node.offset))
+      end
+    end
+
     @global_links[global.name] = Value.new(BB::FAKE_VAL, global.type, Value::MM::Ref, global.constant ? Value::PP::GlobalConstant.new(global.name) : Value::PP::Global.new(global.name))
   end
 
-  def constant_value?(value : Source::Token::ArgType, type : Type) : Value?
-    case value
-    when Int
-      if value == 0
-        Value.new(BB::FAKE_VAL, type, Value::MM::Val, Value::PP::Primitive.new)
-      else
-        case type
-        when Type::PtrType, Type::StructType, Type::FlatType, Type::EnumType
-          nil
-        else
-          Value.new(BB::FAKE_VAL, type, Value::MM::Val, Value::PP::Primitive.new)
-        end
-      end
-    else
-      Value.new(BB::FAKE_VAL, type, Value::MM::Val, Value::PP::Primitive.new)
-    end
+  def init_value(ival : InitValue) : Value
+    Value.new(BB::FAKE_VAL, ival.type, Value::MM::Val, Value::PP::Primitive.new)
   end
 
   def func_register(name : String, type_fn : Type::Fn)

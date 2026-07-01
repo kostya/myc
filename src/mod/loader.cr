@@ -508,7 +508,7 @@ class Myc::Mod::Loader
     global_name = get_only_one_string_value(node)
 
     global_type = nil
-    init_value = nil
+    init_values = nil
     constant_flag = false
     initial_keyword = false
 
@@ -518,10 +518,8 @@ class Myc::Mod::Loader
         raise error("TYPE already defined for GLOBAL #{global_name}", op) if global_type
         global_type = find_type(get_only_one_string_value(op), op)
       when Opcode::Code::INITIAL
-        raise error("INITIAL already defined for GLOBAL #{global_name}", op) if init_value
-        values = op.values
-        raise error("INITIAL expected <= 1 value", op) if values && values.size > 1
-        init_value = values.try &.first?
+        raise error("INITIAL already defined for GLOBAL #{global_name}", op) if init_values
+        init_values = op.values
         initial_keyword = true
       when Opcode::Code::CONSTANT
         raise error("CONSTANT already defined for GLOBAL", op) if constant_flag
@@ -535,7 +533,9 @@ class Myc::Mod::Loader
 
     raise error("missing TYPE for GLOBALDEF #{global_name}", node) unless global_type
 
-    @mod.global_defs << Mod::GlobalDef.new(node, global_name, global_type, initial_keyword, init_value, constant_flag)
+    init_values ||= Array(Source::Token::ArgType).new
+
+    @mod.global_defs[global_name] = Mod::GlobalDef.new(node, global_name, global_type, initial_keyword, init_values, constant_flag)
   end
 
   def find_type(name : String, node : Source::Node) : Type

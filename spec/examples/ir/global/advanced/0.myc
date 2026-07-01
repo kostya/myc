@@ -1,5 +1,6 @@
 GLOBAL :ptr_storage
   TYPE :ptr<i32>
+  INITIAL
 ENDGLOBAL
 
 FUNC :main

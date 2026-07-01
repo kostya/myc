@@ -288,7 +288,7 @@ abstract class Myc::Backend::AbstractBackend
         builder.func_register(name, func_def.type_fn)
       end
 
-      mod.global_defs.each do |global|
+      mod.global_defs.each_value do |global|
         builder.global_register(mod, global)
       end
 

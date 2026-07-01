@@ -73,7 +73,7 @@ class Myc::Backend::Value
     in .val?
       tmp_name = visitor.next_unique("__myc_to_ref_wrapper__")
       tmp = visitor.func.alloca_bb.alloca(tmp_name, @type)
-      tmp.pp = PP::Local.new(tmp_name)
+      tmp.pp = @pp
       tmp.store(visitor, self)
       tmp
     in .ref? then self

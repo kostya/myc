@@ -3,7 +3,7 @@ class Myc::Mod
   getter filename : String
 
   getter type_defs = Hash(String, TypeDef).new
-  getter global_defs = Array(GlobalDef).new
+  getter global_defs = Hash(String, GlobalDef).new
   getter func_defs = Hash(String, FuncDef).new
 
   def initialize(@name, @filename)

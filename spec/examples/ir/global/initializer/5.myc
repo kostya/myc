@@ -1,0 +1,11 @@
+GLOBAL :bla
+  TYPE :ptr<i32>
+  INITIAL 0
+ENDGLOBAL
+
+FUNC :main
+  BODY
+    GLOBAL :bla
+    INSPECT
+ENDFUNC
+
