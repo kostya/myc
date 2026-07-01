@@ -6,19 +6,45 @@ class Myc::Mycc::CodeGenerator
     getter type : Type
     getter is_static : Bool
     getter unique_name : String?
+    getter mangled_name : String
 
-    def initialize(@type, @is_static = false, @unique_name = nil)
+    def initialize(@type, @mangled_name, @is_static = false, @unique_name = nil)
     end
   end
 
   def initialize(@typer)
     @indent = 0
     @io = IO::Memory.new
-    @vars = Hash(String, VarInfo).new
+    @vars_stack = [Hash(String, VarInfo).new]
     @params = Hash(String, Int32).new
     @globals = Hash(String, TypedAST::VarDecl).new
     @local_marks = Set(String).new
     @switch_count = 0
+    @scope_counter = 0
+  end
+
+  def current_vars : Hash(String, VarInfo)
+    @vars_stack.last
+  end
+
+  def find_var(name : String) : VarInfo?
+    @vars_stack.reverse_each do |scope|
+      return scope[name] if scope.has_key?(name)
+    end
+    nil
+  end
+
+  def push_scope
+    @vars_stack.push(Hash(String, VarInfo).new)
+    @scope_counter += 1
+  end
+
+  def pop_scope
+    @vars_stack.pop
+  end
+
+  def mangled_name(name : String) : String
+    "__s#{@scope_counter}_#{name}"
   end
 
   def generate(program : TypedAST::Program) : IO
@@ -76,7 +102,9 @@ class Myc::Mycc::CodeGenerator
   end
 
   def generate_function(func : TypedAST::Function)
-    @vars.clear
+    @vars_stack = [Hash(String, VarInfo).new]
+    @scope_counter = 0
+
     @params.clear
     @local_marks.clear
 
@@ -102,14 +130,15 @@ class Myc::Mycc::CodeGenerator
       emit("BODY")
       @indent += 1
 
-      func.params.each_value do |param|
-        if param.changed
-          @vars[param.name] = VarInfo.new(param.type)
-          emit("PARAM #{param.index}")
-          emit_local(param.name, param.type)
+      func.params.each_value do |p|
+        if p.changed
+          m_name = mangled_name(p.name)
+          current_vars[p.name] = VarInfo.new(p.type, m_name)
+          emit("PARAM #{p.index}")
+          emit_local(m_name, p.type)
           emit("STORE")
         else
-          @params[param.name] = param.index
+          @params[p.name] = p.index
         end
       end
 
@@ -139,10 +168,17 @@ class Myc::Mycc::CodeGenerator
     emit("RET")
   end
 
+  def generate_stmt(stmt : TypedAST::Block)
+    push_scope
+    stmt.body.each { |s| generate_stmt(s) }
+    pop_scope
+  end
+
   def generate_stmt(stmt : TypedAST::VarDecl)
     if stmt.is_static
     else
-      @vars[stmt.name] = VarInfo.new(stmt.var_type)
+      m_name = mangled_name(stmt.name)
+      current_vars[stmt.name] = VarInfo.new(stmt.var_type, m_name)
       if init = stmt.init
         if stmt.var_type.is_a?(Type::FlatType) && init.is_a?(TypedAST::StringLiteral)
           str = init.value
@@ -158,11 +194,11 @@ class Myc::Mycc::CodeGenerator
           end
 
           emit("CREATE #{type_s(stmt.var_type)}")
-          emit_local(stmt.name, stmt.var_type)
+          emit_local(m_name, stmt.var_type)
           emit("STORE")
         else
           generate_expr(init)
-          emit_local(stmt.name, stmt.var_type)
+          emit_local(m_name, stmt.var_type)
           emit("STORE")
         end
       end
@@ -176,13 +212,17 @@ class Myc::Mycc::CodeGenerator
 
     emit("THEN")
     @indent += 1
+    push_scope
     stmt.then_body.each { |s| generate_stmt(s) }
+    pop_scope
     @indent -= 1
 
     unless stmt.else_body.empty?
       emit("ELSE")
       @indent += 1
+      push_scope
       stmt.else_body.each { |s| generate_stmt(s) }
+      pop_scope
       @indent -= 1
     end
 
@@ -201,28 +241,12 @@ class Myc::Mycc::CodeGenerator
 
     emit("BODY")
     @indent += 1
+    push_scope
     stmt.body.each { |s| generate_stmt(s) }
+    pop_scope
     @indent -= 1
 
     emit("STEP")
-    @indent -= 1
-    emit("ENDLOOP")
-  end
-
-  def generate_stmt(stmt : TypedAST::DoWhile)
-    emit("LOOP")
-    @indent += 1
-
-    emit("BODY")
-    @indent += 1
-    stmt.body.each { |s| generate_stmt(s) }
-    @indent -= 1
-
-    emit("COND")
-    @indent += 1
-    generate_expr(stmt.condition)
-    @indent -= 1
-
     @indent -= 1
     emit("ENDLOOP")
   end
@@ -244,13 +268,35 @@ class Myc::Mycc::CodeGenerator
 
     emit("BODY")
     @indent += 1
+    push_scope
     stmt.body.each { |s| generate_stmt(s) }
+    pop_scope
     @indent -= 1
 
     emit("STEP")
     if update = stmt.update
       generate_stmt(update)
     end
+
+    @indent -= 1
+    emit("ENDLOOP")
+  end
+
+  def generate_stmt(stmt : TypedAST::DoWhile)
+    emit("LOOP")
+    @indent += 1
+
+    emit("BODY")
+    @indent += 1
+    push_scope
+    stmt.body.each { |s| generate_stmt(s) }
+    pop_scope
+    @indent -= 1
+
+    emit("COND")
+    @indent += 1
+    generate_expr(stmt.condition)
+    @indent -= 1
 
     @indent -= 1
     emit("ENDLOOP")
@@ -332,8 +378,8 @@ class Myc::Mycc::CodeGenerator
 
   def generate_expr(expr : TypedAST::VarRef)
     name = expr.name
-    if @vars.has_key?(name)
-      emit_local(name, expr.type)
+    if var = find_var(name)
+      emit_local(var.mangled_name, expr.type)
     elsif param = @params[name]?
       emit("PARAM #{param}")
     elsif g = @globals[name]?
@@ -375,8 +421,9 @@ class Myc::Mycc::CodeGenerator
         generate_expr(expr.operand)
         emit("STORE")
       else
-        tmp_name = "__tmp_#{@vars.size}"
-        @vars[tmp_name] = VarInfo.new(expr.type)
+        tmp_name = "__tmp_#{@local_marks.size}"
+        current_vars[tmp_name] = VarInfo.new(expr.type, tmp_name)
+
         generate_expr(expr.operand)
         emit_local(tmp_name, expr.type)
         emit("STORE")
@@ -389,7 +436,7 @@ class Myc::Mycc::CodeGenerator
         emit("STORE")
 
         emit_local(tmp_name, expr.type)
-        @vars.delete(tmp_name)
+        current_vars.delete(tmp_name)
       end
     when :prefix_inc, :prefix_dec
       inc_type = expr.operand.type.is_a?(Type::PtrType) ? typer.u64 : expr.operand.type
@@ -485,12 +532,12 @@ class Myc::Mycc::CodeGenerator
     end
   end
 
-  private def emit_local(name : String, type : Type)
-    if @local_marks.includes?(name)
-      emit("LOCAL :#{name}")
+  private def emit_local(mangled_name : String, type : Type)
+    if @local_marks.includes?(mangled_name)
+      emit("LOCAL :#{mangled_name}")
     else
-      emit("LOCAL :#{name} #{type_s(type)}")
-      @local_marks << name
+      emit("LOCAL :#{mangled_name} #{type_s(type)}")
+      @local_marks << mangled_name
     end
   end
 end

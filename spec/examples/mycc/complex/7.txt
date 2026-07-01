@@ -1,0 +1,6 @@
+inner1: 1
+inner1 after set: 2
+outer after inner1: 2
+inner2: 10
+outer after inner2: 2
+deep: x=2 y=100

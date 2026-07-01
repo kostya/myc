@@ -243,6 +243,16 @@ module Myc::Mycc::TypedAST
     end
   end
 
+  class Block < Stmt
+    getter body : Array(Stmt)
+
+    def initialize(@body, @location); end
+
+    private def inspect_fields(io : IO)
+      body.inspect(io)
+    end
+  end
+
   class VarDecl < Stmt
     getter name : String
     getter var_type : Type

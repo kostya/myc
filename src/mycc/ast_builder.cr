@@ -236,6 +236,9 @@ class Myc::Mycc::ASTBuilder
           stmts << stmt
         else
           case child.kind
+          when .compound_stmt?
+            body = build_stmts(child)
+            stmts << TypedAST::Block.new(body, location(child))
           when .return_stmt?
             stmts << build_return(child)
           when .if_stmt?

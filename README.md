@@ -85,7 +85,7 @@ All opcodes [self documented](https://github.com/kostya/myc/tree/master/src/opco
 
 ## mycc: a C subset compiler
 
-~1300 lines of Crystal. Uses mycIR as backend and libclang for C parsing. Require LLVM >= 20.
+POC. ~2000 lines of Crystal. Uses mycIR as backend and libclang for C parsing. Require LLVM >= 20.
 
 ```sh
 # Build
