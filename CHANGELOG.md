@@ -1,4 +1,6 @@
-## 0.5.0-dev
+## 0.5.0 (03.07.2026)
+* mycc: more work, compile 16 from 26 files of LangArena benchmark
+* added ptr minus ptr operation
 
 ## 0.4.0 (30.06.2026)
 * mycc: rewrite with typed AST + single-pass codegen
