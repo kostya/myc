@@ -93,16 +93,19 @@ POC. ~2000 lines of Crystal. Uses mycIR as backend and libclang for C parsing. R
 shards install; crystal build src/cli/mycc.cr -o ./mycc
 
 # Show mycIR output
-./mycc examples/mycc/sieve.cc
+./mycc examples/mycc/sieve.c d
 
-# Build and run (LLVM backend)
-./mycc examples/mycc/sieve.cc | ./myc-llvm r --release
+# Compile (LLVM backend)
+./mycc examples/mycc/sieve.c c --release
 
-# Show LLVM IR dump
-./mycc examples/mycc/sieve.cc | ./myc-llvm d
+# Build and run (QBE backend)
+./mycc examples/mycc/sieve.c --backend qbe r --release
 
 # Show optimized LLVM IR dump
-./mycc examples/mycc/sieve.cc | ./myc-llvm d --release
+./mycc examples/mycc/sieve.c d | ./myc-llvm d --release
+
+# Show qbe dump
+./mycc examples/mycc/sieve.c d | ./myc-qbe d
 ```
 
 ### Example: Brainfuck compiler with myc IR.
@@ -131,10 +134,10 @@ python3 bf2myc.py mandel.bf | ../../myc-llvm run --release
 | loop.myc | myc-llvm | 61ms | 169ms |
 | | myc-qbe | 56ms | 2437ms |
 | | myc-c | 75ms | 140ms |
-| loop.cc | myc-llvm | 81ms | 142ms |
+| loop.c | myc-llvm | 81ms | 142ms |
 | | myc-qbe | 76ms | 2437ms |
 | | myc-c | 95ms | 127ms |
-| sieve.cc | myc-llvm | 90ms | 439ms |
+| sieve.c | myc-llvm | 90ms | 439ms |
 | | myc-qbe | 76ms | 449ms |
 | | myc-c | 106ms | 446ms |
 

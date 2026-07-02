@@ -10,7 +10,6 @@ myc-test
 bin_*
 *.o
 *.ll
-*.c
 *.ssa
 *.tmp
 *.s
@@ -19,3 +18,4 @@ todo.txt
 plugins/
 .DS_Store
 /*.myc
+/*.c

@@ -1,0 +1,2 @@
+require "../../mycc/all"
+require "./*"

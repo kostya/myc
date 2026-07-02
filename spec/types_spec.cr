@@ -41,7 +41,7 @@ describe "Typer" do
   end
 
   it "caches types" do
-    t = typer
+    t = spec_typer
 
     t1 = t.find("struct<i32, f64 >", Myc::Location.new("/tmp/1", 0))
     t2 = t.find("struct < i32,f64>", Myc::Location.new("/tmp/1", 0))
@@ -188,7 +188,7 @@ describe "Typer" do
     end
 
     it "caches fn types" do
-      t = typer
+      t = spec_typer
 
       t1 = t.find("fn<i32, i32, i32>", Myc::Location.new("/tmp/1", 0))
       t2 = t.find("fn < i32 , i32 , i32 >", Myc::Location.new("/tmp/1", 0))

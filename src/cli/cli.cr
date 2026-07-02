@@ -125,36 +125,40 @@ class Myc::Cli
     ".txt"
   end
 
+  def ext
+    EXT
+  end
+
   private def usage
     <<-USAGE
 Usage: ./#{cli_name} COMMAND [OPTIONS] INPUT [INPUT]* [OUTPUT]
 
 Commands:
 
-  compile|c  ; compile multiple .myc files into executable binary
-             ;   ./#{cli_name} c file.myc out
-             ;   ./#{cli_name} c --release *.myc out
-             ;   cat file.myc | ./#{cli_name} c --release out
+  compile|c  ; compile multiple #{ext} files into executable binary
+             ;   ./#{cli_name} c file{ext} out
+             ;   ./#{cli_name} c --release *{ext} out
+             ;   cat file{ext} | ./#{cli_name} c --release out
 
-  run|r      ; compile multiple .myc files and run the program
-             ;   ./#{cli_name} r file.myc
-             ;   ./#{cli_name} r --release file.myc
-             ;   cat file.myc | ./#{cli_name} r --release
+  run|r      ; compile multiple #{ext} files and run the program
+             ;   ./#{cli_name} r file#{ext}
+             ;   ./#{cli_name} r --release file#{ext}
+             ;   cat file#{ext} | ./#{cli_name} r --release
 
-  obj|o      ; compile one .myc file into object file (.o) for linking
-             ;   ./#{cli_name} o file.myc file.o
-             ;   ./#{cli_name} o --release file.myc file.o
-             ;   cat file.myc | ./#{cli_name} o --release file.o
+  obj|o      ; compile one #{ext} file into object file (.o) for linking
+             ;   ./#{cli_name} o file#{ext} file.o
+             ;   ./#{cli_name} o --release file#{ext} file.o
+             ;   cat file#{ext} | ./#{cli_name} o --release file.o
 
   dump|d     ; output backend IR to console (for debugging and optimization analysis)
-             ;   ./#{cli_name} d file.myc
-             ;   ./#{cli_name} d --release file.myc
-             ;   cat file.myc | ./#{cli_name} d --release
+             ;   ./#{cli_name} d file#{ext}
+             ;   ./#{cli_name} d --release file#{ext}
+             ;   cat file#{ext} | ./#{cli_name} d --release
 
-  beautify|b ; format, validate, and add auto-comments to .myc files (--annotate adds stack state comments)
+  beautify|b ; format, validate, and add auto-comments to #{ext} files (--annotate adds stack state comments)
              ;   ./#{cli_name} b .
              ;   ./#{cli_name} b --annotate src/
-             ;   ./#{cli_name} b file1.myc file2.myc
+             ;   ./#{cli_name} b file1#{ext} file2#{ext}
 
   version|v  ; display version information
              ;   ./#{cli_name} version

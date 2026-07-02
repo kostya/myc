@@ -6,7 +6,7 @@ abstract class Myc::Backend::AbstractBackend
   abstract def obj(mod : Mod, output : String)
   abstract def new_builder : AbstractBuilder
 
-  CC = ENV["CC"]? || "cc"
+  CC = ENV["CC"]? || ENV["cc"]? || "cc"
 
   getter data : Cli::Data
   getter common_options : CommonOptions
@@ -41,15 +41,19 @@ abstract class Myc::Backend::AbstractBackend
     dump(validate(input), output)
   end
 
+  protected def ext
+    EXT
+  end
+
   protected def target_for_compile
     if data.values.size == 0
       raise data.error("nothing to compile")
     end
 
     last = data.values.last
-    if last.ends_with?(EXT) || last.ends_with?(".o")
+    if last.ends_with?(ext) || last.ends_with?(".o")
       if (data.values.size == 1) && data.stdin_filename.nil?
-        return File.basename(data.values.first, EXT)
+        return File.basename(data.values.first, ext)
       else
         return "a.out"
       end
@@ -62,7 +66,7 @@ abstract class Myc::Backend::AbstractBackend
     files = [] of String
     objs = [] of String
     data.values.each do |file|
-      if file.ends_with?(EXT)
+      if file.ends_with?(ext)
         files << file
       elsif file.ends_with?(".o")
         objs << file
@@ -125,7 +129,7 @@ abstract class Myc::Backend::AbstractBackend
   protected def _beautify
     files = data.values.flat_map do |path|
       if File.directory?(path)
-        Dir.glob("#{path}/**/*#{EXT}")
+        Dir.glob("#{path}/**/*#{ext}")
       elsif File.file?(path)
         [path]
       else
@@ -182,7 +186,7 @@ abstract class Myc::Backend::AbstractBackend
   end
 
   protected def object_for(input, ext = "o")
-    base_name = File.basename(input, EXT)
+    base_name = File.basename(input, ext)
     output = Path[input].parent / "#{base_name}.#{ext}"
     output.to_s
   end
@@ -246,11 +250,11 @@ abstract class Myc::Backend::AbstractBackend
   end
 
   private def parse_common_options : CommonOptions
-    target = if target_str = data.options.delete("target")
+    target = if target_str = data.options["target"]?
                Target.from_triple(target_str)
              end
 
-    release = !!data.options.delete("release")
+    release = !!data.options["release"]?
     CommonOptions.new(target: target, release: release)
   end
 
