@@ -11,7 +11,7 @@
 * Compiles to native code via LLVM, QBE, or C. 
 * Fast compilation, zero overhead. 
 * ~6500 lines in Crystal.
-* Includes mycc: a C subset compiler using mycIR as backend and libclang for C parsing.
+* Includes mycc as POC: a C subset compiler using myc as backend and libclang for parsing.
 
 
 ### Why?
@@ -25,7 +25,7 @@
 
 ### Current status
 
-Alpha. But already powerful. All 3 backends work smoothly. 3400 tests pass.
+Alpha. But already powerful. All 3 backends work smoothly. 3400 tests pass. Mycc can compile 16 of 29 .c files from LangArena benchmark.
 
 ### Ultimate goal
 
@@ -85,7 +85,7 @@ All opcodes [self documented](https://github.com/kostya/myc/tree/master/src/opco
 
 ## mycc: a C subset compiler
 
-POC. ~2000 lines of Crystal. Uses mycIR as backend and libclang for C parsing. Require LLVM >= 20.
+POC: a C subset compiler using myc as backend and libclang for parsing. Require LLVM >= 20.
 
 ```sh
 # Build
@@ -108,7 +108,9 @@ shards install; crystal build src/cli/mycc.cr -o ./mycc
 ./mycc examples/mycc/sieve.c d | ./myc-qbe d
 ```
 
-### Example: Brainfuck compiler with myc IR.
+## Exampls:
+
+### Brainfuck compiler with myc IR.
 
 ```sh
 cd benchmark/brainfuck-compiler
@@ -141,7 +143,7 @@ python3 bf2myc.py mandel.bf | ../../myc-llvm run --release
 | | myc-qbe | 76ms | 449ms |
 | | myc-c | 106ms | 446ms |
 
-### Example: factorial in mycIR, examples/ir/fact.myc, translation
+### Factorial in mycIR, examples/ir/fact.myc, translation
 
 <details>
 <summary>examples/ir/fact.myc</summary>
