@@ -235,11 +235,10 @@ class Examples
                          res += modes
                        end
                        res.uniq!
-
-                       puts "Register modes: #{res.inspect}"
                        res
                      end
 
+    puts "Test modes: #{filtered_modes.inspect}"
     filtered_modes.each do |backend, mode|
       examples.each do |example|
         example.register(backend, mode)
