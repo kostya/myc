@@ -197,8 +197,18 @@ class Myc::Backend::C::BB < Myc::Backend::AbstractBB
       emit "#{c_to} #{temp} = (#{c_to})(#{val});"
       wrap_res(temp, to_type, value.pp)
     when {Type::PtrType, Type::IntType}
+      if to_type.bytes_count >= builder.layout.target.pointer_size
+        emit "#{c_to} #{temp} = (#{c_to})(#{val});"
+        wrap_res(temp, to_type, value.pp)
+      end
+    when {Type::IntType, Type::Fn}
       emit "#{c_to} #{temp} = (#{c_to})(#{val});"
       wrap_res(temp, to_type, value.pp)
+    when {Type::Fn, Type::IntType}
+      if to_type.bytes_count >= builder.layout.target.pointer_size
+        emit "#{c_to} #{temp} = (#{c_to})(#{val});"
+        wrap_res(temp, to_type, value.pp)
+      end
     when {Type::PtrType, Type::Fn}
       if from_type.target_type.eq?(typer.void)
         emit "#{c_to} #{temp} = (#{c_to})(#{val});"

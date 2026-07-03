@@ -362,8 +362,18 @@ class Myc::Backend::QBE::BB < Myc::Backend::AbstractBB
       emit "#{t} =#{to_qbe} copy #{val}"
       wrap_res(t, to_type, value.pp)
     when {Type::PtrType, Type::IntType}
+      if to_type.bytes_count >= builder.layout.target.pointer_size
+        emit "#{t} =#{to_qbe} copy #{val}"
+        wrap_res(t, to_type, value.pp)
+      end
+    when {Type::IntType, Type::Fn}
       emit "#{t} =#{to_qbe} copy #{val}"
       wrap_res(t, to_type, value.pp)
+    when {Type::Fn, Type::IntType}
+      if to_type.bytes_count >= builder.layout.target.pointer_size
+        emit "#{t} =#{to_qbe} copy #{val}"
+        wrap_res(t, to_type, value.pp)
+      end
     when {Type::PtrType, Type::Fn}
       if from_type.target_type.eq?(typer.void)
         wrap_res(val, to_type, value.pp)

@@ -1,0 +1,21 @@
+FUNC :bla
+  ARGS
+    TYPE :i32
+  RETURN
+    TYPE :i32
+  BODY
+    PUSH 1
+    PARAM 0
+    BINARY :add
+    RET
+ENDFUNC
+
+FUNC :main
+  RETURN
+    TYPE :i32
+  BODY
+    ADDR :bla
+    AS :u8
+    PUSH 0
+    RET
+ENDFUNC

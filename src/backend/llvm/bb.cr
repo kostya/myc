@@ -283,8 +283,18 @@ class Myc::Backend::Llvm::BB < Myc::Backend::AbstractBB
       val = @llvm_builder.int2ptr(v, tt)
       wrap_res(val, to_type, value.pp)
     when {Type::PtrType, Type::IntType}
-      val = @llvm_builder.ptr2int(v, tt)
+      if to_type.bytes_count >= builder.layout.target.pointer_size
+        val = @llvm_builder.ptr2int(v, tt)
+        wrap_res(val, to_type, value.pp)
+      end
+    when {Type::IntType, Type::Fn}
+      val = @llvm_builder.int2ptr(v, tt)
       wrap_res(val, to_type, value.pp)
+    when {Type::Fn, Type::IntType}
+      if to_type.bytes_count >= builder.layout.target.pointer_size
+        val = @llvm_builder.ptr2int(v, tt)
+        wrap_res(val, to_type, value.pp)
+      end
     when {Type::PtrType, Type::Fn}
       if from_type.target_type.eq?(typer.void)
         wrap_res(v, to_type, value.pp)
