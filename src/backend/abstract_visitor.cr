@@ -34,6 +34,19 @@ abstract class Myc::Backend::AbstractVisitor
       raise error("FUNC :#{func_def.name} expected ret #{func_def.type_fn.ret}, but no RET was found")
     end
 
+    list = @func_def.body.not_nil!.list
+    if list.size > 0 && !list.last.is_a?(Opcode::Ret)
+      if func_def.have_ret?
+        local_name = "__myc_result__"
+        visit Opcode::Local.new(local_name, func_def.type_fn.ret)
+        if local = @locals[local_name]?
+          local.pp = Value::PP::Local.new(local_name)
+        end
+      end
+
+      visit Opcode::Ret.new
+    end
+
     self
   end
 
@@ -632,20 +645,23 @@ abstract class Myc::Backend::AbstractVisitor
   end
 
   def visit(op : Opcode::Ret)
-    if res = @func.result
-      @was_ret = true
+    @was_ret = true
+
+    if func_def.have_ret?
       value = pop_rhs
-      unless res.type.eq?(value.type)
-        if value2 = @bb.to?(value, value.type, res.type)
+      expected_type = func_def.type_fn.ret
+      unless expected_type.eq?(value.type)
+        if value2 = @bb.to?(value, value.type, expected_type)
           value = value2
         else
-          raise error("type mismatch: expected #{res.type}, got #{value.type}")
+          raise error("type mismatch: expected #{expected_type}, got #{value.type}")
         end
       end
-      res.store(self, value)
+      @bb.ret(value)
+    else
+      @bb.ret(nil)
     end
 
-    @bb.jmp(@func.ret_bb)
     @bb = fake_bb
   end
 

@@ -19,9 +19,10 @@ class Myc::Backend::C::BB < Myc::Backend::AbstractBB
 
   def ret(val : Value?)
     if val
-      emit "_result = #{c_val(val)};"
+      emit "return #{c_val(val)};"
+    else
+      emit "return;"
     end
-    emit "goto ret;"
   end
 
   def call(name : String, type_fn : Type::Fn, args : Array(Value)) : Value?
