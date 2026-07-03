@@ -151,14 +151,14 @@ class Myc::Backend::Llvm::BB < Myc::Backend::AbstractBB
       end
     in .eq?
       case ltype
-      when Type::IntType, Type::BoolType, Type::PtrType
+      when Type::IntType, Type::BoolType, Type::PtrType, Type::Fn
         wrap_res(@llvm_builder.icmp(LLVM::IntPredicate::EQ, l, r), typer.bool, lhs.pp)
       when Type::FloatType
         wrap_res(@llvm_builder.fcmp(LLVM::RealPredicate::OEQ, l, r), typer.bool, lhs.pp)
       end
     in .not_eq?
       case ltype
-      when Type::IntType, Type::BoolType, Type::PtrType
+      when Type::IntType, Type::BoolType, Type::PtrType, Type::Fn
         wrap_res(@llvm_builder.icmp(LLVM::IntPredicate::NE, l, r), typer.bool, lhs.pp)
       when Type::FloatType
         wrap_res(@llvm_builder.fcmp(LLVM::RealPredicate::ONE, l, r), typer.bool, lhs.pp)
@@ -285,6 +285,14 @@ class Myc::Backend::Llvm::BB < Myc::Backend::AbstractBB
     when {Type::PtrType, Type::IntType}
       val = @llvm_builder.ptr2int(v, tt)
       wrap_res(val, to_type, value.pp)
+    when {Type::PtrType, Type::Fn}
+      if from_type.target_type.eq?(typer.void)
+        wrap_res(v, to_type, value.pp)
+      end
+    when {Type::Fn, Type::PtrType}
+      if to_type.target_type.eq?(typer.void)
+        wrap_res(v, to_type, value.pp)
+      end
     end
   end
 

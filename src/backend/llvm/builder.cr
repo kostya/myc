@@ -102,7 +102,7 @@ class Myc::Backend::Llvm::Builder < Myc::Backend::AbstractBuilder
       when Float64 then llvm_type(type).const_double(value)
       when Int     then llvm_type(type).const_double(value.to_f64)
       end
-    when Type::StructType, Type::FlatType, Type::EnumType
+    when Type::StructType, Type::FlatType, Type::EnumType, Type::Fn
       case value
       when Int
         if value == 0

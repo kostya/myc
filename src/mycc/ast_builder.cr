@@ -79,18 +79,24 @@ class Myc::Mycc::ASTBuilder
       return TypedAST::Cast.new(addr, target_type, loc)
     end
 
-    if from.is_a?(Type::PtrType) && target_type.is_a?(Type::PtrType) &&
-       target_type.as(Type::PtrType).target_type.is_a?(Type::VoidType)
+    if target_type.is_a?(Type::PtrType) && from.eq?(mod.typer.voidp)
       return TypedAST::Cast.new(node, target_type, loc)
     end
 
-    if from.is_a?(Type::PtrType) && target_type.is_a?(Type::PtrType) &&
-       from.as(Type::PtrType).target_type.is_a?(Type::VoidType)
+    if from.is_a?(Type::PtrType) && target_type.eq?(mod.typer.voidp)
       return TypedAST::Cast.new(node, target_type, loc)
     end
 
     if from.is_a?(Type::IntType) && target_type.is_a?(Type::PtrType) &&
        node.is_a?(TypedAST::IntLiteral) && node.value == 0
+      return TypedAST::Cast.new(node, target_type, loc)
+    end
+
+    if from.is_a?(Type::Fn) && target_type.eq?(mod.typer.voidp)
+      return TypedAST::Cast.new(node, target_type, loc)
+    end
+
+    if from.eq?(mod.typer.voidp) && target_type.is_a?(Type::Fn)
       return TypedAST::Cast.new(node, target_type, loc)
     end
 

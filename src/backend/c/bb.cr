@@ -199,6 +199,16 @@ class Myc::Backend::C::BB < Myc::Backend::AbstractBB
     when {Type::PtrType, Type::IntType}
       emit "#{c_to} #{temp} = (#{c_to})(#{val});"
       wrap_res(temp, to_type, value.pp)
+    when {Type::PtrType, Type::Fn}
+      if from_type.target_type.eq?(typer.void)
+        emit "#{c_to} #{temp} = (#{c_to})(#{val});"
+        wrap_res(temp, to_type, value.pp)
+      end
+    when {Type::Fn, Type::PtrType}
+      if to_type.target_type.eq?(typer.void)
+        emit "#{c_to} #{temp} = (#{c_to})(#{val});"
+        wrap_res(temp, to_type, value.pp)
+      end
     end
   end
 

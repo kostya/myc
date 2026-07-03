@@ -364,6 +364,14 @@ class Myc::Backend::QBE::BB < Myc::Backend::AbstractBB
     when {Type::PtrType, Type::IntType}
       emit "#{t} =#{to_qbe} copy #{val}"
       wrap_res(t, to_type, value.pp)
+    when {Type::PtrType, Type::Fn}
+      if from_type.target_type.eq?(typer.void)
+        wrap_res(val, to_type, value.pp)
+      end
+    when {Type::Fn, Type::PtrType}
+      if to_type.target_type.eq?(typer.void)
+        wrap_res(val, to_type, value.pp)
+      end
     end
   end
 

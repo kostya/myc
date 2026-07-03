@@ -74,6 +74,10 @@ class Myc::Backend::Linter::BB < Myc::Backend::AbstractBB
       wrap_res(FAKE_VAL, to_type, value.pp)
     when {Type::PtrType, Type::IntType}
       wrap_res(FAKE_VAL, to_type, value.pp)
+    when {Type::PtrType, Type::Fn}
+      wrap_res(FAKE_VAL, to_type, value.pp) if from_type.target_type.eq?(func_def.mod.typer.void)
+    when {Type::Fn, Type::PtrType}
+      wrap_res(FAKE_VAL, to_type, value.pp) if to_type.target_type.eq?(func_def.mod.typer.void)
     end
   end
 
