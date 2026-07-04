@@ -1,7 +1,7 @@
 module Myc::Stats
   def debug(subsystem, &)
     {% if !flag?(:release) %}
-      if ENV["DEBUG"]? == "1"
+      if ENV["MYC_DEBUG"]? == "1"
         yield
       end
     {% end %}

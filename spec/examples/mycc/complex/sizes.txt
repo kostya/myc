@@ -1,0 +1,40 @@
+sizeof(char)               = 1
+sizeof(unsigned char)      = 1
+sizeof(signed char)        = 1
+sizeof(short)              = 2
+sizeof(unsigned short)     = 2
+sizeof(int)                = 4
+sizeof(unsigned int)       = 4
+sizeof(long)               = 8
+sizeof(unsigned long)      = 8
+sizeof(long long)          = 8
+sizeof(unsigned long long) = 8
+sizeof(float)              = 4
+sizeof(double)             = 8
+sizeof(long double)        = 8
+sizeof(void*)              = 8
+sizeof(char*)              = 8
+sizeof(int*)               = 8
+sizeof(double*)            = 8
+
+sizeof(char)     = 1
+sizeof('A')      = 4
+sizeof(c)        = 1
+sizeof(arr)      = 10
+sizeof(arr)/sizeof(arr[0]) = 10
+sizeof(ptr)      = 8
+sizeof(*ptr)     = 1
+
+sizeof(char[10])           = 10
+sizeof(int[5])             = 20
+sizeof(double[3])          = 24
+sizeof("Hello")           = 6
+sizeof("Hello World")     = 12
+sizeof(struct Simple)      = 8
+sizeof(struct WithPadding) = 24
+sizeof(union Data)         = 24
+sizeof(enum Color)         = 4
+sizeof(enum LargeEnum)     = 4
+
+sizeof(bool)               = 1
+sizeof(_Bool)              = 1

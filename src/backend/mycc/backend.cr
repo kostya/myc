@@ -58,14 +58,35 @@ class Myc::Backend::Mycc::Backend < Myc::Backend::AbstractBackend
     raise data.error("input not file `#{input}`") unless File.file?(input)
 
     io = Myc.measure("mycc") do
+      Myc.debug(:mycc) do
+        puts "---------------------------- Source ---------------------------------"
+        puts File.read(input)
+      end
+
       source = ::Myc::Mycc::Source.new(input)
       tu = source.clang_parse
+
+      Myc.debug(:mycc) do
+        puts "---------------------------- ClangAST ---------------------------------"
+        source.debug_ast(tu.cursor)
+      end
 
       builder = ::Myc::Mycc::ASTBuilder.new(source, tu)
       ast = builder.build
 
+      Myc.debug(:mycc) do
+        puts "---------------------------- TypedAST ---------------------------------"
+        p ast
+      end
+
       c = ::Myc::Mycc::CodeGenerator.new(builder.mod.typer, builder)
-      c.generate(ast)
+      mod = c.generate(ast)
+
+      Myc.debug(:mycc) do
+        puts "-------------------------------------------------------------"
+      end
+
+      mod
     end
 
     tmp = "/tmp/mycc_temp#{rand(100)}.myc"

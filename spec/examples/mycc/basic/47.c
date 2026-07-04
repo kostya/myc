@@ -1,6 +1,4 @@
-int bla(int x) {
-  return x + 1;
-}
+int bla(int x) { return x + 1; }
 
 int main() {
   typedef int (*func_t)(int);

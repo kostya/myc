@@ -1,11 +1,9 @@
-#define NULL ((void*)0)
+#define NULL ((void *)0)
 
-int bla(int x) {
-  return x + 1;
-}
+int bla(int x) { return x + 1; }
 
 int main() {
-  int(*tmp)(int) = NULL;
+  int (*tmp)(int) = NULL;
 
   if (tmp) {
     printf("no tmp\n");
