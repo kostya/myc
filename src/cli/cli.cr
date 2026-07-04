@@ -60,7 +60,7 @@ class Myc::Cli
       else
         if arg.starts_with?("--")
           if arg.includes?("=")
-            left, right = arg.split("=", 1)
+            left, right = arg.split("=")
             @data.options[left[2..-1]] = right
           else
             arg = arg[2..-1]

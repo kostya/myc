@@ -84,7 +84,6 @@ All opcodes [self documented](https://github.com/kostya/myc/tree/master/src/opco
 * Types: STRUCT, ENUM/VARIANT, FLAT + void, bool, i8..i64, u8..u64, f32, f64, ptr<T>.
 
 # mycc: a C subset compiler
----
 
 POC: a C subset compiler using myc as backend and libclang for parsing in 2300 lines. Require LLVM >= 20.
 
