@@ -1,15 +1,3 @@
-class Clang::TranslationUnit
-  def has_errors?
-    count = LibC.clang_getNumDiagnostics(self)
-    (0...count).any? do |i|
-      diag = LibC.clang_getDiagnostic(self, i)
-      severity = LibC.clang_getDiagnosticSeverity(diag)
-      LibC.clang_disposeDiagnostic(diag)
-      severity >= LibC::CXDiagnosticSeverity::Error
-    end
-  end
-end
-
 class Myc::Mycc::Source
   getter filename : String
   getter content : String
@@ -20,7 +8,7 @@ class Myc::Mycc::Source
   end
 
   def clang_parse : Clang::TranslationUnit
-    index = Clang::Index.new
+    index = Clang::Index.new(false, false)
     files = [Clang::UnsavedFile.new(filename, content)]
 
     args = [
@@ -43,7 +31,7 @@ class Myc::Mycc::Source
     tu = Clang::TranslationUnit.from_source(index, files, args)
 
     if tu.has_errors?
-      raise ClangError.new
+      raise ClangError.new(tu.error_messages.join("\n"))
     end
 
     tu
