@@ -376,7 +376,11 @@ class Myc::Mycc::CodeGenerator
   end
 
   def generate_expr(expr : TypedAST::CharLiteral)
-    emit("PUSH #{expr.value} :u8")
+    if expr.type.eq?(typer.i32)
+      emit("PUSH #{expr.value}")
+    else
+      emit("PUSH #{expr.value} #{type_s(expr.type)}")
+    end
   end
 
   def generate_expr(expr : TypedAST::StringLiteral)
