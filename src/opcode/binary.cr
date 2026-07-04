@@ -1,10 +1,10 @@
 # BINARY — Binary Operation
 #
 # Pops two values, performs the operation, pushes result.
-# First popped = RIGHT operand, second popped = LEFT operand.
+# First popped = left operand, second popped = right operand.
 # All types must match exactly — no implicit conversions.
 #
-# STACK: [right, left] -> [result]
+# STACK: [left, right] -> [result]
 #
 #   PUSH 10      ; right
 #   PUSH 5       ; left

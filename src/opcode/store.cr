@@ -2,7 +2,7 @@
 #
 # Writes a value to an l-value (pointer from LOCAL, GLOBAL, FIELD, DEREF).
 #
-# STACK: [value, l-value] - []
+# STACK: [l-value, value] - []
 #
 #   PUSH 42
 #   LOCAL :x :i32
