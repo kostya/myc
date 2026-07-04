@@ -1,7 +1,6 @@
 # STACK - Stack Manipulation
 #
 # Reorders values on the stack without changing them.
-# First pushed = bottom, last pushed = top.
 #
 # STACK effects:
 #

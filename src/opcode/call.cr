@@ -5,7 +5,7 @@
 # Pushes return value if function returns non-void.
 # Supports variadic functions (vaargs after declared args).
 #
-# STACK: [argN, ..., arg1, arg0] - [retval?]
+# STACK: [arg0, arg1, ..., argN] - [retval?]
 #
 #   PUSH 20      ; arg1
 #   PUSH 10      ; arg0
