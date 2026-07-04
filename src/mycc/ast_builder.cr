@@ -1102,6 +1102,9 @@ class Myc::Mycc::ASTBuilder
         default = [] of TypedAST::Stmt
         children(child).each do |default_child|
           if stmt = build_stmt(default_child)
+            if stmt.is_a?(TypedAST::Break)
+              break
+            end
             default << stmt
           end
         end
@@ -1145,16 +1148,9 @@ class Myc::Mycc::ASTBuilder
       when .decl_ref_expr?
         name = child.spelling
         values << @enum_values[name] if @enum_values.has_key?(name)
-      when .first_expr?
-        children(child).each do |inner|
-          if inner.kind.decl_ref_expr?
-            name = inner.spelling
-            values << @enum_values[name] if @enum_values.has_key?(name)
-          elsif inner.kind.character_literal?
-            ch = extract_character_value(inner)
-            values << ch.to_i64
-          end
-        end
+      when .paren_expr?, .first_expr?
+        values.concat(extract_case_values(child))
+      else
       end
     end
     values

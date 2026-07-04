@@ -37,7 +37,7 @@ class Myc::Backend::Mycc::Backend < Myc::Backend::AbstractBackend
 
   def myc_backend : Myc::Backend::AbstractBackend
     @myc_backend ||= begin
-      name = data.options["backend"]?.try(&.upcase).try(&.strip) || ENV["MYCC_BACKEND"]?
+      name = (data.options["backend"]? || ENV["MYCC_BACKEND"]?).try(&.upcase).try(&.strip)
       unless %w{LLVM QBE C}.includes?(name)
         name = "LLVM"
       end
@@ -85,13 +85,13 @@ class Myc::Backend::Mycc::Backend < Myc::Backend::AbstractBackend
       end
 
       c = ::Myc::Mycc::CodeGenerator.new(builder.mod.typer, builder)
-      mod = c.generate(ast)
+      res = c.generate(ast)
 
       Myc.debug(:mycc) do
         puts "-------------------------------------------------------------"
       end
 
-      mod
+      res
     end
 
     tmp = "/tmp/mycc_temp#{rand(100)}.myc"
