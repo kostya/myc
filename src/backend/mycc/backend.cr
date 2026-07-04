@@ -11,6 +11,10 @@ class Myc::Backend::Mycc::Backend < Myc::Backend::AbstractBackend
     ".c"
   end
 
+  protected def filename_source?(filename : String) : Bool
+    filename.ends_with?(ext) || filename.ends_with?(".myc")
+  end
+
   def self.version
     `#{Myc::VERSION}`
   end
@@ -54,6 +58,7 @@ class Myc::Backend::Mycc::Backend < Myc::Backend::AbstractBackend
   end
 
   protected def validate(input : String) : Mod
+    return super(input) if input.ends_with?(".myc")
     raise data.error("input not found `#{input}`") unless File.exists?(input)
     raise data.error("input not file `#{input}`") unless File.file?(input)
 

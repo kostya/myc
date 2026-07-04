@@ -41,17 +41,13 @@ abstract class Myc::Backend::AbstractBackend
     dump(validate(input), output)
   end
 
-  protected def ext
-    EXT
-  end
-
   protected def target_for_compile
     if data.values.size == 0
       raise data.error("nothing to compile")
     end
 
     last = data.values.last
-    if last.ends_with?(ext) || last.ends_with?(".o")
+    if filename_source?(last) || filename_object?(last)
       if (data.values.size == 1) && data.stdin_filename.nil?
         return File.basename(data.values.first, ext)
       else
@@ -66,9 +62,9 @@ abstract class Myc::Backend::AbstractBackend
     files = [] of String
     objs = [] of String
     data.values.each do |file|
-      if file.ends_with?(ext)
+      if filename_source?(file)
         files << file
-      elsif file.ends_with?(".o")
+      elsif filename_object?(file)
         objs << file
       elsif file == target
       else
@@ -304,5 +300,17 @@ abstract class Myc::Backend::AbstractBackend
 
       builder
     end
+  end
+
+  protected def ext
+    EXT
+  end
+
+  protected def filename_source?(filename : String) : Bool
+    filename.ends_with?(ext)
+  end
+
+  protected def filename_object?(filename : String) : Bool
+    filename.ends_with?(".o")
   end
 end
