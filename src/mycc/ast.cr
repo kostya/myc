@@ -100,6 +100,21 @@ module Myc::Mycc::TypedAST
     end
   end
 
+  class AssignExpr < Node
+    getter left : Node
+    getter right : Node
+
+    def initialize(@left, @right, @location)
+      @type = @left.type
+    end
+
+    private def inspect_fields(io : IO)
+      left.inspect(io)
+      io << ", "
+      right.inspect(io)
+    end
+  end
+
   class Call < Node
     getter func_name : String
     getter args : Array(Node)

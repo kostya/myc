@@ -1,0 +1,10 @@
+FUNC :main
+  BODY
+    PUSH 1
+    PUSH 10
+    PUSH 20
+    STACK :reverse 3
+    CREATE :flat<i32,3>
+    INSPECT
+ENDFUNC
+

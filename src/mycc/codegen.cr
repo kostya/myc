@@ -461,6 +461,14 @@ class Myc::Mycc::CodeGenerator
     end
   end
 
+  def generate_expr(expr : TypedAST::AssignExpr)
+    generate_expr(expr.left)
+    generate_expr(expr.right)
+    emit("STACK :swap2")
+    emit("STORE")
+    generate_expr(expr.left)
+  end
+
   def generate_expr(expr : TypedAST::Call)
     if expr.is_invoke
       callee = expr.args.first

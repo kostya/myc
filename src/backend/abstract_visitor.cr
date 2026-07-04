@@ -718,6 +718,11 @@ abstract class Myc::Backend::AbstractVisitor
       raise error("Stack underflow: need 2 values") if stack.size < 2
       stack.pop
       stack.pop
+    in .reverse?
+      amount = op.val || 2
+      pops = [] of Value
+      amount.times { pops << pop }
+      pops.each { |e| self << e }
     end
   end
 

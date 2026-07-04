@@ -13,6 +13,7 @@
 #   :nrot     [a, b, c] - [c, a, b]
 #   :dup2     [a, b] - [a, b, a, b]
 #   :drop2    [a, b] - []
+#   :reverse 3 [a, b, c] - [c, b, a]
 #
 #   PUSH 10
 #   PUSH 20
@@ -32,6 +33,7 @@ class Myc::Opcode::Stack < Myc::Opcode
     Nrot
     Dup2
     Drop2
+    Reverse
   end
 
   getter shift : Shift

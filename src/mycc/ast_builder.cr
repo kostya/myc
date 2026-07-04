@@ -250,7 +250,6 @@ class Myc::Mycc::ASTBuilder
     when .string_literal?        then build_string_literal(cursor)
     when .decl_ref_expr?         then build_var_ref(cursor)
     when .call_expr?             then build_call(cursor)
-    when .binary_operator?       then build_binary(cursor)
     when .unary_operator?        then build_unary(cursor)
     when .c_style_cast_expr?     then build_cast(cursor)
     when .array_subscript_expr?  then build_subscript(cursor)
@@ -259,6 +258,18 @@ class Myc::Mycc::ASTBuilder
     when .member_ref_expr?       then build_field(cursor)
     when .conditional_operator?  then build_conditional(cursor)
     when .compound_literal_expr? then build_compound_literal(cursor)
+    when .binary_operator?
+      op = cursor.spelling
+      if op == "="
+        children_list = children(cursor)
+        left = build_node(children_list[0]).not_nil!
+        right = build_node(children_list[1]).not_nil!
+        right = auto_cast(right, left.type, location(cursor))
+        mark_param_changed(left)
+        TypedAST::AssignExpr.new(left, right, location(cursor))
+      else
+        build_binary(cursor)
+      end
     when .paren_expr?, .first_expr?
       children = children(cursor)
       children.size == 1 ? build_node(children[0]) : nil
