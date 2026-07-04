@@ -63,18 +63,19 @@ class Myc::Backend::Llvm::Builder < Myc::Backend::AbstractBuilder
     llvm_type = llvm_type(global.type)
     var = llvm_mod.globals.add(llvm_type, global.name)
 
-    if initial_value = global.initial_value
-      if val = _constant_value?(initial_value, global.type)
-        var.initializer = val
+    if initial_value = global.initial_keyword
+      if initial_value = global.initial_value
+        if val = _constant_value?(initial_value, global.type)
+          var.initializer = val
+        else
+          raise global.node.error("cant translate constant #{initial_value.inspect}", mod.filename)
+        end
       else
-        raise global.node.error("cant translate constant #{initial_value.inspect}", mod.filename)
+        var.initializer = llvm_type.undef
       end
-      var.linkage = LLVM::Linkage::Internal
-    else
-      var.initializer = llvm_type.undef
-      var.linkage = LLVM::Linkage::External
     end
 
+    var.linkage = LLVM::Linkage::External
     var.global_constant = global.constant
 
     if global_links[global.name]?

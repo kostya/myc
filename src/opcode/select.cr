@@ -3,7 +3,7 @@
 # Pops condition (Bool), true_val, false_val. Pushes selected value.
 # Both values always evaluated - no branching.
 #
-# STACK: [Bool, true_val, false_val] - [selected]
+# STACK: [false_val, true_val, Bool] - [selected]
 #
 #   PUSH 10
 #   PUSH 20

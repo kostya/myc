@@ -14,6 +14,7 @@ class Myc::Mycc::ASTBuilder
     @globals = [] of TypedAST::VarDecl
     @enum_values = {} of String => Int64
     @enum_types = {} of String => Type
+    @called_functions = Set(String).new
   end
 
   def build : TypedAST::Program
@@ -43,9 +44,7 @@ class Myc::Mycc::ASTBuilder
     end
 
     tu.cursor.visit_children do |cursor|
-      if cursor.kind.function_decl?
-        functions << build_function(cursor)
-      elsif cursor.kind.var_decl?
+      if cursor.kind.var_decl?
         var_decl = build_var_decl(cursor)
         unless @globals.any? { |g| g.name == var_decl.name }
           @globals << var_decl
@@ -60,6 +59,32 @@ class Myc::Mycc::ASTBuilder
       Clang::ChildVisitResult::Continue
     end
 
+    tu.cursor.visit_children do |cursor|
+      if cursor.kind.function_decl?
+        if source_kind(cursor).user_source?
+          functions << build_function(cursor)
+        end
+      end
+      Clang::ChildVisitResult::Continue
+    end
+
+    called_functions_count = 0
+
+    loop do
+      break if called_functions_count == @called_functions.size
+      fn_add_list = Set(String).new(@called_functions - functions.map(&.name))
+      called_functions_count = @called_functions.size
+
+      tu.cursor.visit_children do |cursor|
+        if cursor.kind.function_decl?
+          if fn_add_list.includes?(cursor.spelling)
+            functions << build_function(cursor)
+          end
+        end
+        Clang::ChildVisitResult::Continue
+      end
+    end
+
     TypedAST::Program.new(functions, @structs.dup, @unions.dup, @globals)
   end
 
@@ -67,6 +92,12 @@ class Myc::Mycc::ASTBuilder
     node = auto_decay(node)
     return node if node.type.eq?(target_type)
     from = node.type
+
+    if (from.is_a?(Type::IntType) || from.is_a?(Type::FloatType) || from.is_a?(Type::PtrType)) &&
+       target_type.is_a?(Type::BoolType)
+      zero = from.is_a?(Type::FloatType) ? TypedAST::FloatLiteral.new(0.0, from, loc) : TypedAST::IntLiteral.new(0_i64, from, loc)
+      return TypedAST::BinaryOp.new(:not_eq, node, zero, mod.typer.bool, loc)
+    end
 
     if (from.is_a?(Type::IntType) || from.is_a?(Type::FloatType) || from.is_a?(Type::BoolType)) &&
        (target_type.is_a?(Type::IntType) || target_type.is_a?(Type::FloatType) || target_type.is_a?(Type::BoolType))
@@ -110,6 +141,7 @@ class Myc::Mycc::ASTBuilder
     @current_function_params.clear
     body = nil
 
+    func_type = get_type(cursor, cursor.type)
     return_type = get_type(cursor, cursor.result_type)
     @current_return_type = return_type
 
@@ -117,6 +149,9 @@ class Myc::Mycc::ASTBuilder
       case child.kind
       when .parm_decl?
         param_name = child.spelling
+        if param_name.empty?
+          param_name = "__param_#{@current_function_params.size}"
+        end
         param_type = get_type(child, child.type)
         @current_function_params[param_name] = TypedAST::Function::ParamInfo.new(param_name, param_type, @current_function_params.size)
       when .compound_stmt?
@@ -124,7 +159,8 @@ class Myc::Mycc::ASTBuilder
       end
     end
 
-    TypedAST::Function.new(name, @current_function_params.dup, return_type, body, location(cursor))
+    vaarg = func_type.is_a?(Type::Fn) ? func_type.vaarg : false
+    TypedAST::Function.new(name, @current_function_params.dup, return_type, body, location(cursor), vaarg)
   ensure
     @current_return_type = nil
     @current_function_name = old_name.not_nil!
@@ -559,6 +595,7 @@ class Myc::Mycc::ASTBuilder
       end
 
       vaargs_count = param_types ? args.size - param_types.size : 0
+      @called_functions << func_name
       TypedAST::Call.new(func_name, args, ret_type, location(cursor), vaargs_count: vaargs_count)
     end
   end
@@ -645,14 +682,14 @@ class Myc::Mycc::ASTBuilder
       right = ensure_bool(right)
       op_name = BINARY_MAP[op]? || :and
       result = TypedAST::BinaryOp.new(op_name, left, right, mod.typer.bool, loc)
-      auto_cast(result, mod.typer.i32, loc)
     when "<", ">", "<=", ">=", "==", "!="
       common = common_type(left.type, right.type)
       left = auto_cast(left, common, loc)
       right = auto_cast(right, common, loc)
       result = TypedAST::BinaryOp.new(op_name, left, right, mod.typer.bool, loc)
-      auto_cast(result, mod.typer.i32, loc)
     else
+      left = auto_cast(left, mod.typer.i32, loc) if left.type.is_a?(Type::BoolType)
+      right = auto_cast(right, mod.typer.i32, loc) if right.type.is_a?(Type::BoolType)
       if left.type.is_a?(Type::PtrType) && right.type.is_a?(Type::PtrType) && op_name == :sub
         TypedAST::BinaryOp.new(:sub, left, right, mod.typer.i64, loc)
       elsif left.type.is_a?(Type::PtrType) && right.type.is_a?(Type::IntType)
@@ -909,6 +946,7 @@ class Myc::Mycc::ASTBuilder
       value = @enum_values[name]
       return TypedAST::IntLiteral.new(value, mod.typer.i32, location(cursor))
     end
+    @called_functions << name if type.is_a?(Type::Fn)
     TypedAST::VarRef.new(name, type, location(cursor))
   end
 
@@ -1164,6 +1202,9 @@ class Myc::Mycc::ASTBuilder
     when .u_int128?, .int128?    then mod.typer.find("flat<i32, 4>", location(cursor))
     when .float?                 then mod.typer.f32
     when .double?                then mod.typer.f64
+    when .long_double?           then mod.typer.f64
+    when .block_pointer?
+      mod.typer.voidp
     when .pointer?
       pointee = get_type(cursor, canonical.pointee_type, count)
       if pointee.is_a?(Type::Fn)
@@ -1174,14 +1215,16 @@ class Myc::Mycc::ASTBuilder
     when .record?
       spelling = canonical.spelling
       spelling = spelling.sub("const ", "").sub("volatile ", "").sub("restrict ", "")
-      if spelling.starts_with?("union ")
-        name = spelling.sub("union ", "")
+      name = spelling
+      return mod.typer.voidp if name.includes?("unnamed")
+      if name.starts_with?("union ")
+        name = name.sub("union ", "")
         mod.typer.find(name, location(cursor))
-      elsif spelling.starts_with?("struct ")
-        name = spelling.sub("struct ", "")
+      elsif name.starts_with?("struct ")
+        name = name.sub("struct ", "")
         mod.typer.find(name, location(cursor))
       else
-        mod.typer.find(spelling, location(cursor))
+        mod.typer.find(name, location(cursor))
       end
     when .constant_array?
       mod.typer.find("flat<#{get_type(cursor, canonical.array_element_type, count)}, #{canonical.array_size}>", location(cursor))
@@ -1192,17 +1235,24 @@ class Myc::Mycc::ASTBuilder
     when .function_proto?
       ret = get_type(cursor, canonical.result_type, count)
       arg_types = canonical.arguments.map { |t| get_type(cursor, t, count) }
+      vaarg = canonical.variadic?
       id_name = String.build do |io|
         io << "fn<"
         arg_types.each_with_index do |t, i|
           io << ", " if i > 0
           io << t.id_name
         end
-        io << ", " if arg_types.size > 0
+        if vaarg
+          io << ", " if arg_types.size > 0
+          io << "..."
+        end
+        io << ", " if arg_types.size > 0 || vaarg
         io << ret.id_name
         io << '>'
       end
-      mod.typer.find(id_name, location(cursor))
+      type_fn = Type::Fn.new(arg_types, ret, vaarg: vaarg)
+      mod.typer.types_cache[id_name] ||= type_fn
+      type_fn
     when .function_no_proto?
       ret = get_type(cursor, canonical.result_type, count)
       id_name = "fn<#{ret.id_name}>"
@@ -1300,5 +1350,27 @@ class Myc::Mycc::ASTBuilder
       return TypedAST::Cast.new(addr, ptr_type, node.location)
     end
     node
+  end
+
+  enum SourceKind
+    UserSource
+    UserHeader
+    SystemHeader
+  end
+
+  private def source_kind(cursor) : SourceKind
+    return SourceKind::SystemHeader unless location = cursor.location
+    filename = location.file_name
+    return SourceKind::SystemHeader unless filename
+
+    if filename.includes?(@source.filename)
+      SourceKind::UserSource
+    elsif filename.starts_with?("/Library/") ||
+          filename.starts_with?("/usr/") ||
+          filename.starts_with?("/opt/")
+      SourceKind::SystemHeader
+    else
+      SourceKind::UserHeader
+    end
   end
 end

@@ -1,5 +1,6 @@
 GLOBAL :flags
   TYPE :i32
+  INITIAL 77
 ENDGLOBAL
 
 FUNC :main

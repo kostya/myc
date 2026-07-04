@@ -11,6 +11,7 @@ class Myc::Backend::Llvm::Func < Myc::Backend::AbstractFunc
       case attr
       when "noinline"
         @link.llvm_function.add_attribute LLVM::Attribute::NoInline
+      when "vaarg"
       else
         raise Error::ErrorLoc.new("unknown attr #{attr}", Location.new(func_def.mod.filename, func_def.node.offset))
       end

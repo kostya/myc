@@ -4,7 +4,7 @@
 # First pushed = last argument, last pushed = function pointer.
 # Pushes return value if function returns non-void.
 #
-# STACK: [fn_ptr, arg0, ..., argN] - [retval?]
+# STACK: [argN, ..., arg0, fn_ptr] - [retval?]
 #
 #   ; Direct call (known function)
 #   PUSH 20

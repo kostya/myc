@@ -108,12 +108,17 @@ class Examples
     end
 
     def run(backend : String, release : Bool)
+      p filename if ENV["FILENAME"]? == "1"
       data = Myc::Cli::Data.new
       data.mode = :run
       data.values << filename
 
       if release
         data.options["release"] = ""
+      end
+
+      unless multi_modules.empty?
+        data.values += multi_modules
       end
 
       runner = if kind.c?
@@ -154,7 +159,7 @@ class Examples
 
     main_files.each do |f|
       if keywords
-        next unless keywords.all? { |k| f.includes?(k) }
+        next unless keywords.any? { |k| f.includes?(k) }
       end
 
       kind = f.ends_with?(".myc") ? Kind::MYC : Kind::C
@@ -169,8 +174,7 @@ class Examples
                   ""
                 else
                   unless File.exists?(expect_file)
-                    puts "Warning no expect file for #{f}"
-                    next
+                    "-- not found file #{expect_file} --"
                   else
                     File.read(expect_file)
                   end

@@ -1,5 +1,6 @@
 GLOBAL :g
   TYPE :i32
+  INITIAL
 ENDGLOBAL
 
 FUNC :main

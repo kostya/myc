@@ -6,6 +6,7 @@ ENDENUM
 
 GLOBAL :g
   TYPE :Option
+  INITIAL
 ENDGLOBAL
 
 FUNC :main

@@ -29,16 +29,18 @@ class Myc::Backend::QBE::Builder < Myc::Backend::AbstractBuilder
     g = Value.new(BBVal.new("$#{global.name}"), global.type, Value::MM::Ref, global.constant ? Value::PP::GlobalConstant.new(global.name) : Value::PP::Global.new(global.name))
     @global_links[global.name] = g
 
+    return unless global.initial_keyword
+
     if global.type.needs_blit?
       fields = flatten_data_fields(global.type).join(", ")
-      @data_io << "data $#{global.name} = { #{fields} }\n"
+      @data_io << "export data $#{global.name} = { #{fields} }\n"
     else
       init_val = if val = global.initial_value
                    constant_value?(val, global.type).try(&.bbval.as(BBVal).val) || 0
                  else
                    0
                  end
-      @data_io << "data $#{global.name} = { #{qbe_type(global.type)} #{init_val} }\n"
+      @data_io << "export data $#{global.name} = { #{qbe_type(global.type)} #{init_val} }\n"
     end
   end
 

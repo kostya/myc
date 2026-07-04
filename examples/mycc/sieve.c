@@ -1,4 +1,6 @@
-double sqrt(double);
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
 
 int sieve_count(int limit) {
   if (limit < 2) {

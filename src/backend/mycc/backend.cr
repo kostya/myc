@@ -33,7 +33,7 @@ class Myc::Backend::Mycc::Backend < Myc::Backend::AbstractBackend
 
   def myc_backend : Myc::Backend::AbstractBackend
     @myc_backend ||= begin
-      name = data.options["backend"]?.try(&.upcase).try(&.strip)
+      name = data.options["backend"]?.try(&.upcase).try(&.strip) || ENV["MYCC_BACKEND"]?
       unless %w{LLVM QBE C}.includes?(name)
         name = "LLVM"
       end
@@ -64,7 +64,7 @@ class Myc::Backend::Mycc::Backend < Myc::Backend::AbstractBackend
       builder = ::Myc::Mycc::ASTBuilder.new(source, tu)
       ast = builder.build
 
-      c = ::Myc::Mycc::CodeGenerator.new(builder.mod.typer)
+      c = ::Myc::Mycc::CodeGenerator.new(builder.mod.typer, builder)
       c.generate(ast)
     end
 

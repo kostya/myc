@@ -1,6 +1,7 @@
 class Myc::Mycc::CodeGenerator
   getter io : IO
   getter typer : Mod::Typer
+  getter builder : ASTBuilder
 
   class VarInfo
     getter type : Type
@@ -12,7 +13,7 @@ class Myc::Mycc::CodeGenerator
     end
   end
 
-  def initialize(@typer)
+  def initialize(@typer, @builder)
     @indent = 0
     @io = IO::Memory.new
     @vars_stack = [Hash(String, VarInfo).new]
@@ -84,7 +85,7 @@ class Myc::Mycc::CodeGenerator
         when TypedAST::FloatLiteral
           emit("INITIAL #{init.value}")
         when TypedAST::StringLiteral
-          emit("INITIAL #{init.value}")
+          emit("INITIAL \"#{init.value}\"")
         end
       end
       emit("ENDGLOBAL")
@@ -92,7 +93,9 @@ class Myc::Mycc::CodeGenerator
       @globals[var.original_name] = var
     end
 
-    program.functions.each { |f| generate_function(f) }
+    program.functions.each do |f|
+      generate_function(f)
+    end
     io.rewind
     io
   end
@@ -124,6 +127,10 @@ class Myc::Mycc::CodeGenerator
       @indent += 1
       emit("  TYPE #{type_s(func.return_type)}")
       @indent -= 1
+    end
+
+    if func.vaarg
+      emit("ATTRIBUTES ATTR :vaarg")
     end
 
     if body = func.body

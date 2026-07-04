@@ -25,6 +25,13 @@ STRUCT :Program
   TYPE :ptr<CStrIter>
 ENDSTRUCT
 
+FUNC :strlen
+  ARGS
+    TYPE :ptr<u8>
+  RETURN
+    TYPE :u64
+ENDFUNC
+
 FUNC :new_cstr_iter
   ARGS
     TYPE :ptr<u8>

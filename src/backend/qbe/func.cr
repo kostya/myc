@@ -36,6 +36,7 @@ class Myc::Backend::QBE::Func < Myc::Backend::AbstractFunc
     @func_def.attributes.try &.each do |attr|
       case attr
       when "noinline"
+      when "vaarg"
       else
         raise Error::ErrorLoc.new("unknown attr #{attr}", Location.new(func_def.mod.filename, func_def.node.offset))
       end

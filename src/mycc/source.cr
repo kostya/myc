@@ -1,8 +1,4 @@
 class Myc::Mycc::Source
-  SYSTEM_INCLUDES = [
-    "-isysroot", "/Library/Developer/CommandLineTools/SDKs/MacOSX14.sdk",
-  ]
-
   getter filename : String
   getter content : String
 
@@ -20,9 +16,22 @@ class Myc::Mycc::Source
       "-std=c99",
       "-I#{File.dirname(filename)}",
       "-Wno-implicit-function-declaration",
-    ] + SYSTEM_INCLUDES
 
-    Clang::TranslationUnit.from_source(index, files, args)
+      "-D_FORTIFY_SOURCE=0",
+    ] + FindIncludePaths.new.find
+
+    if inc = ENV["MYCC_INCLUDE"]?
+      inc.strip.split(",").each do |part|
+        unless part.strip.empty?
+          args << "-I"
+          args << part
+        end
+      end
+    end
+
+    tu = Clang::TranslationUnit.from_source(index, files, args)
+
+    tu
   end
 
   def debug_ast(cursor : Clang::Cursor, indent = 0)

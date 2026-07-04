@@ -5,6 +5,7 @@ ENDSTRUCT
 
 GLOBAL :point_ptr
   TYPE :ptr<Point>
+  INITIAL
 ENDGLOBAL
 
 FUNC :main

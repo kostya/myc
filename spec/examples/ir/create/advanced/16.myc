@@ -5,6 +5,7 @@ ENDSTRUCT
 
 GLOBAL :gp
   TYPE :Point
+  INITIAL
 ENDGLOBAL
 
 FUNC :main

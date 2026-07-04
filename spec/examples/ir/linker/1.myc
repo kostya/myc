@@ -1,0 +1,14 @@
+FUNC :blah
+  ARGS
+    TYPE :i32
+  RETURN
+    TYPE :i32
+ENDFUNC
+
+FUNC :main
+  BODY
+    PUSH 15
+    CALL :blah
+    INSPECT
+ENDFUNC
+

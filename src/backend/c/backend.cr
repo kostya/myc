@@ -21,6 +21,8 @@ class Myc::Backend::C::Backend < Myc::Backend::AbstractBackend
               "-Wno-pointer-sign",
               "-Wno-constant-conversion",
               "-Wno-format-security",
+              "-Wno-incompatible-library-redeclaration",
+              "-Wno-implicit-function-declaration",
               "-o", output,
               tmp]
       args << "-O3" if common_options.release

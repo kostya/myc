@@ -1,9 +1,9 @@
 # PRINTF - Formatted Print
 #
 # Calls printf(format, args...). Pops format string then N args.
-# Args popped in order: last pushed = first format arg.
+# Args popped in order: last pushed = last format arg.
 #
-# STACK: [format: ptr<u8>, arg0, ..., argN] - []
+# STACK: [argN, ..., arg0, format: ptr<u8>] - []
 #
 #   PUSH 42
 #   PUSH "Hello %d\n"

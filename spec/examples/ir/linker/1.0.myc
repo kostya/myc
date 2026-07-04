@@ -1,0 +1,12 @@
+FUNC :blah
+  ARGS
+    TYPE :i32
+  RETURN
+    TYPE :i32
+  BODY
+    PARAM 0
+    PUSH 24
+    BINARY :add
+    RET
+ENDFUNC
+

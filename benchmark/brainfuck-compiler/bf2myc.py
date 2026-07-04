@@ -16,6 +16,7 @@ def compile_bf(bf_code: str) -> str:
     
     lines.append('FUNC putchar RETURN TYPE i32 ARGS TYPE i32 ENDFUNC')
     lines.append('FUNC getchar RETURN TYPE i32 ENDFUNC')
+    lines.append('FUNC free ARGS TYPE :ptr<void> ENDFUNC')
     
     lines.append('FUNC main')
     lines.append('BODY')

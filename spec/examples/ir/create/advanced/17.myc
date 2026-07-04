@@ -5,6 +5,7 @@ ENDFLAT
 
 GLOBAL :gv
   TYPE :Vec2
+  INITIAL
 ENDGLOBAL
 
 FUNC :main

@@ -35,6 +35,7 @@ class Myc::Backend::C::Func < Myc::Backend::AbstractFunc
       case attr
       when "noinline"
         attrs += "__attribute__((noinline))"
+      when "vaarg"
       else
         raise Error::ErrorLoc.new("unknown attr #{attr}", Location.new(func_def.mod.filename, func_def.node.offset))
       end

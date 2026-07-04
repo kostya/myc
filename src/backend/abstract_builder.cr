@@ -14,40 +14,24 @@ abstract class Myc::Backend::AbstractBuilder
   def add_std_funcs
     void = Mod::Typer::STD_TYPES["void"]
     i32 = Mod::Typer::STD_TYPES["i32"]
-    i64 = Mod::Typer::STD_TYPES["i64"]
+    u32 = Mod::Typer::STD_TYPES["u32"]
+
     u64 = Mod::Typer::STD_TYPES["u64"]
-    f64 = Mod::Typer::STD_TYPES["f64"]
+
     u8p = Mod::Typer::STD_TYPES["ptr<u8>"]
     voidp = Mod::Typer::STD_TYPES["ptr<void>"]
+
+    f32 = Mod::Typer::STD_TYPES["f32"]
+    f64 = Mod::Typer::STD_TYPES["f64"]
 
     h = Hash(String, Type::Fn).new
 
     h["printf"] = Type::Fn.new([u8p], i32, vaarg: true)
-    h["fprintf"] = Type::Fn.new([voidp, u8p], i32, vaarg: true)
-    h["sprintf"] = Type::Fn.new([u8p, u8p], i32, vaarg: true)
-    h["snprintf"] = Type::Fn.new([u8p, u64, u8p], i32, vaarg: true)
+
     h["malloc"] = Type::Fn.new([u64], voidp)
     h["calloc"] = Type::Fn.new([u64, u64], voidp)
-    h["realloc"] = Type::Fn.new([voidp, u64], voidp)
-    h["strncmp"] = Type::Fn.new([u8p, u8p, u64], i32)
-    h["memcpy"] = Type::Fn.new([voidp, voidp, u64], voidp)
-    h["memset"] = Type::Fn.new([voidp, i32, u64], voidp)
-    h["memcmp"] = Type::Fn.new([voidp, voidp, u64], i32)
+
     h["free"] = Type::Fn.new([voidp], void)
-    h["strlen"] = Type::Fn.new([u8p], u64)
-    h["strcmp"] = Type::Fn.new([u8p, u8p], i32)
-    h["strcpy"] = Type::Fn.new([u8p, u8p], u8p)
-    h["rand"] = Type::Fn.new([] of Type, i32)
-    h["exit"] = Type::Fn.new([i32], void)
-    h["abort"] = Type::Fn.new([] of Type, void)
-    h["fflush"] = Type::Fn.new([voidp], i32)
-    h["putchar"] = Type::Fn.new([i32], i32)
-    h["getchar"] = Type::Fn.new([] of Type, i32)
-    h["puts"] = Type::Fn.new([u8p], i32)
-    h["atoi"] = Type::Fn.new([u8p], i32)
-    h["atof"] = Type::Fn.new([u8p], f64)
-    h["abs"] = Type::Fn.new([i32], i32)
-    h["strchr"] = Type::Fn.new([u8p, i32], u8p)
 
     h
   end

@@ -10,8 +10,9 @@ class Myc::Backend::C::Builder < Myc::Backend::AbstractBuilder
     @temp_counter = 0
     @label_counter = 0
     @funcs = Array(Func).new
-    @data_forward_io = IO::Memory.new
     @data_io = IO::Memory.new
+    @typedef_io = IO::Memory.new
+    @typedef_forward_io = IO::Memory.new
   end
 
   def type_translator
@@ -44,6 +45,10 @@ class Myc::Backend::C::Builder < Myc::Backend::AbstractBuilder
     init_val = if val = global.initial_value
                  constant_value?(val, global.type).try(&.bbval.as(BBVal).val)
                end
+
+    unless global.initial_keyword
+      @data_io << "extern "
+    end
 
     @data_io << "const " if global.constant
     @data_io << c_type(global.type)
@@ -98,19 +103,34 @@ class Myc::Backend::C::Builder < Myc::Backend::AbstractBuilder
     end
 
     File.open(filename, "w") do |f|
-      f << "#include <stdio.h>\n"
-      f << "#include <stdlib.h>\n"
-      f << "#include <string.h>\n"
-      f << "#include <stdint.h>\n"
-      f << "#include <inttypes.h>\n\n"
+      add_shared_header(f)
 
-      copy_io(@data_forward_io, f)
+      copy_io(@typedef_forward_io, f)
+      copy_io(@typedef_io, f)
       copy_io(@data_io, f)
 
       @funcs.each do |fb|
         copy_io(fb.body_io, f)
       end
     end
+  end
+
+  private def add_shared_header(io)
+    io << "typedef unsigned char uint8_t;\n"
+    io << "typedef unsigned short uint16_t;\n"
+    io << "typedef unsigned int uint32_t;\n"
+    io << "typedef unsigned long long uint64_t;\n"
+    io << "typedef signed char int8_t;\n"
+    io << "typedef signed short int16_t;\n"
+    io << "typedef signed int int32_t;\n"
+    io << "typedef signed long long int64_t;\n"
+    io << "typedef unsigned long long size_t;\n"
+    io << "typedef long long intptr_t;\n"
+    io << "typedef unsigned long long uintptr_t;\n"
+    io << "#define NULL ((void*)0)\n"
+    io << "\n"
+
+    io << "void* memcpy(void* arg0, void* arg1, uint64_t arg2);\n"
   end
 
   def new_func(func_def : Mod::FuncDef) : AbstractFunc
@@ -125,23 +145,23 @@ class Myc::Backend::C::Builder < Myc::Backend::AbstractBuilder
   end
 
   def forward_declare(name)
-    @data_forward_io << "typedef struct #{name} #{name};\n"
+    @typedef_forward_io << "typedef struct #{name} #{name};\n"
   end
 
   def forward_declare_array(name, elem_type, count)
-    @data_forward_io << "typedef #{elem_type} #{name}[#{count}];\n"
+    @typedef_forward_io << "typedef #{elem_type} #{name}[#{count}];\n"
   end
 
   def define_struct(name, fields)
-    @data_io << "typedef struct #{name} { #{fields} } #{name};\n"
+    @typedef_io << "typedef struct #{name} { #{fields} } #{name};\n"
   end
 
   def define_enum(name, tag_type, payload_str)
-    @data_io << "typedef struct #{name} { #{tag_type} field0; #{payload_str} } #{name};\n"
+    @typedef_io << "typedef struct #{name} { #{tag_type} field0; #{payload_str} } #{name};\n"
   end
 
   def define_alias(alias_name, struct_name)
-    @data_io << "typedef struct #{struct_name} #{alias_name};\n"
+    @typedef_io << "typedef struct #{struct_name} #{alias_name};\n"
   end
 
   def func_head_str(name : String, type_fn : Type::Fn) : String

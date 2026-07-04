@@ -3,7 +3,7 @@
 # Pops fields from stack and constructs a struct, enum variant, or flat.
 # For enum variants, tag is set automatically.
 #
-# STACK: [field0, ..., fieldN] - [composite]
+# STACK: [fieldN, ..., field0] - [composite]
 #
 #   PUSH 20
 #   PUSH 10

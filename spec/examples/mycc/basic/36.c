@@ -6,6 +6,6 @@ int main() {
 
   size_t new_capacity = 10;
   new_capacity = new_capacity ? new_capacity * 2 : 1024;
-  printf("%d\n", new_capacity);
+  printf("%d\n", (int)new_capacity);
   return 0;
 }

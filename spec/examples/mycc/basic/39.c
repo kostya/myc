@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 int main() {
   char buf[100];
   int w = 800, h = 600;

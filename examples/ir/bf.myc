@@ -30,6 +30,13 @@ STRUCT :Tape
   TYPE :i32
 ENDSTRUCT
 
+FUNC :strlen
+  ARGS
+    TYPE :ptr<u8>
+  RETURN
+    TYPE :u64
+ENDFUNC
+
 FUNC :putchar
   ARGS
     TYPE :i32
