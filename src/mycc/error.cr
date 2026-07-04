@@ -1,6 +1,7 @@
-class Myc::Mycc::Error < Exception
-  getter cursor : Clang::Cursor
+class Myc::Mycc::Error < Myc::Error
+end
 
-  def initialize(@message, @cursor)
+class Myc::Mycc::ClangError < Myc::Mycc::Error
+  def print(io : IO)
   end
 end

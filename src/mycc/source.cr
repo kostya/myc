@@ -1,3 +1,15 @@
+class Clang::TranslationUnit
+  def has_errors?
+    count = LibC.clang_getNumDiagnostics(self)
+    (0...count).any? do |i|
+      diag = LibC.clang_getDiagnostic(self, i)
+      severity = LibC.clang_getDiagnosticSeverity(diag)
+      LibC.clang_disposeDiagnostic(diag)
+      severity >= LibC::CXDiagnosticSeverity::Error
+    end
+  end
+end
+
 class Myc::Mycc::Source
   getter filename : String
   getter content : String
@@ -16,7 +28,6 @@ class Myc::Mycc::Source
       "-std=c99",
       "-I#{File.dirname(filename)}",
       "-Wno-implicit-function-declaration",
-
       "-D_FORTIFY_SOURCE=0",
     ] + FindIncludePaths.new.find
 
@@ -30,6 +41,10 @@ class Myc::Mycc::Source
     end
 
     tu = Clang::TranslationUnit.from_source(index, files, args)
+
+    if tu.has_errors?
+      raise ClangError.new
+    end
 
     tu
   end
