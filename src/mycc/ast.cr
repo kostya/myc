@@ -429,21 +429,19 @@ module Myc::Mycc::TypedAST
   class Switch < Stmt
     getter value : Node
     getter cases : Array(Case)
-    getter default : Array(Stmt)?
 
-    def initialize(@value, @cases, @default, @location); end
+    def initialize(@value, @cases, @location); end
 
     private def inspect_fields(io : IO)
       value.inspect(io)
       cases.each_with_index do |c, index|
         io << ", "
-        io << "case("
+        if c.values.empty?
+          io << "default("
+        else
+          io << "case("
+        end
         {c.values, c.body, c.has_break}.inspect(io)
-        io << ")"
-      end
-      if d = default
-        io << ", default("
-        d.inspect(io)
         io << ")"
       end
     end
@@ -452,7 +450,7 @@ module Myc::Mycc::TypedAST
   class Case
     getter values : Array(Int64)
     getter body : Array(Stmt)
-    getter has_break : Bool
+    property has_break : Bool
 
     def initialize(@values, @body, @has_break, @location : Location)
     end

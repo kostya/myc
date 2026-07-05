@@ -1,0 +1,7 @@
+fall-through: x = 61
+with break: x = 22
+default first: x = 10
+multiple cases: x = 100
+empty case: x = 200
+no default: x = 5
+nested switch: x=10 y=20

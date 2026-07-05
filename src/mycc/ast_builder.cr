@@ -1072,60 +1072,52 @@ class Myc::Mycc::ASTBuilder
     children_list = children(cursor)
     value = build_node(children_list[0]).not_nil!
     cases = [] of TypedAST::Case
-    default = nil
-    current_values = [] of Int64
-    current_body = [] of TypedAST::Stmt
-    has_break = false
 
     children(children_list[1]).each do |child|
       case child.kind
       when .case_stmt?
-        if current_body.any? || current_values.any?
-          cases << TypedAST::Case.new(current_values, current_body, has_break, location(child))
-        end
-        current_values = extract_case_values(child)
-        current_body = [] of TypedAST::Stmt
-        has_break = false
-        nested_values = [] of Int64
-        nested_body = [] of TypedAST::Stmt
-        nested_break = false
-        collect_case_body(child, nested_values, nested_body, nested_break)
-        current_values.concat(nested_values)
-        current_body.concat(nested_body)
-        has_break = nested_break if nested_break
+        values = [extract_case_value(child)]
+        body = [] of TypedAST::Stmt
+        has_break = collect_case_values_and_body(child, values, body)
+        cases << TypedAST::Case.new(values, body, has_break, location(child))
       when .default_stmt?
-        if current_body.any? || current_values.any?
-          cases << TypedAST::Case.new(current_values, current_body, has_break, location(child))
-        end
-        current_values = [] of Int64
-        current_body = [] of TypedAST::Stmt
-        default = [] of TypedAST::Stmt
-        children(child).each do |default_child|
-          if stmt = build_stmt(default_child)
-            if stmt.is_a?(TypedAST::Break)
-              break
+        body = [] of TypedAST::Stmt
+        has_break = false
+        children(child).each do |child|
+          case child.kind
+          when .break_stmt?
+            has_break = true
+          else
+            if stmt = build_stmt(child)
+              body << stmt
             end
-            default << stmt
           end
         end
+        cases << TypedAST::Case.new([] of Int64, body, has_break, location(child))
       when .break_stmt?
-        has_break = true
+        if last_case = cases.last?
+          last_case.has_break = true
+        end
       else
         if stmt = build_stmt(child)
-          current_body << stmt
+          if last_case = cases.last?
+            last_case.body << stmt
+          end
         end
       end
     end
 
-    TypedAST::Switch.new(value, cases, default, location(cursor))
+    TypedAST::Switch.new(value, cases, location(cursor))
   end
 
-  private def collect_case_body(cursor, values, body, has_break)
+  private def collect_case_values_and_body(cursor, values, body) : Bool
+    has_break = false
     children(cursor).each do |child|
       case child.kind
       when .case_stmt?
-        values.concat(extract_case_values(child))
-        collect_case_body(child, values, body, has_break)
+        values << extract_case_value(child)
+        nested_break = collect_case_values_and_body(child, values, body)
+        has_break = nested_break || has_break
       when .break_stmt?
         has_break = true
       else
@@ -1134,26 +1126,26 @@ class Myc::Mycc::ASTBuilder
         end
       end
     end
+    has_break
   end
 
-  private def extract_case_values(cursor : Clang::Cursor) : Array(Int64)
-    values = [] of Int64
-    children(cursor).each do |child|
-      case child.kind
-      when .integer_literal?
-        values << extract_literal_value(child).to_i64
-      when .character_literal?
-        ch = extract_character_value(child)
-        values << ch.to_i64
-      when .decl_ref_expr?
-        name = child.spelling
-        values << @enum_values[name] if @enum_values.has_key?(name)
-      when .paren_expr?, .first_expr?
-        values.concat(extract_case_values(child))
-      else
-      end
+  private def extract_case_value(cursor : Clang::Cursor) : Int64
+    child = cursor.first_child?
+    raise error("case without value", cursor) unless child
+
+    case child.kind
+    when .integer_literal?
+      extract_literal_value(child).to_i64
+    when .character_literal?
+      extract_character_value(child).to_i64
+    when .decl_ref_expr?
+      name = child.spelling
+      @enum_values[name] || raise error("unknown enum value #{name}", cursor)
+    when .paren_expr?, .first_expr?
+      extract_case_value(child)
+    else
+      raise error("unexpected case value kind: #{child.kind}", cursor)
     end
-    values
   end
 
   private def extract_character_value(cursor : Clang::Cursor) : Int32
