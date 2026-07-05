@@ -15,6 +15,8 @@ class Myc::Mycc::ASTBuilder
     @enum_values = {} of String => Int64
     @enum_types = {} of String => Type
     @called_functions = Set(String).new
+    @unnamed_counter = 0_u64
+    @unnamed_types = Hash(String, Type).new
   end
 
   def build : TypedAST::Program
@@ -166,9 +168,9 @@ class Myc::Mycc::ASTBuilder
     @current_function_name = old_name.not_nil!
   end
 
-  private def build_struct_decl(cursor : Clang::Cursor)
-    name = cursor.spelling
-    return if name.empty?
+  private def build_struct_decl(cursor : Clang::Cursor, name : String? = nil)
+    name ||= cursor.spelling
+    return if name.empty? || name.includes?("unnamed")
 
     struct_type = mod.type_defs[name]?.try(&.type)
     unless struct_type.is_a?(Type::StructType)
@@ -189,9 +191,9 @@ class Myc::Mycc::ASTBuilder
     struct_type.data = fields.map { |_, t| t }
   end
 
-  private def build_union(cursor : Clang::Cursor)
-    name = cursor.spelling
-    return if name.empty?
+  private def build_union(cursor : Clang::Cursor, name : String? = nil)
+    name ||= cursor.spelling
+    return if name.empty? || name.includes?("unnamed")
 
     enum_type = Type::EnumType.new(name, mod.typer.i32)
     fields = [] of {String, Type}
@@ -290,6 +292,14 @@ class Myc::Mycc::ASTBuilder
             stmts << build_var_decl(decl_child)
           elsif decl_child.kind.struct_decl?
             build_struct_decl(decl_child)
+          elsif decl_child.kind.union_decl?
+            build_union(decl_child)
+          elsif decl_child.kind.typedef_decl?
+            type_name = decl_child.spelling
+            underlying_type = get_type(decl_child, decl_child.typedef_decl_underlying_type)
+            unless mod.type_defs[type_name]?
+              mod.type_defs[type_name] = Mod::TypeDef.new(cursor_to_node(decl_child), underlying_type)
+            end
           end
         end
       else
@@ -1246,7 +1256,31 @@ class Myc::Mycc::ASTBuilder
       spelling = canonical.spelling
       spelling = spelling.sub("const ", "").sub("volatile ", "").sub("restrict ", "")
       name = spelling
-      return mod.typer.voidp if name.includes?("unnamed")
+
+      if name.includes?("unnamed")
+        type_cursor = canonical.cursor
+        type_key = type_cursor.spelling
+
+        if cached = @unnamed_types[type_key]?
+          return cached
+        end
+        @unnamed_counter += 1
+        unique_name = "__inline_type_#{@unnamed_counter}"
+
+        result_type = if type_cursor.kind.union_decl?
+                        build_union(type_cursor, unique_name)
+                        mod.type_defs[unique_name]?.try(&.type) || raise error("unknown type #{name}", cursor)
+                      elsif type_cursor.kind.struct_decl?
+                        build_struct_decl(type_cursor, unique_name)
+                        mod.type_defs[unique_name]?.try(&.type) || raise error("unknown type #{name}", cursor)
+                      else
+                        raise error("unknown type #{name}", cursor)
+                      end
+
+        @unnamed_types[type_key] = result_type
+        return result_type
+      end
+
       if name.starts_with?("union ")
         name = name.sub("union ", "")
         mod.typer.find(name, location(cursor))
