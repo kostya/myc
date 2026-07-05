@@ -706,10 +706,16 @@ class Myc::Mycc::ASTBuilder
       op_name = BINARY_MAP[op]? || :and
       result = TypedAST::BinaryOp.new(op_name, left, right, mod.typer.bool, loc)
     when "<", ">", "<=", ">=", "==", "!="
-      common = common_type(left.type, right.type)
-      left = auto_cast(left, common, loc)
-      right = auto_cast(right, common, loc)
-      result = TypedAST::BinaryOp.new(op_name, left, right, mod.typer.bool, loc)
+      if left.type.is_a?(Type::PtrType) && right.type.is_a?(Type::PtrType)
+        left = TypedAST::Cast.new(left, mod.typer.u64, loc)
+        right = TypedAST::Cast.new(right, mod.typer.u64, loc)
+        result = TypedAST::BinaryOp.new(op_name, left, right, mod.typer.bool, loc)
+      else
+        common = common_type(left.type, right.type)
+        left = auto_cast(left, common, loc)
+        right = auto_cast(right, common, loc)
+        result = TypedAST::BinaryOp.new(op_name, left, right, mod.typer.bool, loc)
+      end
     else
       left = auto_cast(left, mod.typer.i32, loc) if left.type.is_a?(Type::BoolType)
       right = auto_cast(right, mod.typer.i32, loc) if right.type.is_a?(Type::BoolType)
@@ -762,6 +768,8 @@ class Myc::Mycc::ASTBuilder
       type = operand.not_nil!.type
       if type.is_a?(Type::PtrType)
         TypedAST::Deref.new(operand.not_nil!, type.target_type, loc)
+      elsif type.is_a?(Type::Fn)
+        operand.not_nil!
       else
         raise error("Cannot dereference non-pointer type #{type}", cursor)
       end

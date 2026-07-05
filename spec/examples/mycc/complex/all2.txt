@@ -1,0 +1,38 @@
+=== Pointer Tests ===
+  double ptr: **pp=42 (expect 42)
+  double ptr write: x=100 (expect 100)
+  triple ptr: x=77 (expect 77)
+  ptr to array: (*parr)[2]=3 (expect 3)
+  ptr to array write: arr[2]=99 (expect 99)
+  fn array: fns[0](5)=6 (expect 6)
+  fn array: fns[1](5)=10 (expect 10)
+  fn array: fns[2](5)=2 (expect 2)
+  fn ret ptr: *result=55 (expect 55)
+  linked: a=10
+  linked: a->next=20 (expect b addr)
+  linked: a->next->next=30 (expect 30)
+  linked: end is null
+  tree node: root=1 (expect 1)
+  tree node: left is null=1 (expect 1)
+  void* cast: 42 (expect 42)
+  void* to char*: 42 (expect 42)
+  ptr to const: *p=20 (expect 20)
+  ptr diff: q-p=5 (expect 5)
+  ptr+2: *(p+3)=30 (expect 30)
+  ptr[4]: p[4]=40 (expect 40)
+  ptr compare: p < q
+  ptr compare: p == arr
+  null: int* == 0
+  null: void* == 0
+  null: fn ptr == 0
+  null: all null
+  struct arr: pairs[0].a=10 (expect 10)
+  struct arr: pairs[1].b=40 (expect 40)
+  ternary ptr: *r=1 (expect 1)
+  first field: *id_ptr=123 (expect 123)
+  ptr to fn ptr: (**pfn)(42)=42 (expect 42)
+  ptr to fn ptr: (*pfn)(99)=99 (expect 99)
+  loop ptr sum: 20 (expect 20)
+  chain write: x=42 (expect 42)
+  chain read: y=43 (expect 43)
+=== ALL POINTER TESTS PASSED ===
