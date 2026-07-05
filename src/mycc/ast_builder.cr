@@ -1319,12 +1319,29 @@ class Myc::Mycc::ASTBuilder
     unless cursor.spelling.empty?
       return cursor.spelling
     end
+
     @tu.tokenize(cursor.extent) do |token|
       if token.kind.literal?
         return token.spelling
       end
     end
-    "0"
+
+    if result = cursor.evaluate
+      case result.kind
+      when LibC::CXEvalResultKind::Int
+        if result.unsigned?
+          return result.as_unsigned.to_s
+        else
+          return result.as_long_long.to_s
+        end
+      when LibC::CXEvalResultKind::Float
+        return result.as_double.to_s
+      when LibC::CXEvalResultKind::StrLiteral, LibC::CXEvalResultKind::ObjCStrLiteral, LibC::CXEvalResultKind::CFStr
+        return result.as_str
+      end
+    end
+
+    raise error("cannot extract literal value from #{cursor.kind}, bug in libclang", cursor)
   end
 
   private def parse_c_int_literal(value : String) : Int64

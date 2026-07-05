@@ -1,3 +1,4 @@
-i = 0
-i = 1
-i = 2
+do-while: 0 1 2 
+while:    0 1 2 
+do-while(0): 0 
+while(0): (none)

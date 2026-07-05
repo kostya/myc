@@ -293,18 +293,33 @@ class Myc::Mycc::CodeGenerator
     emit("LOOP")
     @indent += 1
 
+    emit("COND")
+    @indent += 1
+    emit("PUSH true")
+    @indent -= 1
+
     emit("BODY")
     @indent += 1
     push_scope
     stmt.body.each { |s| generate_stmt(s) }
+
+    generate_expr(stmt.condition)
+    emit("IF")
+    @indent += 1
+    emit("THEN")
+    @indent += 1
+
+    @indent -= 1
+    emit("ELSE")
+    @indent += 1
+    emit("BREAK")
+    @indent -= 1
+    @indent -= 1
+    emit("ENDIF")
     pop_scope
     @indent -= 1
 
-    emit("COND")
-    @indent += 1
-    generate_expr(stmt.condition)
-    @indent -= 1
-
+    emit("STEP")
     @indent -= 1
     emit("ENDLOOP")
   end
