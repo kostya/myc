@@ -120,7 +120,7 @@ class Myc::Mycc::ASTBuilder
       return TypedAST::Cast.new(node, target_type, loc)
     end
 
-    if from.is_a?(Type::IntType) && target_type.is_a?(Type::PtrType) &&
+    if from.is_a?(Type::IntType) && (target_type.is_a?(Type::PtrType) || target_type.is_a?(Type::Fn)) &&
        node.is_a?(TypedAST::IntLiteral) && node.value == 0
       return TypedAST::Cast.new(node, target_type, loc)
     end
@@ -294,6 +294,8 @@ class Myc::Mycc::ASTBuilder
             build_struct_decl(decl_child)
           elsif decl_child.kind.union_decl?
             build_union(decl_child)
+          elsif decl_child.kind.enum_decl?
+            build_enum(decl_child)
           elsif decl_child.kind.typedef_decl?
             type_name = decl_child.spelling
             underlying_type = get_type(decl_child, decl_child.typedef_decl_underlying_type)
@@ -784,7 +786,9 @@ class Myc::Mycc::ASTBuilder
                end
 
       mark_param_changed(operand.not_nil!)
-      TypedAST::UnaryOp.new(op_sym, operand.not_nil!, operand.not_nil!.type, loc, is_statement)
+
+      op_type = is_statement ? mod.typer.void : operand.not_nil!.type
+      TypedAST::UnaryOp.new(op_sym, operand.not_nil!, op_type, loc, is_statement)
     else
       operand || raise error("Unknown unary operator: #{op}", cursor)
     end
@@ -881,58 +885,67 @@ class Myc::Mycc::ASTBuilder
 
   private def build_for(cursor : Clang::Cursor) : TypedAST::For
     children_list = children(cursor)
-    body = build_stmt_or_stmts(children_list.last)
-    parts = children_list[0...-1]
+
+    semicolon_count = 0
+    tokens_after_open = 0
+    tokens_after_first_semi = 0
+    tokens_after_second_semi = 0
+    found_open = false
+
+    @tu.tokenize(cursor.extent) do |token|
+      sp = token.spelling
+
+      if sp == "("
+        found_open = true
+        next
+      end
+
+      next unless found_open
+
+      case sp
+      when ";"
+        semicolon_count += 1
+      else
+        case semicolon_count
+        when 0 then tokens_after_open += 1
+        when 1 then tokens_after_first_semi += 1
+        when 2 then tokens_after_second_semi += 1
+        end
+      end
+
+      break if semicolon_count >= 2 && tokens_after_second_semi > 0 && sp == ")"
+    end
+
+    has_init = tokens_after_open > 0
+    has_cond = tokens_after_first_semi > 0
+    has_step = tokens_after_second_semi > 0
+
+    parts = children_list[...-1]
     init = nil
     condition = nil
     update = nil
 
-    if parts.size >= 1
-      if parts[0].kind.decl_stmt? || (parts[0].kind.binary_operator? && parts[0].spelling == "=")
-        init = build_stmt(parts[0])
-      else
-        condition = ensure_bool(build_node(parts[0]).not_nil!)
-      end
+    part_idx = 0
+
+    if has_init && part_idx < parts.size
+      init = build_stmt(parts[part_idx])
+      part_idx += 1
     end
-    if parts.size >= 2
-      if init
-        condition = ensure_bool(build_node(parts[1]).not_nil!)
-      elsif parts[1].kind.binary_operator?
-        update = build_stmt(parts[1])
-      else
-        condition = ensure_bool(build_node(parts[1]).not_nil!)
-      end
+
+    if has_cond && part_idx < parts.size
+      node = build_node(parts[part_idx])
+      condition = ensure_bool(node) if node
+      part_idx += 1
     end
-    if parts.size >= 3
-      update = build_stmt(parts[2])
+
+    if has_step && part_idx < parts.size
+      update = build_stmt(parts[part_idx])
+      part_idx += 1
     end
+
+    body = build_stmt_or_stmts(children_list.last)
 
     TypedAST::For.new(init, condition, update, body, location(cursor))
-  end
-
-  private def build_int_literal(cursor : Clang::Cursor) : TypedAST::IntLiteral
-    value = extract_literal_value(cursor)
-    clean = value.gsub(/[LlUu]+$/, "")
-    type = get_type(cursor, cursor.type)
-    TypedAST::IntLiteral.new(parse_c_int_literal(clean), type, location(cursor))
-  end
-
-  private def build_float_literal(cursor : Clang::Cursor) : TypedAST::FloatLiteral
-    value = extract_literal_value(cursor)
-    clean = value.gsub(/[fFlL]$/, "").to_f64
-    type = get_type(cursor, cursor.type)
-    TypedAST::FloatLiteral.new(clean, type, location(cursor))
-  end
-
-  private def build_char_literal(cursor : Clang::Cursor) : TypedAST::CharLiteral
-    value = extract_literal_value(cursor)
-    ch = if value && value.size >= 3 && value[0] == '\''
-           value[1].ord
-         else
-           value.to_i
-         end
-    type = get_type(cursor, cursor.type)
-    TypedAST::CharLiteral.new(ch, type, location(cursor))
   end
 
   private def build_string_literal(cursor : Clang::Cursor) : TypedAST::StringLiteral
@@ -947,6 +960,24 @@ class Myc::Mycc::ASTBuilder
       .gsub(/\\[0-7]{1,3}/) { |m| m[1..].to_i(8).chr }
       .gsub(/\\x[0-9a-fA-F]{1,2}/) { |m| m[2..].to_i(16).chr }
     TypedAST::StringLiteral.new(value, mod.typer.u8p, location(cursor))
+  end
+
+  private def build_int_literal(cursor : Clang::Cursor) : TypedAST::IntLiteral
+    value = cursor.evaluate.try(&.as_long_long) || 0_i64
+    type = get_type(cursor, cursor.type)
+    TypedAST::IntLiteral.new(value, type, location(cursor))
+  end
+
+  private def build_float_literal(cursor : Clang::Cursor) : TypedAST::FloatLiteral
+    value = cursor.evaluate.try(&.as_double) || 0.0
+    type = get_type(cursor, cursor.type)
+    TypedAST::FloatLiteral.new(value, type, location(cursor))
+  end
+
+  private def build_char_literal(cursor : Clang::Cursor) : TypedAST::CharLiteral
+    value = cursor.evaluate.try(&.as_long_long.to_i) || 0
+    type = get_type(cursor, cursor.type)
+    TypedAST::CharLiteral.new(value, type, location(cursor))
   end
 
   private def build_conditional(cursor : Clang::Cursor) : TypedAST::Node
@@ -1144,10 +1175,14 @@ class Myc::Mycc::ASTBuilder
     raise error("case without value", cursor) unless child
 
     case child.kind
-    when .integer_literal?
-      extract_literal_value(child).to_i64
-    when .character_literal?
-      extract_character_value(child).to_i64
+    when .integer_literal?, .character_literal?
+      if result = child.evaluate
+        case result.kind
+        when LibC::CXEvalResultKind::Int
+          return result.as_long_long
+        end
+      end
+      raise error("cannot evaluate case value", cursor)
     when .decl_ref_expr?
       name = child.spelling
       @enum_values[name] || raise error("unknown enum value #{name}", cursor)
@@ -1155,15 +1190,6 @@ class Myc::Mycc::ASTBuilder
       extract_case_value(child)
     else
       raise error("unexpected case value kind: #{child.kind}", cursor)
-    end
-  end
-
-  private def extract_character_value(cursor : Clang::Cursor) : Int32
-    value = extract_literal_value(cursor)
-    if value && value.size >= 3 && value[0] == '\''
-      value[1].ord
-    else
-      value.to_i
     end
   end
 
@@ -1183,7 +1209,7 @@ class Myc::Mycc::ASTBuilder
     "+" => :add, "-" => :sub, "*" => :mul, "/" => :div,
     "<" => :less, ">" => :more, "<=" => :less_eq, ">=" => :more_eq,
     "==" => :eq, "!=" => :not_eq, "%" => :rem,
-    "&&" => :and, "||" => :or,
+    "&&" => :land, "||" => :lor,
     "&" => :and, "|" => :or, "^" => :xor, "<<" => :shl, ">>" => :shr,
     "<<=" => :shl, ">>=" => :shr,
   }
@@ -1339,47 +1365,6 @@ class Myc::Mycc::ASTBuilder
 
   private def error(msg, cursor) : Myc::Error::ErrorLoc
     Myc::Error::ErrorLoc.new(msg, location(cursor))
-  end
-
-  private def extract_literal_value(cursor : Clang::Cursor) : String
-    unless cursor.spelling.empty?
-      return cursor.spelling
-    end
-
-    @tu.tokenize(cursor.extent) do |token|
-      if token.kind.literal?
-        return token.spelling
-      end
-    end
-
-    if result = cursor.evaluate
-      case result.kind
-      when LibC::CXEvalResultKind::Int
-        if result.unsigned?
-          return result.as_unsigned.to_s
-        else
-          return result.as_long_long.to_s
-        end
-      when LibC::CXEvalResultKind::Float
-        return result.as_double.to_s
-      when LibC::CXEvalResultKind::StrLiteral, LibC::CXEvalResultKind::ObjCStrLiteral, LibC::CXEvalResultKind::CFStr
-        return result.as_str
-      end
-    end
-
-    raise error("cannot extract literal value from #{cursor.kind}, bug in libclang", cursor)
-  end
-
-  private def parse_c_int_literal(value : String) : Int64
-    if value.starts_with?("0b") || value.starts_with?("0B")
-      value[2..].to_i64(base: 2)
-    elsif value.starts_with?("0x") || value.starts_with?("0X")
-      value[2..].to_i64(base: 16)
-    elsif value.starts_with?('0') && value.size > 1 && !value.includes?('.')
-      value[1..].to_i64(base: 8)
-    else
-      value.to_i64
-    end
   end
 
   private def is_function_pointer?(cursor : Clang::Cursor) : Bool

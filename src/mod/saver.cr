@@ -108,9 +108,12 @@ class Myc::Mod::Saver
     g_node = sequence(Opcode::Code::GLOBAL, global.name)
     g_node.list << save_type(global.type)
 
-    if init = global.initial_value
-      init_node = opcode(Opcode::Code::INITIAL, init)
-      g_node.list << init_node
+    if global.initial_keyword
+      if init = global.initial_value
+        g_node.list << opcode(Opcode::Code::INITIAL, init)
+      else
+        g_node.list << opcode(Opcode::Code::INITIAL)
+      end
     end
 
     if global.constant

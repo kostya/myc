@@ -1,0 +1,112 @@
+=== Arrays ===
+  array basic: 1 2 3 4 5
+  array decay sum: 150
+  array modified via ptr: arr[2]=99
+  flat subscript: 100 200 300
+=== Implicit Casts ===
+  float->int: 3
+  double->int: 2
+  void*->int*: 42
+  null ptr: false
+  non-null ptr: true
+  int 5: true
+  int 0: false
+  int -1: true
+=== Literals ===
+  dec=42 hex=255 oct=63
+  float=3.140000 double=2.718000
+  char='A' int=65
+=== Increments ===
+  prefix: pre=11 res=11
+  postfix: post=11 res=10
+  ptr++: *p=20
+  (*p)++: arr[1]=21
+=== Compound Assign ===
+  compound: 1
+  ptr+=2: arr[2]=99
+=== Sizeof ===
+  sizeof(char)=1
+  sizeof(int)=4
+  sizeof(long)=8
+  sizeof(float)=4
+  sizeof(double)=8
+  sizeof(int*)=8
+  sizeof(void*)=8
+=== Ternary ===
+  max(1,2)=2
+  min(1,2)=1
+  max of three=30
+=== Goto ===
+  goto: x=3 (expect 3)
+  goto loop: sum=10 (expect 10)
+=== Strings ===
+  string: Hello, World!
+  char array: Hello
+=== Structs ===
+  struct: x=10 y=20
+  struct via ptr: x=30 y=40
+  nested struct: (0,0)-(100,200)
+=== Unions ===
+  union int: 42
+  union char: Z
+  union float: 3.140000
+=== Do-While ===
+  do-while: 3
+  do-while: 2
+  do-while: 1
+  do-while break: 1
+  do-while break: 2
+  do-while break: 3
+=== Unary ===
+  neg: -42
+  !0: 1
+  !42: 0
+  ~0: 4294967295
+=== Casts ===
+  cast double->int: 3
+  cast void*->int*: 42
+=== Continue ===
+  continue for: 8 (expect 8)
+  continue while: 12 (expect 12)
+=== Scopes ===
+  inner scope: x=2
+  inner-inner: x=3
+  inner again: x=2
+  outer: x=1
+=== Assign Expr ===
+  chain assign: a=42 b=42 c=42
+  assign in if: d=1
+=== Logical ===
+  && true: ok
+  && false: ok
+  || true: ok
+  || false: ok
+  short-circuit ||: x=0 (expect 0)
+  short-circuit &&: x=0 (expect 0)
+=== Switch ===
+  switch int: 2
+  switch char: B
+  switch fall-through: y=61 (expect 61)
+=== Invoke ===
+  invoke: 30 (expect 30)
+=== Static ===
+  static call1: 1
+  static call2: 2
+  static call3: 3
+=== Enum ===
+  enum value: 2
+  enum switch: GREEN
+  enum1 value: 2
+=== For Loops ===
+  for sum: 10
+  for no init: 0
+  for no init: 1
+  for no init: 2
+  for break: 0
+  for break: 1
+  for break: 2
+  for infinite: 1
+  for infinite: 2
+  for infinite: 3
+=== null fn ptr ===
+null_fn = 3

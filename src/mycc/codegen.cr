@@ -30,7 +30,9 @@ class Myc::Mycc::CodeGenerator
 
   def find_var(name : String) : VarInfo?
     @vars_stack.reverse_each do |scope|
-      return scope[name] if scope.has_key?(name)
+      if v = scope[name]?
+        return v
+      end
     end
     nil
   end
@@ -87,6 +89,8 @@ class Myc::Mycc::CodeGenerator
         when TypedAST::StringLiteral
           emit("INITIAL \"#{init.value}\"")
         end
+      elsif var.is_static
+        emit("INITIAL")
       end
       emit("ENDGLOBAL")
 
@@ -160,11 +164,8 @@ class Myc::Mycc::CodeGenerator
   def generate_stmt(stmt : TypedAST::ExprStmt)
     generate_expr(stmt.expr)
 
-    case expr = stmt.expr
-    when TypedAST::Call
-      if !returns_void?(expr) && expr.func_name != "printf"
-        emit("STACK :drop")
-      end
+    unless stmt.expr.type.id_name == "void"
+      emit("STACK :drop")
     end
   end
 
@@ -266,12 +267,14 @@ class Myc::Mycc::CodeGenerator
     emit("LOOP")
     @indent += 1
 
+    emit("COND")
+    @indent += 1
     if cond = stmt.condition
-      emit("COND")
-      @indent += 1
       generate_expr(cond)
-      @indent -= 1
+    else
+      emit("PUSH true")
     end
+    @indent -= 1
 
     emit("BODY")
     @indent += 1
@@ -423,6 +426,54 @@ class Myc::Mycc::CodeGenerator
   def generate_expr(expr : TypedAST::BinaryOp)
     case expr.op
     when :store
+    when :land
+      tmp = "__sc_and_#{@local_marks.size}"
+
+      generate_expr(expr.left)
+      emit_local(tmp, typer.bool)
+      emit("STORE")
+
+      emit_local(tmp, typer.bool)
+      emit("IF")
+      @indent += 1
+      emit("THEN")
+      @indent += 1
+      generate_expr(expr.right)
+      emit_local(tmp, typer.bool)
+      emit("STORE")
+      @indent -= 1
+      emit("ELSE")
+      @indent += 1
+
+      @indent -= 1
+      @indent -= 1
+      emit("ENDIF")
+
+      emit_local(tmp, typer.bool)
+    when :lor
+      tmp = "__sc_or_#{@local_marks.size}"
+
+      generate_expr(expr.left)
+      emit_local(tmp, typer.bool)
+      emit("STORE")
+
+      emit_local(tmp, typer.bool)
+      emit("IF")
+      @indent += 1
+      emit("THEN")
+      @indent += 1
+
+      @indent -= 1
+      emit("ELSE")
+      @indent += 1
+      generate_expr(expr.right)
+      emit_local(tmp, typer.bool)
+      emit("STORE")
+      @indent -= 1
+      @indent -= 1
+      emit("ENDIF")
+
+      emit_local(tmp, typer.bool)
     else
       generate_expr(expr.right)
       generate_expr(expr.left)
@@ -496,9 +547,6 @@ class Myc::Mycc::CodeGenerator
       invoke_args.reverse.each { |arg| generate_expr(arg) }
       generate_expr(callee)
       emit("INVOKE#{expr.vaargs_count > 0 ? " #{expr.vaargs_count}" : ""}")
-    elsif expr.func_name == "printf"
-      expr.args.reverse.each { |arg| generate_expr(arg) }
-      emit("PRINTF #{expr.args.size - 1}")
     else
       expr.args.reverse.each { |arg| generate_expr(arg) }
       emit("CALL :#{expr.func_name}#{expr.vaargs_count > 0 ? " #{expr.vaargs_count}" : ""}")

@@ -1,0 +1,30 @@
+=== Short-Circuit Tests ===
+  and(1,1): true
+  and(1,0): false
+  and(0,1): false
+  and(0,0): false
+  or(1,1): true
+  or(1,0): true
+  or(0,1): true
+  or(0,0): false
+  and sc &&: x=0 (expect 0)
+  and sc chain: y=0 (expect 0)
+  or short-circuit: ok
+  or sc ||: x=0 (expect 0)
+  or chain: ok
+  or sc chain: y=0 (expect 0)
+  side-effect: a=1 b=2 (expect a=1 b=2)
+  side-effect 2: c=0 d=0 (expect c=0 d=0)
+  side-effect 3: ok
+  side-effect 3: e=1 f=0 (expect e=1 f=0)
+  sc ptr: ok
+  sc null: ok (no crash)
+  sc ptr range: ok
+  nested sc: x=5 (expect 5)
+  nested sc 2: y=10 (expect 10)
+  nested sc 3: z=0 (expect 0)
+  precedence 1: a=1 b=0 (expect a=1 b=0)
+  precedence 2: c=0 (expect 0)
+  loop sc: i=3 count=3 (expect i=3 count=3)
+  ternary sc: result=42 x=0 (expect result=42 x=0)
+=== DONE ===

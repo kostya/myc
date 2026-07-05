@@ -1,0 +1,15 @@
+=== For All Combinations ===
+  for(;;): inf=2 (expect 2)
+  for(;cond;): a=2 (expect 2)
+  for(init;;): b=3 (expect 3)
+  for(;;step): c=2 (expect 2)
+  for(init;cond;): d=2 (expect 2)
+  for(init;;step): e=2 (expect 2)
+  for(;cond;step): f=2 (expect 2)
+  for(init;cond;step): g=2 (expect 2)
+  for(+=): h=12 (expect 12)
+  for empty body: i=3 (expect 3)
+  nested for: sum=6 (expect 6)
+  for continue: sum=8 (expect 8)
+  for break: sum=6 (expect 6)
+=== DONE ===
