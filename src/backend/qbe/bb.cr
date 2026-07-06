@@ -12,6 +12,16 @@ class Myc::Backend::QBE::BB < Myc::Backend::AbstractBB
     wrap_ref(name2, type, Value::PP::LocalUninitialized.new(name))
   end
 
+  def vla(type : Type, ptr_type : Type, size : Value) : Value
+    temp = new_temp
+    elem_size = @builder.layout.size_of(type)
+
+    bytes = new_temp
+    emit "#{bytes} =l mul #{qbe_val(size)}, #{elem_size}"
+    emit "#{temp} =l alloc8 #{bytes}"
+    wrap_val(temp, ptr_type, Value::PP::Vla.new)
+  end
+
   def load_ref(value : Value) : Value
     if value.type.needs_blit?
       return wrap_val(qbe_val(value), value.type, value.pp)

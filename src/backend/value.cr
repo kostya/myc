@@ -35,6 +35,7 @@ class Myc::Backend::Value
     record LocalUninitialized < PP, name : String
     record CallResult < PP, name : String
     record FnAddress < PP, name : String
+    record Vla < PP
   end
 
   getter bbval : AbstractBBVal

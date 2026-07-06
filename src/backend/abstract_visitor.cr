@@ -657,6 +657,12 @@ abstract class Myc::Backend::AbstractVisitor
     visit Opcode::As.new(mod.typer.to_ptr(op.type, op.offset))
   end
 
+  def visit(op : Opcode::Alloca)
+    size = pop_rhs
+    raise error("size should be int type, not #{size.type}") unless size.type.is_a?(Type::IntType)
+    self << @bb.vla(op.type, mod.typer.to_ptr(op.type, current_op.offset), size)
+  end
+
   def visit(op : Opcode::SizeOf)
     if type = op.type
       visit Opcode::Push.new(builder.layout.size_of(type).to_i64, mod.typer.u64)

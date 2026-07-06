@@ -32,6 +32,7 @@ class Myc::Opcode
     INVOKE
     GOTO
     LABEL
+    ALLOCA
 
     UNDEF    = 500
     TYPE

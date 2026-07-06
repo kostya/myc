@@ -14,6 +14,11 @@ class Myc::Backend::Llvm::BB < Myc::Backend::AbstractBB
     wrap_ref(@llvm_builder.alloca(llvm_type(type), name), type, Value::PP::LocalUninitialized.new(name))
   end
 
+  def vla(type : Type, ptr_type : Type, size : Value) : Value
+    val = @llvm_builder.build_array_alloca(llvm_type(type), llvm_val(size))
+    wrap_val(val, ptr_type, Value::PP::Vla.new)
+  end
+
   def load_ref(value : Value) : Value
     wrap_val(@llvm_builder.load(llvm_type(value), llvm_val(value)), value.type, value.pp)
   end

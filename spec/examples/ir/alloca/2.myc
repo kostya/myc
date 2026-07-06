@@ -1,0 +1,41 @@
+FUNC :memcpy
+  ARGS
+    TYPE :ptr<void>
+    TYPE :ptr<void>
+    TYPE :u64
+  RETURN
+    TYPE :ptr<void>
+ENDFUNC
+
+FUNC :main
+  BODY
+    PUSH 3
+    ALLOCA :i32
+    LOCAL :x :ptr<i32>
+    STORE
+    PUSH 1
+    LOCAL :x
+    DEREF
+    STORE
+    PUSH 2
+    PUSH 1
+    LOCAL :x
+    BINARY :add
+    DEREF
+    STORE
+    PUSH 3
+    PUSH 2
+    LOCAL :x
+    BINARY :add
+    DEREF
+    STORE
+    SIZEOF "flat<i32, 3>"
+    LOCAL :x
+    LOCAL :y "flat<i32, 3>"
+    ADDR
+    CALL :memcpy
+    STACK :drop
+    LOCAL :y
+    INSPECT
+ENDFUNC
+

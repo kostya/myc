@@ -1,4 +1,5 @@
 ## 0.6.0-dev
+* ALLOCA: for vla
 
 ## 0.5.0 (03.07.2026)
 * mycc: most work, now compile 16 from 29 files of LangArena benchmark

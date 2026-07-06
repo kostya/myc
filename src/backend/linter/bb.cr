@@ -5,6 +5,10 @@ class Myc::Backend::Linter::BB < Myc::Backend::AbstractBB
     wrap_ref(FAKE_VAL, type, Value::PP::LocalUninitialized.new(name))
   end
 
+  def vla(type : Type, ptr_type : Type, size : Value) : Value
+    wrap_val(FAKE_VAL, ptr_type, Value::PP::Vla.new)
+  end
+
   def load_ref(value : Value) : Value
     wrap_val(FAKE_VAL, value.type, value.pp)
   end

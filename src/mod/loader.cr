@@ -225,6 +225,8 @@ class Myc::Mod::Loader
       end
     when Opcode::Code::LOOP
       load_loop(node)
+    when Opcode::Code::ALLOCA
+      Opcode::Alloca.new(find_type(get_only_one_string_value(node), node)).with_position(node)
     when Opcode::Code::MALLOC
       Opcode::Malloc.new(find_type(get_only_one_string_value(node), node)).with_position(node)
     when Opcode::Code::SIZEOF

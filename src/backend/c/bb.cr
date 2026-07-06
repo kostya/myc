@@ -9,6 +9,12 @@ class Myc::Backend::C::BB < Myc::Backend::AbstractBB
     wrap_ref(name, type, Value::PP::LocalUninitialized.new(name))
   end
 
+  def vla(type : Type, ptr_type : Type, size : Value) : Value
+    temp = builder.new_temp
+    emit "#{c_type(type)} #{temp}[#{c_val(size)}];"
+    wrap_val(temp, ptr_type, Value::PP::Vla.new)
+  end
+
   def load_ref(value : Value) : Value
     wrap_val(c_val(value), value.type, value.pp)
   end

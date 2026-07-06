@@ -179,6 +179,7 @@ class Myc::Mod::Saver
              end
            when Opcode::Loop   then save_loop(op, locals_saved)
            when Opcode::Malloc then opcode(Opcode::Code::MALLOC, op.type.id_name)
+           when Opcode::Alloca then opcode(Opcode::Code::ALLOCA, op.type.id_name)
            when Opcode::SizeOf then op.type ? opcode(Opcode::Code::SIZEOF, op.type.not_nil!.id_name) : opcode(Opcode::Code::SIZEOF)
            when Opcode::Next   then opcode(Opcode::Code::NEXT)
            when Opcode::Param  then opcode(Opcode::Code::PARAM, op.index.to_i64)
