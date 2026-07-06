@@ -89,9 +89,8 @@ class Myc::Mycc::CodeGenerator
         when TypedAST::StringLiteral
           emit("INITIAL \"#{init.value}\"")
         end
-      elsif var.is_static
-        emit("INITIAL")
       end
+
       emit("ENDGLOBAL")
 
       @globals[var.original_name] = var

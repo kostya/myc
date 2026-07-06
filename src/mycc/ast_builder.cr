@@ -439,23 +439,44 @@ class Myc::Mycc::ASTBuilder
     name = cursor.spelling
     var_type = get_type(cursor, cursor.type)
     is_static = cursor.storage_class.static?
+    is_extern = cursor.storage_class.extern? && !is_static
 
     init = nil
-    children(cursor).each do |child|
-      if node = build_node(child)
-        init = node
+
+    if result = cursor.evaluate
+      case result.kind
+      when LibC::CXEvalResultKind::Int
+        init = TypedAST::IntLiteral.new(result.as_long_long, var_type, location(cursor))
+      when LibC::CXEvalResultKind::Float
+        init = TypedAST::FloatLiteral.new(result.as_double, var_type, location(cursor))
+      when LibC::CXEvalResultKind::StrLiteral
+        init = TypedAST::StringLiteral.new(result.as_str, var_type, location(cursor))
       end
     end
 
-    if init
-      if var_type.is_a?(Type::FlatType) && init.is_a?(TypedAST::IntLiteral)
-        init = nil
-      elsif var_type.is_a?(Type::FlatType) && init.is_a?(TypedAST::StringLiteral)
-      elsif init.is_a?(TypedAST::InitList)
-        init = resolve_init_list_types(init, var_type)
-        init = auto_cast(init, var_type, location(cursor)) if init.type != var_type
-      else
-        init = auto_cast(init, var_type, location(cursor))
+    unless init
+      children(cursor).each do |child|
+        if node = build_node(child)
+          init = node
+        end
+      end
+
+      if init
+        if var_type.is_a?(Type::FlatType) && init.is_a?(TypedAST::IntLiteral)
+          init = nil
+        elsif var_type.is_a?(Type::FlatType) && init.is_a?(TypedAST::StringLiteral)
+        elsif init.is_a?(TypedAST::InitList)
+          init = resolve_init_list_types(init, var_type)
+          init = auto_cast(init, var_type, location(cursor)) if init.type != var_type
+        else
+          init = auto_cast(init, var_type, location(cursor))
+        end
+      end
+    end
+
+    if (is_static || @current_function_name.empty?) && !is_extern
+      if init.nil? || (init.is_a?(TypedAST::Cast) && is_zero_cast?(init))
+        init = TypedAST::IntLiteral.new(0_i64, var_type, location(cursor))
       end
     end
 
@@ -467,8 +488,30 @@ class Myc::Mycc::ASTBuilder
         @globals << var
       end
       var
+    elsif @current_function_name.empty?
+      var = TypedAST::VarDecl.new(name, var_type, init, location(cursor), is_extern: is_extern && init.nil?)
+      if var_found = @globals.find { |g| g.name == var.name }
+        if var_found.is_extern && !var.is_extern
+          @globals.delete(var_found)
+          @globals << var
+        end
+      else
+        @globals << var
+      end
+      var
     else
       TypedAST::VarDecl.new(name, var_type, init, location(cursor))
+    end
+  end
+
+  private def is_zero_cast?(node : TypedAST::Node) : Bool
+    case node
+    when TypedAST::Cast
+      is_zero_cast?(node.operand)
+    when TypedAST::IntLiteral
+      node.value == 0
+    else
+      false
     end
   end
 
