@@ -1,0 +1,25 @@
+=== Decay Tests ===
+  take_int_ptr: 10
+  decay arg: ok
+  take_char_ptr: OK
+  decay char arg: ok
+  take_void_ptr: 1953718627
+  decay cast void*: ok
+  take_char_ptr: cast
+  decay cast char*: ok
+  take_int_ptr: 1953718627
+  decay cast int*: ok
+  decay assign: *p=1 *(p+1)=2
+  decay assign 2: *q=1
+  decay return: *ret=99
+  decay arith: *p=10
+  decay arith 2: *q=15
+  decay condition: arr is non-null
+  decay condition: null is false
+  decay subscript: arr[1]=14
+  decay subscript ptr: p[2]=21
+  decay unary: *p=200
+  decay deref: *arr=100
+  decay sizeof: sizeof(arr)=40 (expect 40)
+  decay sizeof char: sizeof(str)=5 (expect 5)
+=== DONE ===

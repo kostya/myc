@@ -808,11 +808,12 @@ class Myc::Mycc::ASTBuilder
     when "~"
       TypedAST::UnaryOp.new(:bnot, operand.not_nil!, operand.not_nil!.type, loc)
     when "*"
-      type = operand.not_nil!.type
+      operand = auto_decay(operand.not_nil!)
+      type = operand.type
       if type.is_a?(Type::PtrType)
-        TypedAST::Deref.new(operand.not_nil!, type.target_type, loc)
+        TypedAST::Deref.new(operand, type.target_type, loc)
       elsif type.is_a?(Type::Fn)
-        operand.not_nil!
+        operand
       else
         raise error("Cannot dereference non-pointer type #{type}", cursor)
       end
@@ -1061,11 +1062,18 @@ class Myc::Mycc::ASTBuilder
     tokens.first? == "++" || tokens.first? == "--"
   end
 
-  private def build_cast(cursor : Clang::Cursor) : TypedAST::Cast
+  private def build_cast(cursor : Clang::Cursor) : TypedAST::Node
     target_type = get_type(cursor, cursor.type)
     children_list = children(cursor)
     operand = children_list.size > 0 ? build_node(children_list.last) : nil
-    TypedAST::Cast.new(operand.not_nil!, target_type, location(cursor))
+    operand = auto_decay(operand.not_nil!)
+
+    from = operand.type
+    if (from.is_a?(Type::PtrType) || from.is_a?(Type::Fn)) && target_type.is_a?(Type::IntType)
+      operand = TypedAST::Cast.new(operand, mod.typer.u64, location(cursor))
+    end
+
+    TypedAST::Cast.new(operand, target_type, location(cursor))
   end
 
   private def build_subscript(cursor : Clang::Cursor) : TypedAST::Subscript
