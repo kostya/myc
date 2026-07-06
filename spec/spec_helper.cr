@@ -85,7 +85,7 @@ class Examples
     multi_modules : Array(String) do
     def register(backend : String, release : Bool)
       test_name = if kind.c?
-                    "[#{backend}#{release ? 1 : 0}] [cat #{rel_filename}] (crystal src/cli/mycc.cr #{rel_filename} d | crystal src/cli/#{backend.downcase}.cr d)"
+                    "[#{backend}#{release ? 1 : 0}] [cat #{rel_filename}] (crystal src/cli/mycc.cr #{rel_filename} --backend #{backend.downcase} d)"
                   else
                     "[#{backend}#{release ? 1 : 0}] [cat #{rel_filename}] (crystal src/cli/#{backend.downcase}.cr #{rel_filename} d)"
                   end

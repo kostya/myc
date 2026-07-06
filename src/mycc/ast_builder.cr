@@ -371,7 +371,13 @@ class Myc::Mycc::ASTBuilder
       build_switch(cursor)
     when .binary_operator?
       op = cursor.spelling
-      if op == "="
+      if op == ","
+        children_list = children(cursor)
+        stmts = [] of TypedAST::Stmt
+
+        collect_comma_stmts(cursor, stmts)
+        TypedAST::Block.new(stmts, location(cursor))
+      elsif op == "="
         children_list = children(cursor)
         left = build_node(children_list[0]).not_nil!
         right = build_node(children_list[1]).not_nil!
@@ -419,6 +425,18 @@ class Myc::Mycc::ASTBuilder
       TypedAST::Assign.new(left, value, location(cursor))
     else
       nil
+    end
+  end
+
+  private def collect_comma_stmts(cursor, stmts)
+    if cursor.kind.binary_operator? && cursor.spelling == ","
+      children_list = children(cursor)
+      collect_comma_stmts(children_list[0], stmts)
+      collect_comma_stmts(children_list[1], stmts)
+    else
+      if stmt = build_stmt(cursor)
+        stmts << stmt
+      end
     end
   end
 
@@ -768,6 +786,11 @@ class Myc::Mycc::ASTBuilder
         right = auto_cast(right, common, loc)
         result = TypedAST::BinaryOp.new(op_name, left, right, mod.typer.bool, loc)
       end
+    when ","
+      left = build_node(children_list[0]).not_nil!
+      right = build_node(children_list[1]).not_nil!
+
+      TypedAST::BinaryOp.new(:comma, left, right, right.type, loc)
     else
       left = auto_cast(left, mod.typer.i32, loc) if left.type.is_a?(Type::BoolType)
       right = auto_cast(right, mod.typer.i32, loc) if right.type.is_a?(Type::BoolType)

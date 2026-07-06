@@ -1,0 +1,22 @@
+=== Comma Tests ===
+  comma basic: a=3 (expect 3)
+  comma assign: x=6 y=5 (expect 6, 5)
+  comma chain: a=3 b=2 (expect 3, 2)
+  comma for: i=5 j=5 (expect 5, 5)
+  comma for multi: a=3 b=7 c=130 (expect 3, 7, 130)
+  comma side: x=3 y=30 (expect 3, 30)
+  comma for: i=0 j=10 k=20
+  comma for: i=1 j=9 k=25
+  comma for: i=2 j=8 k=30
+  comma for ptr: *p=1 *q=2 *r=3
+  comma for ptr: *p=2 *q=1 *r=13
+  comma for init only: x=3 y=70 (expect 3, 70)
+  comma for fn: idx=0 val=100
+  comma for fn: idx=1 val=101
+  comma for fn: idx=2 val=102
+  comma for fn: idx=3 val=103
+  comma for fn: idx=4 val=104
+  comma stmt: a=3 b=2 (expect 3, 2)
+test_comma_parens 0
+test_comma_parens 1
+=== DONE ===

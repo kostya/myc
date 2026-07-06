@@ -480,6 +480,10 @@ class Myc::Mycc::CodeGenerator
       emit("ENDIF")
 
       emit_local(tmp, typer.bool)
+    when :comma
+      generate_expr(expr.left)
+      emit("STACK :drop")
+      generate_expr(expr.right)
     else
       generate_expr(expr.right)
       generate_expr(expr.left)
