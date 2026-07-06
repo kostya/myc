@@ -274,9 +274,10 @@ module Myc::Mycc::TypedAST
     getter init : Node?
     getter is_static : Bool
     property is_extern : Bool
+    getter is_vla : Bool
     getter original_name : String
 
-    def initialize(@name, @var_type, @init, @location, @is_static = false, @is_extern = false, @original_name = name)
+    def initialize(@name, @var_type, @init, @location, @is_static = false, @is_extern = false, @is_vla = false, @original_name = name)
     end
 
     private def inspect_fields(io : IO)
@@ -289,6 +290,9 @@ module Myc::Mycc::TypedAST
       if is_static
         io << ", "
         io << "static(#{original_name})"
+      end
+      if is_vla
+        io << ", vla"
       end
       if i = init
         io << ", "

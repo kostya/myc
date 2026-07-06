@@ -1,0 +1,19 @@
+=== VLA Tests ===
+  basic: arr[0]=0 arr[2]=20 arr[4]=40
+  expr size: arr[6]=6
+  decay sum: 21
+  sizeof: arr=8 n*4=40
+  in loop: arr[3]=3
+  ptr: 0 20
+  cast: 42
+  ternary vla: p[4]=4
+  ternary vla: p[4]=40
+  conditional: arr[0]=0
+  conditional: n <= 0
+  recursive: bottom
+  recursive: arr[0]=1 depth=1
+  recursive: arr[0]=2 depth=2
+  recursive: arr[0]=3 depth=3
+  fn ptr: arr[9]=9
+  sc vla: temp[0]=99
+=== DONE ===

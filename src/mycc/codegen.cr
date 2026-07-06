@@ -182,7 +182,14 @@ class Myc::Mycc::CodeGenerator
   end
 
   def generate_stmt(stmt : TypedAST::VarDecl)
-    if stmt.is_static
+    if stmt.is_vla
+      generate_expr(stmt.init.not_nil!)
+      emit("ALLOCA #{type_s(stmt.var_type.as(Type::PtrType).target_type)}")
+      m_name = mangled_name(stmt.name)
+      current_vars[stmt.name] = VarInfo.new(stmt.var_type, m_name)
+      emit_local(m_name, stmt.var_type)
+      emit("STORE")
+    elsif stmt.is_static
     else
       m_name = mangled_name(stmt.name)
       current_vars[stmt.name] = VarInfo.new(stmt.var_type, m_name)

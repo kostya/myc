@@ -439,11 +439,20 @@ class Myc::Mycc::ASTBuilder
     name = cursor.spelling
     var_type = get_type(cursor, cursor.type)
     is_static = cursor.storage_class.static?
+    is_vla = cursor.type.canonical_type.kind.variable_array?
     is_extern = cursor.storage_class.extern? && !is_static
 
     init = nil
 
-    if result = cursor.evaluate
+    if is_vla
+      children(cursor).each do |child|
+        if size_node = build_node(child)
+          init = size_node
+        end
+      end
+    end
+
+    if !init && (result = cursor.evaluate)
       case result.kind
       when LibC::CXEvalResultKind::Int
         init = TypedAST::IntLiteral.new(result.as_long_long, var_type, location(cursor))
@@ -483,13 +492,13 @@ class Myc::Mycc::ASTBuilder
     if is_static
       func_name = @current_function_name.presence || "global"
       unique_name = "#{func_name}_#{name}"
-      var = TypedAST::VarDecl.new(unique_name, var_type, init, location(cursor), is_static: true, original_name: name)
+      var = TypedAST::VarDecl.new(unique_name, var_type, init, location(cursor), is_static: true, is_vla: is_vla, original_name: name)
       unless @globals.any? { |g| g.name == unique_name }
         @globals << var
       end
       var
     elsif @current_function_name.empty?
-      var = TypedAST::VarDecl.new(name, var_type, init, location(cursor), is_extern: is_extern && init.nil?)
+      var = TypedAST::VarDecl.new(name, var_type, init, location(cursor), is_extern: is_extern && init.nil?, is_vla: is_vla)
       if var_found = @globals.find { |g| g.name == var.name }
         if var_found.is_extern && !var.is_extern
           @globals.delete(var_found)
@@ -500,7 +509,7 @@ class Myc::Mycc::ASTBuilder
       end
       var
     else
-      TypedAST::VarDecl.new(name, var_type, init, location(cursor))
+      TypedAST::VarDecl.new(name, var_type, init, location(cursor), is_vla: is_vla)
     end
   end
 
@@ -1328,6 +1337,9 @@ class Myc::Mycc::ASTBuilder
     when .float?                 then mod.typer.f32
     when .double?                then mod.typer.f64
     when .long_double?           then mod.typer.f64
+    when .variable_array?
+      elem_type = get_type(cursor, canonical.array_element_type, count)
+      mod.typer.to_ptr(elem_type, location(cursor).offset)
     when .block_pointer?
       mod.typer.voidp
     when .pointer?
