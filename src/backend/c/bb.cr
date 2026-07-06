@@ -11,7 +11,9 @@ class Myc::Backend::C::BB < Myc::Backend::AbstractBB
 
   def vla(type : Type, ptr_type : Type, size : Value) : Value
     temp = builder.new_temp
-    emit "#{c_type(type)} #{temp}[#{c_val(size)}];"
+    elem_c_type = c_type(type)
+    size_val = c_val(size)
+    emit "#{elem_c_type} *#{temp} = (#{elem_c_type}*)alloca(#{size_val} * sizeof(#{elem_c_type}));"
     wrap_val(temp, ptr_type, Value::PP::Vla.new)
   end
 
