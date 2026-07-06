@@ -1,0 +1,6 @@
+FUNC :main
+  BODY
+    PUSH true
+    ALLOCA :i32
+ENDFUNC
+
