@@ -1,8 +1,11 @@
-## 0.6.0-dev
+## 0.6.0
 * ALLOCA: for vla
+* backend for mycc
+* mycc: many fixes, now can compile and run 20 of 30 .c files of LangArena benchmark
+* mycc: show parser errors
 
 ## 0.5.0 (03.07.2026)
-* mycc: most work, now compile 16 from 29 files of LangArena benchmark
+* mycc: most work, now compile 16 from 30 files of LangArena benchmark
 * added ptr minus ptr operation
 
 ## 0.4.0 (30.06.2026)
