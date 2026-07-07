@@ -158,6 +158,9 @@ class Myc::Mycc::ASTBuilder
         @current_function_params[param_name] = TypedAST::Function::ParamInfo.new(param_name, param_type, @current_function_params.size)
       when .compound_stmt?
         body = build_stmts(child)
+      when .first_attr?, .type_ref?, .first_expr?, .warn_unused_result_attr?, .const_attr?, .visibility_attr?, .asm_label_attr?
+      else
+        raise error("Unhandled child: #{child.kind}", child)
       end
     end
 
@@ -185,6 +188,13 @@ class Myc::Mycc::ASTBuilder
         field_name = child.spelling
         field_type = get_type(child, child.type)
         fields << {field_name, field_type}
+      elsif child.kind.union_decl?
+        build_union(child)
+      elsif child.kind.packed_attr?
+      elsif child.kind.struct_decl?
+        build_struct_decl(child)
+      else
+        raise error("Unhandled child: #{child.kind}", child)
       end
     end
     @structs[name] = fields
@@ -219,6 +229,11 @@ class Myc::Mycc::ASTBuilder
         ct.hidden = true
         ct.data = [field_type]
         variant.composite_value_type = ct
+      elsif child.kind.struct_decl?
+        build_struct_decl(child)
+      elsif child.kind.packed_attr?
+      else
+        raise error("Unhandled child: #{child.kind}", child)
       end
     end
 
@@ -235,6 +250,8 @@ class Myc::Mycc::ASTBuilder
         const_name = child.spelling
         const_value = child.enum_constant_decl_value
         @enum_values[const_name] = const_value
+      else
+        raise error("Unhandled child: #{child.kind}", child)
       end
       Clang::ChildVisitResult::Continue
     end
@@ -302,6 +319,8 @@ class Myc::Mycc::ASTBuilder
             unless mod.type_defs[type_name]?
               mod.type_defs[type_name] = Mod::TypeDef.new(cursor_to_node(decl_child), underlying_type)
             end
+          else
+            raise error("Unhandled child: #{child.kind}", decl_child)
           end
         end
       else
@@ -331,13 +350,32 @@ class Myc::Mycc::ASTBuilder
             if stmt = build_stmt(child)
               stmts << stmt
             end
+          when .null_stmt?
+          when .c_style_cast_expr?
+            target_type = get_type(child, child.type)
+            if target_type.id_name == "void"
+              children_list = children(child)
+              if children_list.size > 0
+                expr_node = build_node(children_list.last)
+                if expr_node
+                  stmts << TypedAST::ExprStmt.new(expr_node, location(child))
+                end
+              end
+            else
+              expr = build_cast(child)
+              stmts << TypedAST::ExprStmt.new(expr, location(child))
+            end
           when .label_stmt?
             stmts << TypedAST::Label.new(child.spelling, location(child))
             children(child).each do |label_child|
               if s = build_stmt(label_child)
                 stmts << s
+              else
+                raise error("Unhandled child: #{child.kind}", label_child)
               end
             end
+          else
+            raise error("Unhandled child: #{child.kind}", child)
           end
         end
       end
@@ -354,6 +392,8 @@ class Myc::Mycc::ASTBuilder
       children(cursor).each do |child|
         if child.kind.var_decl?
           return build_var_decl(child)
+        else
+          raise error("Unhandled child: #{child.kind}", child)
         end
       end
       nil
@@ -407,6 +447,8 @@ class Myc::Mycc::ASTBuilder
       children(cursor).each do |child|
         if child.kind.label_ref?
           label_name = child.spelling
+        else
+          raise error("Unhandled child: #{child.kind}", child)
         end
       end
       TypedAST::Goto.new(label_name, location(cursor))
@@ -433,9 +475,15 @@ class Myc::Mycc::ASTBuilder
       children_list = children(cursor)
       collect_comma_stmts(children_list[0], stmts)
       collect_comma_stmts(children_list[1], stmts)
+    elsif cursor.kind.paren_expr?
+      children(cursor).each do |child|
+        collect_comma_stmts(child, stmts)
+      end
     else
       if stmt = build_stmt(cursor)
         stmts << stmt
+      else
+        raise error("Unhandled child: #{cursor.kind}", cursor)
       end
     end
   end
@@ -445,6 +493,8 @@ class Myc::Mycc::ASTBuilder
     children(cursor).each do |child|
       if node = build_node(child)
         value = node
+      else
+        raise error("Unhandled child: #{child.kind}", child)
       end
     end
     if value && (ctr = @current_return_type)
@@ -466,6 +516,9 @@ class Myc::Mycc::ASTBuilder
       children(cursor).each do |child|
         if size_node = build_node(child)
           init = size_node
+        elsif child.kind.parm_decl? || child.kind.type_ref?
+        else
+          raise error("Unhandled child: #{child.kind}", child)
         end
       end
     end
@@ -485,6 +538,11 @@ class Myc::Mycc::ASTBuilder
       children(cursor).each do |child|
         if node = build_node(child)
           init = node
+        elsif child.kind.parm_decl? || child.kind.type_ref? ||
+              child.kind.struct_decl? || child.kind.union_decl? || child.kind.enum_decl? ||
+              child.kind.asm_label_attr?
+        else
+          raise error("Unhandled child: #{child.kind}", child)
         end
       end
 
@@ -671,6 +729,8 @@ class Myc::Mycc::ASTBuilder
         if node = build_node(child)
           next if node.is_a?(TypedAST::VarRef) && node.name == func_name
           args << node
+        else
+          raise error("Unhandled child: #{child.kind}", child)
         end
       end
 
@@ -728,6 +788,8 @@ class Myc::Mycc::ASTBuilder
       elsif child.kind.first_expr?
         found = find_callee_decl(child, func_name)
         return found if found
+      else
+        raise error("Unhandled child: #{child.kind}", child)
       end
     end
     nil
@@ -920,6 +982,8 @@ class Myc::Mycc::ASTBuilder
           end
           elements << node
           field_idx += 1
+        else
+          raise error("Unhandled child: #{child.kind}", child)
         end
       end
     end
@@ -1135,6 +1199,7 @@ class Myc::Mycc::ASTBuilder
 
   private def build_cast(cursor : Clang::Cursor) : TypedAST::Node
     target_type = get_type(cursor, cursor.type)
+
     children_list = children(cursor)
     operand = children_list.size > 0 ? build_node(children_list.last) : nil
     operand = auto_decay(operand.not_nil!)
@@ -1258,6 +1323,7 @@ class Myc::Mycc::ASTBuilder
           case child.kind
           when .break_stmt?
             has_break = true
+          when .null_stmt?
           when .compound_stmt?
             children(child).each do |inner|
               case inner.kind
@@ -1266,12 +1332,16 @@ class Myc::Mycc::ASTBuilder
               else
                 if stmt = build_stmt(inner)
                   body << stmt
+                else
+                  raise error("Unhandled child: #{child.kind}", inner)
                 end
               end
             end
           else
             if stmt = build_stmt(child)
               body << stmt
+            else
+              raise error("Unhandled child: #{child.kind}", child)
             end
           end
         end
@@ -1292,6 +1362,8 @@ class Myc::Mycc::ASTBuilder
               if last_case = cases.last?
                 last_case.body << stmt
               end
+            else
+              raise error("Unhandled child: #{child.kind}", inner)
             end
           end
         end
@@ -1300,6 +1372,8 @@ class Myc::Mycc::ASTBuilder
           if last_case = cases.last?
             last_case.body << stmt
           end
+        else
+          raise error("Unhandled child: #{child.kind}", child)
         end
       end
     end
@@ -1317,6 +1391,7 @@ class Myc::Mycc::ASTBuilder
         has_break = nested_break || has_break
       when .break_stmt?
         has_break = true
+      when .null_stmt?
       when .compound_stmt?
         children(child).each do |inner|
           case inner.kind
@@ -1325,12 +1400,17 @@ class Myc::Mycc::ASTBuilder
           else
             if stmt = build_stmt(inner)
               body << stmt
+            else
+              raise error("Unhandled child: #{child.kind}", inner)
             end
           end
         end
+      when .character_literal?, .integer_literal?, .first_expr?, .paren_expr?, .decl_ref_expr?
       else
         if stmt = build_stmt(child)
           body << stmt
+        else
+          raise error("Unhandled child: #{child.kind}", child)
         end
       end
     end
@@ -1563,6 +1643,8 @@ class Myc::Mycc::ASTBuilder
           return !inner.referenced.kind.function_decl?
         elsif inner.kind.member_ref_expr? && inner.spelling == func_name
           return true
+        else
+          raise error("Unhandled child: #{inner.kind}", inner)
         end
       end
     end

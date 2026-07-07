@@ -1,0 +1,5 @@
+=== Comma Parens Tests ===
+  parens comma: a=1 b=2 c=3 (expect 1, 2, 3)
+  nested parens: a=10 b=20 c=30 (expect 10, 20, 30)
+  mixed comma: a=100 b=200 c=300 (expect 100, 200, 300)
+=== DONE ===
