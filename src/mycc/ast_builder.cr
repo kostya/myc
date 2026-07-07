@@ -1004,6 +1004,16 @@ class Myc::Mycc::ASTBuilder
     has_cond = tokens_after_first_semi > 0
     has_step = tokens_after_second_semi > 0
 
+    if !has_init && !has_cond && !has_step
+      if children_list.size == 4
+        has_init = true
+        has_cond = true
+        has_step = true
+      else
+        raise error("cant parse for #{children_list.size} childs", cursor)
+      end
+    end
+
     parts = children_list[...-1]
     init = nil
     condition = nil
