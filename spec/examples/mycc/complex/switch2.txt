@@ -1,0 +1,4 @@
+=== Switch Case Block Tests ===
+  switch case block: result=42 (expect 42)
+  switch fallthrough block: result=30 (expect 30)
+=== DONE ===

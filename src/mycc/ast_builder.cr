@@ -1258,6 +1258,17 @@ class Myc::Mycc::ASTBuilder
           case child.kind
           when .break_stmt?
             has_break = true
+          when .compound_stmt?
+            children(child).each do |inner|
+              case inner.kind
+              when .break_stmt?
+                has_break = true
+              else
+                if stmt = build_stmt(inner)
+                  body << stmt
+                end
+              end
+            end
           else
             if stmt = build_stmt(child)
               body << stmt
@@ -1268,6 +1279,21 @@ class Myc::Mycc::ASTBuilder
       when .break_stmt?
         if last_case = cases.last?
           last_case.has_break = true
+        end
+      when .compound_stmt?
+        children(child).each do |inner|
+          case inner.kind
+          when .break_stmt?
+            if last_case = cases.last?
+              last_case.has_break = true
+            end
+          else
+            if stmt = build_stmt(inner)
+              if last_case = cases.last?
+                last_case.body << stmt
+              end
+            end
+          end
         end
       else
         if stmt = build_stmt(child)
@@ -1291,6 +1317,17 @@ class Myc::Mycc::ASTBuilder
         has_break = nested_break || has_break
       when .break_stmt?
         has_break = true
+      when .compound_stmt?
+        children(child).each do |inner|
+          case inner.kind
+          when .break_stmt?
+            has_break = true
+          else
+            if stmt = build_stmt(inner)
+              body << stmt
+            end
+          end
+        end
       else
         if stmt = build_stmt(child)
           body << stmt
