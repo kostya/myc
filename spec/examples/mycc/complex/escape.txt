@@ -1,0 +1,13 @@
+=== String Escape Tests ===
+  newline: hello
+world
+  tab: hello	world
+  backslash: hello\world
+  quote: hello"world
+  mixed: line1\nline2
+line3
+  csv: "point A\n, ""0""",1.0,,2.0,"[true\n, 0]",3.0
+  octal: helloAworld
+  hex: helloAworld
+  combo: \\n\t\"\101\x41
+=== DONE ===

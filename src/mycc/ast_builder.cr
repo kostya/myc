@@ -1045,14 +1045,43 @@ class Myc::Mycc::ASTBuilder
   private def build_string_literal(cursor : Clang::Cursor) : TypedAST::StringLiteral
     raw = cursor.spelling
     unquoted = raw[1..-2]
-    value = unquoted
-      .gsub("\\n", "\n")
-      .gsub("\\t", "\t")
-      .gsub("\\r", "\r")
-      .gsub("\\\"", "\"")
-      .gsub("\\\\", "\\")
-      .gsub(/\\[0-7]{1,3}/) { |m| m[1..].to_i(8).chr }
-      .gsub(/\\x[0-9a-fA-F]{1,2}/) { |m| m[2..].to_i(16).chr }
+
+    value = String.build do |str|
+      i = 0
+      while i < unquoted.size
+        if unquoted[i] == '\\' && i + 1 < unquoted.size
+          case unquoted[i + 1]
+          when 'n'  then str << '\n'
+          when 't'  then str << '\t'
+          when 'r'  then str << '\r'
+          when '\\' then str << '\\'
+          when '"'  then str << '"'
+          when '\'' then str << '\''
+          when '0'
+            if i + 3 < unquoted.size && unquoted[i + 2].in?('0'..'7') && unquoted[i + 3].in?('0'..'7')
+              str << unquoted[i + 1..i + 3].to_i(8).chr
+              i += 3
+              next
+            else
+              str << '\0'
+            end
+          when 'x'
+            if i + 3 < unquoted.size
+              str << unquoted[i + 2..i + 3].to_i(16).chr
+              i += 3
+              next
+            end
+          else
+            str << unquoted[i + 1]
+          end
+          i += 2
+        else
+          str << unquoted[i]
+          i += 1
+        end
+      end
+    end
+
     TypedAST::StringLiteral.new(value, mod.typer.u8p, location(cursor))
   end
 
