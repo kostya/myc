@@ -558,6 +558,20 @@ class Myc::Mycc::CodeGenerator
       generate_expr(callee)
       emit("INVOKE#{expr.vaargs_count > 0 ? " #{expr.vaargs_count}" : ""}")
     else
+      case expr.func_name
+      when "__builtin_expect"
+        generate_expr(expr.args[0])
+        return
+      when "__builtin_constant_p"
+        case expr.args[0]
+        when TypedAST::IntLiteral, TypedAST::FloatLiteral
+          emit("PUSH 1")
+        else
+          emit("PUSH 0")
+        end
+        return
+      end
+
       expr.args.reverse.each { |arg| generate_expr(arg) }
       emit("CALL :#{expr.func_name}#{expr.vaargs_count > 0 ? " #{expr.vaargs_count}" : ""}")
     end
