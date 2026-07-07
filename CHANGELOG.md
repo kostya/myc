@@ -1,4 +1,6 @@
-## 0.6.0
+## 0.7.0-dev
+
+## 0.6.0 (07.07.2026)
 * ALLOCA: for vla
 * backend for mycc
 * mycc: many fixes, now can compile and run 20 of 30 .c files of LangArena benchmark
