@@ -955,24 +955,19 @@ class Myc::Mycc::ASTBuilder
     op = cursor.spelling
     return op unless op.empty?
 
-    tokens = [] of String
-    @tu.tokenize(cursor.extent) do |token|
-      tokens << token.spelling if token.kind.punctuation?
+    case cursor.unary_operator_kind
+    when LibC::CXUnaryOperatorKind::AddrOf  then "&"
+    when LibC::CXUnaryOperatorKind::Deref   then "*"
+    when LibC::CXUnaryOperatorKind::Minus   then "-"
+    when LibC::CXUnaryOperatorKind::LNot    then "!"
+    when LibC::CXUnaryOperatorKind::Not     then "~"
+    when LibC::CXUnaryOperatorKind::PostInc then "++"
+    when LibC::CXUnaryOperatorKind::PostDec then "--"
+    when LibC::CXUnaryOperatorKind::PreInc  then "++"
+    when LibC::CXUnaryOperatorKind::PreDec  then "--"
+    else
+      raise error("unknown unary_op", cursor)
     end
-
-    if {"*", "&", "-", "!", "~"}.includes?(tokens.first?)
-      return tokens.first
-    end
-
-    if {"++", "--"}.includes?(tokens.first?)
-      return tokens.first
-    end
-
-    if {"++", "--"}.includes?(tokens.last?)
-      return tokens.last
-    end
-
-    ""
   end
 
   private def build_init_list(cursor : Clang::Cursor, target_type : Type? = nil) : TypedAST::InitList
