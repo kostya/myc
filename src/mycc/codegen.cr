@@ -394,7 +394,9 @@ class Myc::Mycc::CodeGenerator
     case_counter = 0
     stmt.cases.each do |c|
       emit("LABEL \"#{label}__case_#{case_counter}\"")
+      push_scope
       c.body.each { |s| generate_stmt(s) }
+      pop_scope
       emit("GOTO \"#{label}_end\"") if c.has_break
       case_counter += 1
     end

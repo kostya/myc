@@ -1,0 +1,12 @@
+=== Switch/If Scopes ===
+value = 10
+value = 0
+value = 30
+value = 0
+value = 100
+value = 0
+  inner: value=2 (expect 2)
+  inner-inner: value=3 (expect 3)
+  inner again: value=2 (expect 2)
+  outer: value=1 (expect 1)
+=== DONE ===
