@@ -155,6 +155,10 @@ class Myc::Mycc::ASTBuilder
           param_name = "__param_#{@current_function_params.size}"
         end
         param_type = get_type(child, child.type)
+        if param_type.is_a?(Type::FlatType)
+          param_type = mod.typer.to_ptr(param_type.target_type, location(child).offset)
+        end
+
         @current_function_params[param_name] = TypedAST::Function::ParamInfo.new(param_name, param_type, @current_function_params.size)
       when .compound_stmt?
         body = build_stmts(child)
@@ -1188,6 +1192,9 @@ class Myc::Mycc::ASTBuilder
   private def build_var_ref(cursor : Clang::Cursor) : TypedAST::Node
     name = cursor.spelling
     type = get_type(cursor, cursor.type)
+    if @current_function_params.has_key?(name) && type.is_a?(Type::FlatType)
+      type = mod.typer.to_ptr(type.target_type, location(cursor).offset)
+    end
     if @enum_values.has_key?(name)
       value = @enum_values[name]
       return TypedAST::IntLiteral.new(value, mod.typer.i32, location(cursor))
