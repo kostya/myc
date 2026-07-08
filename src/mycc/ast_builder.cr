@@ -547,6 +547,12 @@ class Myc::Mycc::ASTBuilder
       end
 
       if init
+        if init.is_a?(TypedAST::InitList) && init.elements.size > 0
+          all_zeros = init.elements.all? { |elem| elem.is_a?(TypedAST::IntLiteral) && elem.value == 0 }
+          if all_zeros
+            init = TypedAST::ZeroInitializer.new(var_type, location(cursor))
+          end
+        end
         if var_type.is_a?(Type::FlatType) && init.is_a?(TypedAST::IntLiteral)
           init = nil
         elsif var_type.is_a?(Type::FlatType) && init.is_a?(TypedAST::StringLiteral)
@@ -555,18 +561,6 @@ class Myc::Mycc::ASTBuilder
           init = auto_cast(init, var_type, location(cursor)) if init.type != var_type
         else
           init = auto_cast(init, var_type, location(cursor))
-        end
-      end
-    end
-
-    case init
-    when TypedAST::InitList
-      if init.elements.size == 1
-        case el = init.elements[0]
-        when TypedAST::IntLiteral
-          if el.value == 0
-            init = TypedAST::ZeroInitializer.new(var_type, location(cursor))
-          end
         end
       end
     end
