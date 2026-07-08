@@ -559,6 +559,7 @@ class Myc::Mycc::ASTBuilder
         elsif init.is_a?(TypedAST::InitList)
           init = resolve_init_list_types(init, var_type)
           init = auto_cast(init, var_type, location(cursor)) if init.type != var_type
+        elsif init.is_a?(TypedAST::ZeroInitializer)
         else
           init = auto_cast(init, var_type, location(cursor))
         end
