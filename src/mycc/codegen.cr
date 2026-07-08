@@ -190,6 +190,16 @@ class Myc::Mycc::CodeGenerator
       emit_local(m_name, stmt.var_type)
       emit("STORE")
     elsif stmt.is_static
+    elsif stmt.init.is_a?(TypedAST::ZeroInitializer)
+      m_name = mangled_name(stmt.name)
+      current_vars[stmt.name] = VarInfo.new(stmt.var_type, m_name)
+
+      emit("SIZEOF #{type_s(stmt.var_type)}")
+      emit("PUSH 0 :u8")
+      emit_local(m_name, stmt.var_type)
+      emit("ADDR")
+      emit("CALL :memset")
+      emit("STACK :drop")
     else
       m_name = mangled_name(stmt.name)
       current_vars[stmt.name] = VarInfo.new(stmt.var_type, m_name)
@@ -629,6 +639,9 @@ class Myc::Mycc::CodeGenerator
     generate_expr(expr.then_expr)
     generate_expr(expr.condition)
     emit("SELECT")
+  end
+
+  def generate_expr(expr : TypedAST::ZeroInitializer)
   end
 
   private def returns_void?(call : TypedAST::Call) : Bool

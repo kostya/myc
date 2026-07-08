@@ -234,6 +234,11 @@ module Myc::Mycc::TypedAST
     end
   end
 
+  class ZeroInitializer < Node
+    def initialize(@type, @location)
+    end
+  end
+
   abstract class Stmt
     getter location : Location
 

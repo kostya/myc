@@ -27,10 +27,9 @@ abstract class Myc::Backend::AbstractBuilder
     h = Hash(String, Type::Fn).new
 
     h["printf"] = Type::Fn.new([u8p], i32, vaarg: true)
-
     h["malloc"] = Type::Fn.new([u64], voidp)
     h["calloc"] = Type::Fn.new([u64, u64], voidp)
-
+    h["memset"] = Type::Fn.new([voidp, i32, u64], voidp)
     h["free"] = Type::Fn.new([voidp], void)
 
     h
