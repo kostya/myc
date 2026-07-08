@@ -819,6 +819,10 @@ class Myc::Mycc::ASTBuilder
       end
     end
 
+    unless node
+      raise error("cant build_compound_literal", cursor)
+    end
+
     node
   end
 
@@ -840,15 +844,17 @@ class Myc::Mycc::ASTBuilder
     right = auto_decay(right)
     loc = location(cursor)
 
-    op_name = BINARY_MAP[op]? || :add
-
     case op
     when "&&", "||"
       left = ensure_bool(left)
       right = ensure_bool(right)
-      op_name = BINARY_MAP[op]? || :and
+      op_name = BINARY_MAP[op]?
+      raise error("unknown binary #{op}", cursor) unless op_name
       result = TypedAST::BinaryOp.new(op_name, left, right, mod.typer.bool, loc)
     when "<", ">", "<=", ">=", "==", "!="
+      op_name = BINARY_MAP[op]?
+      raise error("unknown binary #{op}", cursor) unless op_name
+
       if left.type.is_a?(Type::PtrType) && right.type.is_a?(Type::PtrType)
         left = TypedAST::Cast.new(left, mod.typer.u64, loc)
         right = TypedAST::Cast.new(right, mod.typer.u64, loc)
@@ -865,6 +871,9 @@ class Myc::Mycc::ASTBuilder
 
       TypedAST::BinaryOp.new(:comma, left, right, right.type, loc)
     else
+      op_name = BINARY_MAP[op]?
+      raise error("unknown binary #{op}", cursor) unless op_name
+
       left = auto_cast(left, mod.typer.i32, loc) if left.type.is_a?(Type::BoolType)
       right = auto_cast(right, mod.typer.i32, loc) if right.type.is_a?(Type::BoolType)
       if left.type.is_a?(Type::PtrType) && right.type.is_a?(Type::PtrType) && op_name == :sub
@@ -1199,11 +1208,17 @@ class Myc::Mycc::ASTBuilder
   end
 
   private def is_prefix_unary?(cursor : Clang::Cursor) : Bool
-    tokens = [] of String
-    @tu.tokenize(cursor.extent) do |token|
-      tokens << token.spelling
+    case cursor.unary_operator_kind
+    when LibC::CXUnaryOperatorKind::PreInc, LibC::CXUnaryOperatorKind::PreDec
+      true
+    when LibC::CXUnaryOperatorKind::PostInc, LibC::CXUnaryOperatorKind::PostDec,
+         LibC::CXUnaryOperatorKind::AddrOf, LibC::CXUnaryOperatorKind::Deref,
+         LibC::CXUnaryOperatorKind::Minus, LibC::CXUnaryOperatorKind::LNot,
+         LibC::CXUnaryOperatorKind::Not
+      false
+    else
+      raise error("Unknown unary operator kind: #{cursor.unary_operator_kind}", cursor)
     end
-    tokens.first? == "++" || tokens.first? == "--"
   end
 
   private def build_cast(cursor : Clang::Cursor) : TypedAST::Node
@@ -1263,7 +1278,9 @@ class Myc::Mycc::ASTBuilder
 
     start = tokens.index("(")
     finish = tokens.rindex(")")
-    return "void" unless start && finish && start < finish
+    unless start && finish && start < finish
+      raise error("cant parse sizeof type #{tokens.inspect}", cursor)
+    end
 
     type_tokens = tokens[start + 1...finish]
     type_tokens = type_tokens.reject { |t| {"const", "volatile", "restrict"}.includes?(t) }
