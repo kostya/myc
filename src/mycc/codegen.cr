@@ -370,13 +370,18 @@ class Myc::Mycc::CodeGenerator
     label = "__switch_#{@switch_count}"
     @switch_count += 1
 
+    generate_expr(stmt.value)
+    switch_val = "__switch_val_#{@switch_count}"
+    emit_local(switch_val, stmt.value.type)
+    emit("STORE")
+
     case_counter = 0
     stmt.cases.each do |c|
       if c.values.present?
         c.values.each do |val|
           val_type_s = type_s(stmt.value.type)
           emit("PUSH #{val} #{val_type_s}")
-          generate_expr(stmt.value.dup)
+          emit_local(switch_val, stmt.value.type)
           emit("BINARY :eq")
           emit("IF")
           @indent += 1
