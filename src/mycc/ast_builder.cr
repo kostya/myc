@@ -1252,11 +1252,20 @@ class Myc::Mycc::ASTBuilder
   private def build_sizeof(cursor : Clang::Cursor) : TypedAST::Node
     children_list = children(cursor)
     if children_list.size > 0
-      target_type = get_type(children_list[0], children_list[0].type)
+      child = children_list[0]
+      target_type = get_type(child, child.type)
+      _, ptr_count = extract_sizeof_type(cursor)
+      if ptr_count > 0
+        type_name = target_type.id_name
+        ptr_count.times { type_name = "ptr<#{type_name}>" }
+        target_type = mod.typer.find(type_name, location(cursor))
+      end
     else
-      type_spelling = extract_sizeof_type(cursor)
-      target_type = mod.typer.find(type_spelling, location(cursor))
+      type_name, ptr_count = extract_sizeof_type(cursor)
+      ptr_count.times { type_name = "ptr<#{type_name}>" }
+      target_type = mod.typer.find(type_name, location(cursor))
     end
+
     TypedAST::SizeOf.new(target_type, mod.typer.u64, location(cursor))
   end
 
@@ -1270,7 +1279,7 @@ class Myc::Mycc::ASTBuilder
     "void" => "void", "bool" => "bool", "_Bool" => "bool",
   }
 
-  private def extract_sizeof_type(cursor : Clang::Cursor) : String
+  private def extract_sizeof_type(cursor : Clang::Cursor) : Tuple(String, Int32)
     tokens = [] of String
     @tu.tokenize(cursor.extent) do |token|
       tokens << token.spelling
@@ -1284,12 +1293,20 @@ class Myc::Mycc::ASTBuilder
 
     type_tokens = tokens[start + 1...finish]
     type_tokens = type_tokens.reject { |t| {"const", "volatile", "restrict"}.includes?(t) }
-    ptr_count = type_tokens.count("*")
+    ptr_count = 0
+    type_tokens.reverse_each do |t|
+      if t == "*"
+        ptr_count += 1
+      else
+        break
+      end
+    end
+
     type_tokens = type_tokens.reject { |t| t == "*" }
     type_name = type_tokens.join(" ")
     type_name = SIZEOF_TYPE_ALIASES[type_name]? || type_name
-    ptr_count.times { type_name = "ptr<#{type_name}>" }
-    type_name
+
+    {type_name, ptr_count}
   end
 
   private def get_field_types(type : Type?) : Array(Type)
