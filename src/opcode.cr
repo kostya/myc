@@ -41,6 +41,7 @@ class Myc::Opcode
     ATTR
     CONSTANT
     ALIGN
+    SKIP
 
     MOD    = 1000
     FUNC
@@ -63,6 +64,7 @@ class Myc::Opcode
     STRUCT
     ATTRIBUTES
     FLAT
+    TAG
 
     ENDFUNC   = 3000
     ENDENUM

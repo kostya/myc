@@ -7,9 +7,9 @@ class Myc::Type::FlatType < Myc::Type
     @backend_name = normalize_name(id_name)
   end
 
-  def field_type?(index : Int32) : Type?
+  def field_type?(index : Int32) : Tuple(Int32, Type)?
     if index >= 0 && index < elements_count
-      target_type
+      {index, target_type}
     end
   end
 

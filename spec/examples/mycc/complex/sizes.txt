@@ -32,7 +32,7 @@ sizeof("Hello")           = 6
 sizeof("Hello World")     = 12
 sizeof(struct Simple)      = 8
 sizeof(struct WithPadding) = 24
-sizeof(union Data)         = 24
+sizeof(union Data)         = 20
 sizeof(enum Color)         = 4
 sizeof(enum LargeEnum)     = 4
 

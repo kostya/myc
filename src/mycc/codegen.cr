@@ -64,6 +64,7 @@ class Myc::Mycc::CodeGenerator
     program.unions.each do |name, fields|
       emit("ENUM :#{name}")
       @indent += 1
+      emit("TAG SKIP")
       fields.each do |field_name, field_type|
         emit("VARIANT :#{field_name}")
         @indent += 1

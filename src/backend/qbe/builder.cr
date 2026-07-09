@@ -127,7 +127,7 @@ class Myc::Backend::QBE::Builder < Myc::Backend::AbstractBuilder
     when Type::FlatType
       type.elements_count.times.to_a.flat_map { flatten_data_fields(type.target_type) }
     when Type::EnumType
-      fields = flatten_data_fields(type.index_type)
+      fields = type.index_type ? flatten_data_fields(type.index_type.not_nil!) : [] of String
       payload_count = @layout.enum_payload_count(type)
       if payload_count > 0
         fields + payload_count.times.to_a.map { "w 0" }

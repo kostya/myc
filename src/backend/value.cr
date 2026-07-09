@@ -87,8 +87,9 @@ class Myc::Backend::Value
   end
 
   def field(visitor : AbstractVisitor, index : Int32) : Value
-    field_type = @type.field_type?(index)
-    raise visitor.error("no field #{index} in #{@type}") unless field_type
+    ft = @type.field_type?(index)
+    raise visitor.error("no field #{index} in #{@type}") unless ft
+    index, field_type = ft
 
     case @mm
     in .val?

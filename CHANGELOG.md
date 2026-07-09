@@ -1,4 +1,5 @@
 ## 0.7.0-dev
+* ENUM added TAG TYPE, and TAG SKIP
 
 ## 0.6.0 (07.07.2026)
 * ALLOCA: for vla

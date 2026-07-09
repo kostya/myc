@@ -81,6 +81,16 @@ class Myc::Mod::Saver
       node.sections << opcode(Opcode::Code::ALIGN, ea.to_i64)
     end
 
+    if itype = type.index_type
+      node2 = sequence(Opcode::Code::TAG)
+      node.sections << node2
+      node2.list << opcode(Opcode::Code::TYPE, itype.id_name)
+    else
+      node2 = sequence(Opcode::Code::TAG)
+      node.sections << node2
+      node2.list << opcode(Opcode::Code::SKIP)
+    end
+
     type.data.each do |_, variant_type|
       v_node = sequence(Opcode::Code::VARIANT, variant_type.original_name)
 

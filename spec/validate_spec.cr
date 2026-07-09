@@ -98,6 +98,39 @@ context "Validate" do
     _____________________________src
     ENUM :Option
       ALIGN 8
+      TAG
+        TYPE :i32
+      VARIANT :None
+      VARIANT :Some
+        TYPE :i32
+        TYPE :f64
+    ENDENUM
+    _____________________________res
+  end
+
+  it "enum without tag" do
+    validate(<<-'_____________________________src').should eq <<-'_____________________________res'
+    ENUM "Option" VARIANT "None" TAG SKIP VARIANT "Some" TYPE i32 TYPE "f64" ALIGN 8 ENDENUM
+    _____________________________src
+    ENUM :Option
+      ALIGN 8
+      TAG
+        SKIP
+      VARIANT :None
+      VARIANT :Some
+        TYPE :i32
+        TYPE :f64
+    ENDENUM
+    _____________________________res
+  end
+
+  it "enum without custom tag type" do
+    validate(<<-'_____________________________src').should eq <<-'_____________________________res'
+    ENUM "Option" TAG TYPE :i32 VARIANT "None" VARIANT "Some" TYPE i32 TYPE "f64" ENDENUM
+    _____________________________src
+    ENUM :Option
+      TAG
+        TYPE :i32
       VARIANT :None
       VARIANT :Some
         TYPE :i32
@@ -167,6 +200,8 @@ context "Validate" do
     ENDSTRUCT
 
     ENUM :Option
+      TAG
+        TYPE :i32
       VARIANT :None
       VARIANT :Some
         TYPE :i32
@@ -596,6 +631,8 @@ context "Validate" do
     ENDSTRUCT
 
     ENUM :option
+      TAG
+        TYPE :i32
       VARIANT :none
     ENDENUM
 
@@ -712,6 +749,8 @@ context "Validate" do
     ENDSTRUCT
 
     ENUM :option
+      TAG
+        TYPE :i32
       VARIANT :none
       VARIANT :some
         TYPE :i32

@@ -89,22 +89,20 @@ class Myc::Backend::Layout
     when 0
       0_u64
     when 1
-      tag_size = size_of(type.index_type)
-      tag_align = alignment_of(type.index_type)
-      align_to(tag_size, tag_align)
+      if index_type = type.index_type
+        tag_size = size_of(index_type)
+        tag_align = alignment_of(index_type)
+        align_to(tag_size, tag_align)
+      else
+        0_u64
+      end
     else
       raise "enum #{type.id_name} has no field #{index}"
     end
   end
 
   def field_offset(type : Type::EnumVariantType, index : UInt64) : UInt64
-    if index == 0
-      0_u64
-    else
-      tag_size = size_of(type.parent_type.index_type)
-      tag_align = alignment_of(type.parent_type.index_type)
-      align_to(tag_size, tag_align) + field_offset(type.composite_value_type.not_nil!, index - 1)
-    end
+    field_offset(type.parent_type, index)
   end
 
   def field_offset(type : Type, index : UInt64) : UInt64
@@ -116,8 +114,13 @@ class Myc::Backend::Layout
   end
 
   private def compute_enum_size(type : Type::EnumType) : UInt64
-    tag_size = size_of(type.index_type)
-    tag_align = alignment_of(type.index_type)
+    tag_size = 0_u64
+    tag_align = 0u64
+
+    if index_type = type.index_type
+      tag_size = size_of(index_type)
+      tag_align = alignment_of(index_type)
+    end
 
     max_payload = if type.data.any?
                     type.data.max_of do |_, variant|
@@ -131,7 +134,7 @@ class Myc::Backend::Layout
                     0_u64
                   end
 
-    align_to(tag_size, tag_align) + max_payload
+    (tag_size > 0 ? align_to(tag_size, tag_align) : tag_size) + max_payload
   end
 
   private def compute_enum_alignment(type : Type::EnumType) : UInt64
@@ -139,7 +142,7 @@ class Myc::Backend::Layout
       return ea
     end
 
-    tag_align = alignment_of(type.index_type)
+    tag_align = type.index_type ? alignment_of(type.index_type.not_nil!) : 0_u64
 
     max_payload = if type.data.any?
                     type.data.max_of do |_, variant|
@@ -157,7 +160,7 @@ class Myc::Backend::Layout
   end
 
   def enum_payload_count(type : Type::EnumType) : UInt64
-    payload_size = size_of(type) - size_of(type.index_type)
+    payload_size = size_of(type) - (type.index_type ? size_of(type.index_type.not_nil!) : 0_u64)
     payload_size > 0 ? (payload_size + 3) // 4 : 0_u64
   end
 

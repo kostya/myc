@@ -16,7 +16,7 @@ abstract class Myc::Type
     io << self.id_name
   end
 
-  def field_type?(index : Int32) : Type?
+  def field_type?(index : Int32) : Tuple(Int32, Type)?
   end
 
   def needs_blit? : Bool

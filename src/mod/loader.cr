@@ -17,8 +17,7 @@ class Myc::Mod::Loader
         @mod.type_defs[name] = Mod::TypeDef.new(node, struct_type)
       when Opcode::Code::ENUM
         name = get_only_one_string_value(node)
-        index_type = @mod.typer.i32
-        enum_type = Type::EnumType.new(name, index_type)
+        enum_type = Type::EnumType.new(name, nil)
         preloaded_types[name] = node
         raise error("type #{name} already defined", node) if @mod.type_defs[name]?
         @mod.type_defs[name] = Mod::TypeDef.new(node, enum_type)
@@ -470,11 +469,27 @@ class Myc::Mod::Loader
   end
 
   private def load_enum(type : Type::EnumType, node : Source::Node::Container)
+    tag_type = nil
+    tag_skip = false
+
     node.sections.each do |section|
       case section.code
       when Opcode::Code::ALIGN
         raise error("ALIGN already defined", section) if type.explicit_alignment
         type.explicit_alignment = get_only_one_int_value(section).to_u64
+      when Opcode::Code::TAG
+        section.as(Source::Node::Sequence).list.each do |op|
+          case op.code
+          when Opcode::Code::TYPE
+            raise error("TAG alread have TYPE", section) if tag_type
+            tag_type = find_type(get_only_one_string_value(op), op)
+          when Opcode::Code::SKIP
+            raise error("TAG alread skipped", section) if tag_skip
+            tag_skip = true
+          else
+            raise error("VARIANT should have only TYPE opcodes", section)
+          end
+        end
       when Opcode::Code::VARIANT
         variant_name = get_only_one_string_value(section)
         eet = Type::EnumVariantType.new(type.id_name + "::" + variant_name, variant_name, type, type.data.size)
@@ -502,6 +517,16 @@ class Myc::Mod::Loader
         raise error("unexpected section #{section.code} in ENUM", section)
       end
     end
+
+    if tag_type && tag_skip
+      raise error("conflict TAG TYPE and SKIP", node)
+    end
+
+    if !tag_type && !tag_skip
+      tag_type = @mod.typer.i32
+    end
+
+    type.index_type = tag_type
 
     raise error("ENUM must have at least one VARIANT", node) if type.data.empty?
   end

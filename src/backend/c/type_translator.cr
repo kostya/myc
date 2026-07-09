@@ -78,8 +78,8 @@ struct Myc::Backend::C::TypeTranslator
 
   private def do_complex_translate(type : Type::EnumType)
     payload_count = @builder.layout.enum_payload_count(type)
-    payload_str = payload_count > 0 ? "int32_t field1[#{payload_count}];" : ""
-    @builder.define_enum(type.backend_name, translate(type.index_type), payload_str)
+    payload_str = payload_count > 0 ? "int32_t field#{type.index_type ? "1" : "0"}[#{payload_count}];" : ""
+    @builder.define_enum(type.backend_name, type.index_type ? translate(type.index_type.not_nil!) : nil, payload_str)
 
     type.data.each do |_, variant|
       variant_name = variant.backend_name

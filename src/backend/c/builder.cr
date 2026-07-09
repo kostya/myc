@@ -157,7 +157,11 @@ class Myc::Backend::C::Builder < Myc::Backend::AbstractBuilder
   end
 
   def define_enum(name, tag_type, payload_str)
-    @typedef_io << "typedef struct #{name} { #{tag_type} field0; #{payload_str} } #{name};\n"
+    if tag_type
+      @typedef_io << "typedef struct #{name} { #{tag_type} field0; #{payload_str} } #{name};\n"
+    else
+      @typedef_io << "typedef struct #{name} { #{payload_str} } #{name};\n"
+    end
   end
 
   def define_alias(alias_name, struct_name)

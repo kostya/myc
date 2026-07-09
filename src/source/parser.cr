@@ -14,7 +14,7 @@ module Myc::Source
     Opcode::Code::ENUM => Section.new(
       Opcode::Code::ENUM,
       Opcode::Code::ENDENUM,
-      Set(Opcode::Code).new([Opcode::Code::VARIANT, Opcode::Code::ALIGN])),
+      Set(Opcode::Code).new([Opcode::Code::VARIANT, Opcode::Code::ALIGN, Opcode::Code::TAG])),
 
     Opcode::Code::GLOBAL => Section.new(
       Opcode::Code::GLOBAL,

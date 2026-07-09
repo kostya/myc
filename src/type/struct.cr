@@ -6,8 +6,10 @@ class Myc::Type::StructType < Myc::Type
     @backend_name = normalize_name(id_name)
   end
 
-  def field_type?(index : Int32) : Type?
-    data[index]?
+  def field_type?(index : Int32) : Tuple(Int32, Type)?
+    if d = data[index]?
+      {index, d}
+    end
   end
 
   def repr(io)

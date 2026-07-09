@@ -344,30 +344,44 @@ abstract class Myc::Backend::AbstractVisitor
       body << Opcode::Push.new(")")
       body << Opcode::Printf.new(0)
     when Type::EnumType
-      cases_seq = Array(Opcode::Seq).new
-      tags_list = Array(Int64).new
+      if type.index_type
+        cases_seq = Array(Opcode::Seq).new
+        tags_list = Array(Int64).new
 
-      type.data.each do |_, child_type|
-        seq = Opcode::Seq.new
-        seq << arg
-        seq << Opcode::As.new(child_type)
-        seq << Opcode::Param.new(1)
-        seq << Opcode::Inspect.new(internal: true)
+        type.data.each do |_, child_type|
+          seq = Opcode::Seq.new
+          seq << arg
+          seq << Opcode::As.new(child_type)
+          seq << Opcode::Param.new(1)
+          seq << Opcode::Inspect.new(internal: true)
 
-        cases_seq << seq
-        tags_list << child_type.position
+          cases_seq << seq
+          tags_list << child_type.position
+        end
+
+        else_seq = Opcode::Seq.new
+        else_seq << arg
+        else_seq << Opcode::Field.new(0)
+        else_seq << Opcode::Push.new("#{type}::Undef(%d)")
+        else_seq << Opcode::Printf.new(1)
+
+        body << arg
+        body << Opcode::Field.new(0)
+
+        body << Opcode::Switch.new(cases_seq, tags_list, else_seq)
+      else
+        body << Opcode::Push.new("#{type}::Notag(")
+        body << Opcode::Printf.new(0)
+
+        body << arg
+        body << Opcode::Field.new(1)
+
+        body << Opcode::Param.new(1)
+        body << Opcode::Inspect.new(internal: true)
+
+        body << Opcode::Push.new(")")
+        body << Opcode::Printf.new(0)
       end
-
-      else_seq = Opcode::Seq.new
-      else_seq << arg
-      else_seq << Opcode::Field.new(0)
-      else_seq << Opcode::Push.new("#{type}::Undef(%d)")
-      else_seq << Opcode::Printf.new(1)
-
-      body << arg
-      body << Opcode::Field.new(0)
-
-      body << Opcode::Switch.new(cases_seq, tags_list, else_seq)
     else
       raise error("undefined for type: #{type}")
     end
@@ -937,17 +951,19 @@ abstract class Myc::Backend::AbstractVisitor
     when Type::EnumVariantType
       local_name = next_unique("__myc_create_enum")
 
-      visit Opcode::Push.new(type.position.to_i64, mod.typer.i32)
-      visit Opcode::Local.new(local_name, type)
-      visit Opcode::Field.new(0)
-      visit Opcode::Store.new
+      if type.parent_type.index_type
+        visit Opcode::Push.new(type.position.to_i64, mod.typer.i32)
+        visit Opcode::Local.new(local_name, type)
+        visit Opcode::Field.new(0)
+        visit Opcode::Store.new
+      end
 
       type.value_types.size.times do |index|
-        visit Opcode::Local.new(local_name)
+        visit Opcode::Local.new(local_name, type)
         visit Opcode::Field.new(index + 1)
         visit Opcode::Store.new
       end
-      visit Opcode::Local.new(local_name)
+      visit Opcode::Local.new(local_name, type)
     else
       raise error("CREATE only for composite types, not for #{type}")
     end
