@@ -70,7 +70,7 @@ abstract class Myc::Backend::AbstractVisitor
   end
 
   private def find_func_type_fn(name : String) : Type::Fn?
-    @mod.func_defs[name]?.try(&.type_fn) || @builder.std_funcs[name]? || @builder.inspect_type_fns[name]?
+    @mod.func_defs[name]?.try(&.type_fn) || @builder.std_funcs[name]? || @builder.inspect_type_fns[name]?.try(&.type_fn)
   end
 
   def visit(op : Opcode::Printf)
@@ -204,8 +204,8 @@ abstract class Myc::Backend::AbstractVisitor
 
   private def generate_inspect_func(type : Type, func_name : String)
     type_fn = Type::Fn.new([mod.typer.voidp, mod.typer.i32], mod.typer.void)
-    @builder.inspect_type_fns[func_name] = type_fn
     fdef = Mod::FuncDef.new(@func_def.node, @mod, func_name, type_fn)
+    @builder.inspect_type_fns[func_name] = fdef
     fdef.attributes = %w{noinline}
     fdef.body = Opcode::Seq.new
     body = fdef.body.not_nil!

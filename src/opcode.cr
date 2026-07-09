@@ -42,6 +42,7 @@ class Myc::Opcode
     CONSTANT
     ALIGN
     SKIP
+    PRIVATE
 
     MOD    = 1000
     FUNC

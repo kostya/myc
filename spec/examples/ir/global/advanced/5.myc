@@ -1,12 +1,10 @@
-GLOBAL :g
+GLOBAL :bla
   TYPE :i32
-  INITIAL 42
-  CONSTANT
 ENDGLOBAL
 
 FUNC :main
   BODY
-    GLOBAL :g
+    GLOBAL :bla
     INSPECT
 ENDFUNC
 

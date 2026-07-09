@@ -538,6 +538,7 @@ class Myc::Mod::Loader
     init_value = nil
     constant_flag = false
     initial_keyword = false
+    global_private = false
 
     node.list.each do |op|
       case op.code
@@ -555,6 +556,8 @@ class Myc::Mod::Loader
         values = op.values
         raise error("CONSTANT have no values", op) if values && values.size > 0
         constant_flag = true
+      when Opcode::Code::PRIVATE
+        global_private = true
       else
         raise error("unexpected opcode #{op.code} in GLOBALDEF", op)
       end
@@ -562,7 +565,7 @@ class Myc::Mod::Loader
 
     raise error("missing TYPE for GLOBALDEF #{global_name}", node) unless global_type
 
-    @mod.global_defs << Mod::GlobalDef.new(node, global_name, global_type, initial_keyword, init_value, constant_flag)
+    @mod.global_defs << Mod::GlobalDef.new(node, global_name, global_type, initial_keyword, init_value, constant_flag, global_private)
   end
 
   def find_type(name : String, node : Source::Node) : Type

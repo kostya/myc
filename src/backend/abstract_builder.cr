@@ -3,12 +3,12 @@ abstract class Myc::Backend::AbstractBuilder
   getter layout : Layout
   getter std_funcs : Hash(String, Type::Fn)
   getter inspect_funcs : Hash(Type, String)
-  getter inspect_type_fns : Hash(String, Type::Fn)
+  getter inspect_type_fns : Hash(String, Mod::FuncDef)
 
   def initialize(@backend, @layout)
     @std_funcs = add_std_funcs
     @inspect_funcs = Hash(Type, String).new
-    @inspect_type_fns = Hash(String, Type::Fn).new
+    @inspect_type_fns = Hash(String, Mod::FuncDef).new
   end
 
   def add_std_funcs
@@ -38,7 +38,7 @@ abstract class Myc::Backend::AbstractBuilder
   abstract def constant_value?(value : Source::Token::ArgType, type : Type) : Value?
   abstract def find_global(name : String) : Value?
   abstract def new_func(func_def : Mod::FuncDef) : AbstractFunc
-  abstract def func_register(name : String, type_fn : Type::Fn)
+  abstract def func_register(name : String, func_def : Mod::FuncDef)
 
   protected def escaped_string(s : String)
     s.gsub("\\", "\\\\").gsub("\"", "\\\"").gsub("\n", "\\n")

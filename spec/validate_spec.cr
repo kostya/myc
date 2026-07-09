@@ -907,4 +907,24 @@ context "Validate" do
     ENDFUNC
     _____________________________res
   end
+
+  it "private" do
+    validate(<<-'_____________________________src').should eq <<-'_____________________________res'
+    GLOBAL counter TYPE i32 CONSTANT INITIAL 0 PRIVATE ENDGLOBAL
+    FUNC :test ATTRIBUTES ATTR :private BODY ENDFUNC
+    _____________________________src
+    GLOBAL :counter
+      TYPE :i32
+      INITIAL 0
+      CONSTANT
+      PRIVATE
+    ENDGLOBAL
+
+    FUNC :test
+      ATTRIBUTES
+        ATTR :private
+      BODY
+    ENDFUNC
+    _____________________________res
+  end
 end

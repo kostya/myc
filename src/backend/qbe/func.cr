@@ -33,10 +33,13 @@ class Myc::Backend::QBE::Func < Myc::Backend::AbstractFunc
   end
 
   def build
+    visibility = "export "
     @func_def.attributes.try &.each do |attr|
       case attr
       when "noinline"
       when "vaarg"
+      when "private"
+        visibility = ""
       else
         raise Error::ErrorLoc.new("unknown attr #{attr}", Location.new(func_def.mod.filename, func_def.node.offset))
       end
@@ -45,7 +48,7 @@ class Myc::Backend::QBE::Func < Myc::Backend::AbstractFunc
     ret_type = builder.qbe_type(@func_def.type_fn.ret)
     args = @func_def.type_fn.args.map_with_index { |t, i| "#{builder.qbe_type(t)} %arg#{i}" }
 
-    emit "export function #{ret_type} $#{@func_def.name}(#{args.join(", ")}) {\n"
+    emit "#{visibility}function #{ret_type} $#{@func_def.name}(#{args.join(", ")}) {\n"
     emit "@start\n"
 
     v = new_visitor

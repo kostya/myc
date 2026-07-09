@@ -1,0 +1,13 @@
+FUNC :bla
+  ATTRIBUTES
+    ATTR :private
+  BODY
+    PUSH :bla
+    INSPECT
+ENDFUNC
+
+FUNC :main
+  BODY
+    CALL :bla
+ENDFUNC
+

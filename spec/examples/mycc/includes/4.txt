@@ -1,0 +1,4 @@
+bla = 1
+glob = 42
+second = 2
+second glob = 43

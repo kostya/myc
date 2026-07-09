@@ -130,6 +130,10 @@ class Myc::Mod::Saver
       g_node.list << opcode(Opcode::Code::CONSTANT)
     end
 
+    if global.private_flag
+      g_node.list << opcode(Opcode::Code::PRIVATE)
+    end
+
     g_node
   end
 

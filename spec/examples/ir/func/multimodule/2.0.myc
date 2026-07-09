@@ -1,0 +1,8 @@
+FUNC :bla
+  ATTRIBUTES
+    ATTR :private
+  BODY
+    PUSH :bla_in_2
+    INSPECT
+ENDFUNC
+

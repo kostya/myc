@@ -12,6 +12,8 @@ class Myc::Backend::Llvm::Func < Myc::Backend::AbstractFunc
       when "noinline"
         @link.llvm_function.add_attribute LLVM::Attribute::NoInline
       when "vaarg"
+      when "private"
+        @link.llvm_function.linkage = LLVM::Linkage::Private
       else
         raise Error::ErrorLoc.new("unknown attr #{attr}", Location.new(func_def.mod.filename, func_def.node.offset))
       end

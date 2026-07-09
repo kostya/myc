@@ -285,7 +285,7 @@ abstract class Myc::Backend::AbstractBackend
       mod.finalize_enums(builder.layout)
 
       mod.func_defs.each do |name, func_def|
-        builder.func_register(name, func_def.type_fn)
+        builder.func_register(name, func_def)
       end
 
       mod.global_defs.each do |global|

@@ -21,8 +21,8 @@ class Myc::Backend::QBE::Builder < Myc::Backend::AbstractBuilder
     @type_translator ||= TypeTranslator.new(self)
   end
 
-  def func_register(name : String, type_fn : Type::Fn)
-    @func_links[name] = type_fn
+  def func_register(name : String, func_def : Mod::FuncDef)
+    @func_links[name] = func_def.type_fn
   end
 
   def global_register(mod : Mod, global : Mod::GlobalDef)
@@ -31,16 +31,22 @@ class Myc::Backend::QBE::Builder < Myc::Backend::AbstractBuilder
 
     return unless global.initial_keyword
 
+    visibility = "export "
+
+    if global.private_flag
+      visibility = ""
+    end
+
     if global.type.needs_blit?
       fields = flatten_data_fields(global.type).join(", ")
-      @data_io << "export data $#{global.name} = { #{fields} }\n"
+      @data_io << "#{visibility}data $#{global.name} = { #{fields} }\n"
     else
       init_val = if val = global.initial_value
                    constant_value?(val, global.type).try(&.bbval.as(BBVal).val) || 0
                  else
                    0
                  end
-      @data_io << "export data $#{global.name} = { #{qbe_type(global.type)} #{init_val} }\n"
+      @data_io << "#{visibility}data $#{global.name} = { #{qbe_type(global.type)} #{init_val} }\n"
     end
   end
 

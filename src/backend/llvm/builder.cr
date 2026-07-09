@@ -51,8 +51,8 @@ class Myc::Backend::Llvm::Builder < Myc::Backend::AbstractBuilder
     end
   end
 
-  def func_register(name : String, type_fn : Type::Fn)
-    func_link(name, type_fn)
+  def func_register(name : String, func_def : Mod::FuncDef)
+    func_link(name, func_def.type_fn)
   end
 
   def func_link(name : String, type_fn : Type::Fn) : FuncLink
@@ -75,7 +75,7 @@ class Myc::Backend::Llvm::Builder < Myc::Backend::AbstractBuilder
       end
     end
 
-    var.linkage = LLVM::Linkage::External
+    var.linkage = global.private_flag ? LLVM::Linkage::Internal : LLVM::Linkage::External
     var.global_constant = global.constant
 
     if global_links[global.name]?

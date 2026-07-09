@@ -1,0 +1,5 @@
+GLOBAL :bla
+  TYPE :i32
+  INITIAL 32
+ENDGLOBAL
+

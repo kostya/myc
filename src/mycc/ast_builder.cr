@@ -169,7 +169,8 @@ class Myc::Mycc::ASTBuilder
     end
 
     vaarg = func_type.is_a?(Type::Fn) ? func_type.vaarg : false
-    TypedAST::Function.new(name, @current_function_params.dup, return_type, body, location(cursor), vaarg)
+    is_static = cursor.storage_class.static?
+    TypedAST::Function.new(name, @current_function_params.dup, return_type, body, location(cursor), vaarg, is_static)
   ensure
     @current_return_type = nil
     @current_function_name = old_name.not_nil!

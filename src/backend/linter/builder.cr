@@ -24,7 +24,7 @@ class Myc::Backend::Linter::Builder < Myc::Backend::AbstractBuilder
     end
   end
 
-  def func_register(name : String, type_fn : Type::Fn)
+  def func_register(name : String, func_def : Mod::FuncDef)
   end
 
   def find_global(name : String) : Value?

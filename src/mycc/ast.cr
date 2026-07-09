@@ -486,8 +486,9 @@ module Myc::Mycc::TypedAST
     getter body : Array(Stmt)?
     getter location : Location
     getter vaarg : Bool
+    getter is_static : Bool
 
-    def initialize(@name, @params, @return_type, @body, @location, @vaarg = false); end
+    def initialize(@name, @params, @return_type, @body, @location, @vaarg, @is_static); end
 
     def inspect(io : IO)
       io << "Function " << name << "("

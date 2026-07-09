@@ -33,9 +33,9 @@ class Myc::Backend::C::Builder < Myc::Backend::AbstractBuilder
     type_translator.translate(type)
   end
 
-  def func_register(name : String, type_fn : Type::Fn)
-    @data_io << func_head_str(name, type_fn) << "; \n"
-    @func_links[name] = type_fn
+  def func_register(name : String, func_def : Mod::FuncDef)
+    @data_io << func_head_str(name, func_def.type_fn, func_def.attributes.try(&.includes?("private"))) << "; \n"
+    @func_links[name] = func_def.type_fn
   end
 
   def global_register(mod : Mod, global : Mod::GlobalDef)
@@ -48,6 +48,10 @@ class Myc::Backend::C::Builder < Myc::Backend::AbstractBuilder
 
     unless global.initial_keyword
       @data_io << "extern "
+    end
+
+    if global.private_flag
+      @data_io << "static "
     end
 
     @data_io << "const " if global.constant
@@ -98,8 +102,8 @@ class Myc::Backend::C::Builder < Myc::Backend::AbstractBuilder
   end
 
   def save(filename : String)
-    inspect_type_fns.each do |name, type_fn|
-      func_register(name, type_fn)
+    inspect_type_fns.each do |name, func_def|
+      func_register(name, func_def)
     end
 
     File.open(filename, "w") do |f|
@@ -168,8 +172,12 @@ class Myc::Backend::C::Builder < Myc::Backend::AbstractBuilder
     @typedef_io << "typedef struct #{struct_name} #{alias_name};\n"
   end
 
-  def func_head_str(name : String, type_fn : Type::Fn) : String
+  def func_head_str(name : String, type_fn : Type::Fn, static = false) : String
     String.build do |s|
+      if static
+        s << "static "
+      end
+
       s << c_type(type_fn.ret)
       s << ' '
       s << name

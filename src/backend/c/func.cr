@@ -31,17 +31,19 @@ class Myc::Backend::C::Func < Myc::Backend::AbstractFunc
 
   def build
     attrs = ""
+    is_static = false
     @func_def.attributes.try &.each do |attr|
       case attr
       when "noinline"
-        attrs += "__attribute__((noinline))"
+        attrs += "__attribute__((noinline)) "
       when "vaarg"
+      when "private"
+        is_static = true
       else
         raise Error::ErrorLoc.new("unknown attr #{attr}", Location.new(func_def.mod.filename, func_def.node.offset))
       end
     end
-    attrs += " " unless attrs.empty?
-    emit("#{attrs}#{builder.func_head_str(@func_def.name, @func_def.type_fn)} {")
+    emit("#{attrs}#{builder.func_head_str(@func_def.name, @func_def.type_fn, is_static)} {")
 
     v = new_visitor
     v.visit

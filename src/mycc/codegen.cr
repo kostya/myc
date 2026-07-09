@@ -92,6 +92,8 @@ class Myc::Mycc::CodeGenerator
         end
       end
 
+      emit("PRIVATE") if var.is_static
+
       emit("ENDGLOBAL")
 
       @globals[var.original_name] = var
@@ -133,8 +135,13 @@ class Myc::Mycc::CodeGenerator
       @indent -= 1
     end
 
-    if func.vaarg
-      emit("ATTRIBUTES ATTR :vaarg")
+    if func.vaarg || func.is_static
+      emit("ATTRIBUTES")
+      if func.vaarg
+        emit("ATTR :vaarg")
+      elsif func.is_static
+        emit("ATTR :private")
+      end
     end
 
     if body = func.body
