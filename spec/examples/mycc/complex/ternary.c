@@ -66,7 +66,7 @@ int test_ternary_struct() {
   Node *null_ptr = 0;
 
   Node *r1 = ptr ? ptr->next : (Node *)0xBAD;
-  printf("  ternary struct non-null: r1=%p (expect 0x0)\n", r1);
+  printf("  ternary struct non-null: r1=%d (expect 0x0)\n", (int)r1);
 
   Node *r2 = null_ptr ? null_ptr->next : (Node *)0xBAD;
   printf("  ternary struct null: r2=%p (expect 0xBAD, no crash)\n", r2);
