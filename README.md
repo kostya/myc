@@ -25,7 +25,7 @@
 
 ### Current status
 
-Alpha. But already powerful. All 3 backends work smoothly. 3900 tests pass. Mycc can compile and run 21 of 29 .c files from [LangArena](https://github.com/kostya/LangArena) benchmark. Mycc already close to c99 standard.
+Alpha. But already powerful. All 3 backends work smoothly. 4000 tests pass. Mycc can compile and run 24 of 29 .c files from [LangArena](https://github.com/kostya/LangArena) benchmark. Mycc already close to c99 standard.
 
 ### Ultimate goal
 
