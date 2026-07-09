@@ -643,10 +643,27 @@ class Myc::Mycc::CodeGenerator
   end
 
   def generate_expr(expr : TypedAST::Conditional)
-    generate_expr(expr.else_expr)
-    generate_expr(expr.then_expr)
+    tmp = "__ternary_#{@local_marks.size}"
+
     generate_expr(expr.condition)
-    emit("SELECT")
+    emit("IF")
+    @indent += 1
+    emit("THEN")
+    @indent += 1
+    generate_expr(expr.then_expr)
+    emit_local(tmp, expr.type)
+    emit("STORE")
+    @indent -= 1
+    emit("ELSE")
+    @indent += 1
+    generate_expr(expr.else_expr)
+    emit_local(tmp, expr.type)
+    emit("STORE")
+    @indent -= 1
+    @indent -= 1
+    emit("ENDIF")
+
+    emit_local(tmp, expr.type)
   end
 
   def generate_expr(expr : TypedAST::ZeroInitializer)

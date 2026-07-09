@@ -1,0 +1,11 @@
+=== Ternary Short-Circuit Tests ===
+  ternary null: result=0xdead (expect 0xDEAD)
+  ternary non-null: val=42 (expect 42)
+  ternary null deref: val2=-1 (expect -1, no crash)
+  ternary side true: x=1 counter=1 (expect 1, 1)
+  ternary side false: y=2 counter=1 (expect 2, 1)
+  ternary assign true: x=10 a=10 b=0 (expect 10, 10, 0)
+  ternary assign false: y=20 a=0 b=20 (expect 20, 0, 20)
+  ternary struct non-null: r1=0x0 (expect 0x0)
+  ternary struct null: r2=0xbad (expect 0xBAD, no crash)
+=== DONE ===
