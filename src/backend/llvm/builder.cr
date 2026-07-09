@@ -96,6 +96,12 @@ class Myc::Backend::Llvm::Builder < Myc::Backend::AbstractBuilder
       case value
       when Bool
         llvm_type(type).const_int(value ? 1 : 0)
+      when Int
+        if value == 1
+          llvm_type(type).const_int(1)
+        elsif value == 0
+          llvm_type(type).const_int(0)
+        end
       end
     when Type::FloatType
       case value
