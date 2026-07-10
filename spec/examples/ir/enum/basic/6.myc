@@ -1,4 +1,4 @@
-{{common.myc_include}}
+<<common.myc_include>>
 
 STRUCT :Storage
   TYPE :u8

@@ -1,4 +1,4 @@
-{{common.myc_include}}
+<<common.myc_include>>
 
 FUNC :test_get_alloca
   BODY

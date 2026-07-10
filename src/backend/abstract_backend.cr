@@ -242,7 +242,7 @@ abstract class Myc::Backend::AbstractBackend
   end
 
   private def preprocess(str : String, filename : String) : String
-    str.gsub(/{{(.*?)}}/) { File.read(File.join(File.dirname(filename), $1.to_s)) }
+    str.gsub(/<<(.*?)>>/) { File.read(File.join(File.dirname(filename), $1.to_s)) }
   end
 
   private def parse_common_options : CommonOptions

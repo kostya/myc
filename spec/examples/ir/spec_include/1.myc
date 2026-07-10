@@ -1,4 +1,4 @@
-{{shared.myc_include}}
+<<shared.myc_include>>
 
 FUNC :main
   BODY

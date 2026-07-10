@@ -1,4 +1,4 @@
-{{chain1.myc_include}}
+<<chain1.myc_include>>
 
 FUNC :main
   BODY

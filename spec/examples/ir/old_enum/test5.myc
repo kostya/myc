@@ -1,4 +1,4 @@
-{{general.myc_include}}
+<<general.myc_include>>
 
 STRUCT :Bla
   TYPE :EnumTest
