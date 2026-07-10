@@ -162,7 +162,7 @@ class Myc::Mycc::ASTBuilder
         @current_function_params[param_name] = TypedAST::Function::ParamInfo.new(param_name, param_type, @current_function_params.size)
       when .compound_stmt?
         body = build_stmts(child)
-      when .first_attr?, .type_ref?, .first_expr?, .warn_unused_result_attr?, .const_attr?, .visibility_attr?, .asm_label_attr?
+      when .first_attr?, .type_ref?, .first_expr?, .warn_unused_result_attr?, .const_attr?, .visibility_attr?, .asm_label_attr?, .pure_attr?
       else
         raise error("Unhandled child: #{child.kind}", child)
       end
