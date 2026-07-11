@@ -1,0 +1,17 @@
+GLOBAL :bla
+  TYPE :fn<void>
+  INITIAL 0
+ENDGLOBAL
+
+FUNC :hello
+  BODY
+    PUSH "Hello\n"
+    PRINTF 0
+ENDFUNC
+
+FUNC :main
+  BODY
+    GLOBAL :bla
+    INSPECT
+ENDFUNC
+

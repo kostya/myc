@@ -1,0 +1,11 @@
+GLOBAL :bla
+  TYPE :bool
+  INITIAL true
+ENDGLOBAL
+
+FUNC :main
+  BODY
+    GLOBAL :bla
+    INSPECT
+ENDFUNC
+

@@ -80,39 +80,41 @@ abstract class Myc::Backend::AbstractVisitor
 
   def visit(op : Opcode::Push)
     type = op.type
+    value = op.value
 
-    unless type
-      case val = op.value
-      when Int
-        if val >= Int32::MIN && val <= Int32::MAX
-          type = mod.typer.i32
+    case value
+    when Source::Token::IntValue
+      v = value.val
+      if Int32::MIN <= v && Int32::MAX >= v
+        type ||= mod.typer.i32
+      elsif Int64::MAX <= v
+        type ||= mod.typer.u64
+      else
+        type ||= mod.typer.i64
+      end
+    when Source::Token::FloatValue
+      type ||= mod.typer.f64
+    when Source::Token::BoolValue
+      type ||= mod.typer.bool
+    when Source::Token::StringValue
+      if value.val.starts_with?('M')
+        case value.val
+        when "MYC_BACKEND"
+          value = Source::Token::StringValue.new(@builder.backend.name)
+        when "MYC_FLAGS"
+          value = Source::Token::StringValue.new(@builder.backend.debug_flags)
         end
       end
-    end
 
-    unless type
-      type = mod.typer.std_value_type?(op.value)
+      type ||= mod.typer.u8p
+    else
+      raise error("unknown value #{value.inspect}")
     end
 
     raise error("type for value #{op.value.inspect} not found") unless type
 
-    case val = op.value
-    when String
-      if val.starts_with?('M')
-        case val
-        when "MYC_BACKEND"
-          val = @builder.backend.name
-        when "MYC_FLAGS"
-          val = @builder.backend.debug_flags
-        end
-      end
-    end
-
-    if val = builder.constant_value?(val, type)
-      self << val
-    else
-      raise error("cant push value: #{op.value.class.inspect} #{op.value.inspect}")
-    end
+    vp = AbstractBuilder::ValuesParser.new([value], type, mod, Location.new(mod.filename, op.offset))
+    self << builder.init_value(vp.parse)
   end
 
   def visit(op : Opcode::Seq)
@@ -177,7 +179,7 @@ abstract class Myc::Backend::AbstractVisitor
     f = if fname = builder.inspect_funcs[arg.type]?
           fname
         else
-          fname = "__myc_inspect_#{mod.name}_#{arg.type.backend_name}"
+          fname = generate_inspect_func_name(arg)
           builder.inspect_funcs[arg.type] = fname
           generate_inspect_func(arg.type, fname)
           fname
@@ -193,29 +195,33 @@ abstract class Myc::Backend::AbstractVisitor
 
     if depth
       @stack << depth
-      visit Opcode::Push.new(1_i64, mod.typer.i32)
+      visit push(1_i64, mod.typer.i32)
       visit Opcode::Binary.new(:add)
     else
-      visit Opcode::Push.new(0_i64, mod.typer.i32)
+      visit push(0_i64, mod.typer.i32)
     end
     visit Opcode::Stack.new(:swap2)
     visit Opcode::Call.new(f)
+  end
+
+  private def generate_inspect_func_name(arg : Value) : String
+    "__myc_inspect_#{mod.name}_#{arg.type.backend_name}"
   end
 
   private def generate_inspect_func(type : Type, func_name : String)
     type_fn = Type::Fn.new([mod.typer.voidp, mod.typer.i32], mod.typer.void)
     fdef = Mod::FuncDef.new(@func_def.node, @mod, func_name, type_fn)
     @builder.inspect_type_fns[func_name] = fdef
-    fdef.attributes = %w{noinline}
+    fdef.attributes = %w{noinline private}
     fdef.body = Opcode::Seq.new
     body = fdef.body.not_nil!
 
-    body << Opcode::Push.new(5_i64, mod.typer.i32)
+    body << push(5_i64, mod.typer.i32)
     body << Opcode::Param.new(1)
     body << Opcode::Binary.new(:more)
 
     then_seq = Opcode::Seq.new
-    then_seq << Opcode::Push.new("...")
+    then_seq << push("...")
     then_seq << Opcode::Printf.new(0)
     then_seq << Opcode::Ret.new
 
@@ -230,27 +236,27 @@ abstract class Myc::Backend::AbstractVisitor
     case type
     when Type::IntType
       body << arg
-      body << Opcode::Push.new(builder.layout.int_format(type))
+      body << push(builder.layout.int_format(type))
       body << Opcode::Printf.new(1)
     when Type::FloatType
       body << arg
-      body << Opcode::Push.new(builder.layout.float_format(type))
+      body << push(builder.layout.float_format(type))
       body << Opcode::Printf.new(1)
     when Type::BoolType
-      body << Opcode::Push.new("false")
-      body << Opcode::Push.new("true")
+      body << push("false")
+      body << push("true")
       body << arg
       body << Opcode::Select.new
-      body << Opcode::Push.new("%s")
+      body << push("%s")
       body << Opcode::Printf.new(1)
     when Type::VoidType
-      body << Opcode::Push.new("void")
+      body << push("void")
       body << Opcode::Printf.new(0)
     when Type::PtrType
       target_type = type.target_type
       if target_type.eq?(mod.typer.u8)
         body << arg
-        body << Opcode::Push.new("\"%s\"")
+        body << push("\"%s\"")
         body << Opcode::Printf.new(1)
       else
         case target_type
@@ -258,7 +264,7 @@ abstract class Myc::Backend::AbstractVisitor
           then_seq = Opcode::Seq.new
           else_seq = Opcode::Seq.new
 
-          body << Opcode::Push.new("ptr<#{target_type}>(")
+          body << push("ptr<#{target_type}>(")
           body << Opcode::Printf.new(0)
 
           then_seq << arg
@@ -270,34 +276,37 @@ abstract class Myc::Backend::AbstractVisitor
           ptr_int_type = builder.layout.ptr_as_int_type(mod.typer)
           else_seq << arg
           else_seq << Opcode::As.new(ptr_int_type)
-          else_seq << Opcode::Push.new(builder.layout.int_hex_format(ptr_int_type))
+          else_seq << push(builder.layout.int_hex_format(ptr_int_type))
           else_seq << Opcode::Printf.new(1)
 
           body << Opcode::Param.new(0)
           body << Opcode::As.new(mod.typer.to_ptr(type, current_op.offset))
           body << Opcode::Deref.new
           body << Opcode::As.new(ptr_int_type)
-          body << Opcode::Push.new(0_i64, ptr_int_type)
+          body << push(0_i64, ptr_int_type)
           body << Opcode::Binary.new(:not_eq)
           body << Opcode::If.new(then_seq, else_seq)
 
-          body << Opcode::Push.new(")")
+          body << push(")")
           body << Opcode::Printf.new(0)
         else
           ptr_int_type = builder.layout.ptr_as_int_type(mod.typer)
           body << arg
           body << Opcode::As.new(ptr_int_type)
-          body << Opcode::Push.new("ptr<#{target_type}>(#{builder.layout.int_hex_format(ptr_int_type)})")
+          body << push("ptr<#{target_type}>(#{builder.layout.int_hex_format(ptr_int_type)})")
           body << Opcode::Printf.new(1)
         end
       end
+    when Type::Fn
+      body << push("#{type.id_name}(?)")
+      body << Opcode::Printf.new(0)
     when Type::StructType
-      body << Opcode::Push.new("#{type.id_name}(")
+      body << push("#{type.id_name}(")
       body << Opcode::Printf.new(0)
 
       type.data.each_with_index do |subtype, index|
         if index != 0
-          body << Opcode::Push.new(", ")
+          body << push(", ")
           body << Opcode::Printf.new(0)
         end
 
@@ -307,15 +316,15 @@ abstract class Myc::Backend::AbstractVisitor
         body << Opcode::Inspect.new(internal: true)
       end
 
-      body << Opcode::Push.new(")")
+      body << push(")")
       body << Opcode::Printf.new(0)
     when Type::EnumVariantType
-      body << Opcode::Push.new("#{type.id_name}(")
+      body << push("#{type.id_name}(")
       body << Opcode::Printf.new(0)
 
       type.value_types.each_with_index do |subtype, index|
         if index != 0
-          body << Opcode::Push.new(", ")
+          body << push(", ")
           body << Opcode::Printf.new(0)
         end
         body << arg
@@ -324,15 +333,15 @@ abstract class Myc::Backend::AbstractVisitor
         body << Opcode::Inspect.new(internal: true)
       end
 
-      body << Opcode::Push.new(")")
+      body << push(")")
       body << Opcode::Printf.new(0)
     when Type::FlatType
-      body << Opcode::Push.new("#{type.id_name}(")
+      body << push("#{type.id_name}(")
       body << Opcode::Printf.new(0)
 
       type.elements_count.times do |index|
         if index != 0
-          body << Opcode::Push.new(", ")
+          body << push(", ")
           body << Opcode::Printf.new(0)
         end
         body << arg
@@ -341,7 +350,7 @@ abstract class Myc::Backend::AbstractVisitor
         body << Opcode::Inspect.new(internal: true)
       end
 
-      body << Opcode::Push.new(")")
+      body << push(")")
       body << Opcode::Printf.new(0)
     when Type::EnumType
       if type.index_type
@@ -362,7 +371,7 @@ abstract class Myc::Backend::AbstractVisitor
         else_seq = Opcode::Seq.new
         else_seq << arg
         else_seq << Opcode::Field.new(0)
-        else_seq << Opcode::Push.new("#{type}::Undef(%d)")
+        else_seq << push("#{type}::Undef(%d)")
         else_seq << Opcode::Printf.new(1)
 
         body << arg
@@ -370,7 +379,7 @@ abstract class Myc::Backend::AbstractVisitor
 
         body << Opcode::Switch.new(cases_seq, tags_list, else_seq)
       else
-        body << Opcode::Push.new("#{type}::Notag(")
+        body << push("#{type}::Notag(")
         body << Opcode::Printf.new(0)
 
         body << arg
@@ -379,7 +388,7 @@ abstract class Myc::Backend::AbstractVisitor
         body << Opcode::Param.new(1)
         body << Opcode::Inspect.new(internal: true)
 
-        body << Opcode::Push.new(")")
+        body << push(")")
         body << Opcode::Printf.new(0)
       end
     else
@@ -387,10 +396,10 @@ abstract class Myc::Backend::AbstractVisitor
     end
 
     body << Opcode::Param.new(1)
-    body << Opcode::Push.new(0_i64, mod.typer.i32)
+    body << push(0_i64, mod.typer.i32)
     body << Opcode::Binary.new(:eq)
     then_seq = Opcode::Seq.new
-    then_seq << Opcode::Push.new("\n")
+    then_seq << push("\n")
     then_seq << Opcode::Printf.new(0)
     body << Opcode::If.new(then_seq, Opcode::Seq.new)
 
@@ -679,10 +688,10 @@ abstract class Myc::Backend::AbstractVisitor
 
   def visit(op : Opcode::SizeOf)
     if type = op.type
-      visit Opcode::Push.new(builder.layout.size_of(type).to_i64, mod.typer.u64)
+      visit push(builder.layout.size_of(type).to_i64, mod.typer.u64)
     else
       value = pop
-      visit Opcode::Push.new(builder.layout.size_of(value.type).to_i64, mod.typer.u64)
+      visit push(builder.layout.size_of(value.type).to_i64, mod.typer.u64)
     end
   end
 
@@ -816,11 +825,7 @@ abstract class Myc::Backend::AbstractVisitor
     end
 
     case_values = op.values.map do |value|
-      if val = builder.constant_value?(value, index.type)
-        val
-      else
-        raise error("cant create constant for #{value}, type: #{index.type}")
-      end
+      builder.init_value(AbstractBuilder::InitValue::Intval.new(index.type, value))
     end
 
     case_bbs = op.cases_seq.map { @bb.next("switch_case") }
@@ -952,7 +957,7 @@ abstract class Myc::Backend::AbstractVisitor
       local_name = next_unique("__myc_create_enum")
 
       if type.parent_type.index_type
-        visit Opcode::Push.new(type.position.to_i64, mod.typer.i32)
+        visit push(type.position.to_i64, mod.typer.i32)
         visit Opcode::Local.new(local_name, type)
         visit Opcode::Field.new(0)
         visit Opcode::Store.new
@@ -1011,5 +1016,20 @@ abstract class Myc::Backend::AbstractVisitor
   def next_unique(tag : String) : String
     @unique_id += 1
     "#{tag}_#{@unique_id}"
+  end
+
+  private def push(v, type = nil)
+    case v
+    when Int
+      Opcode::Push.new(Source::Token::IntValue.new(v), type)
+    when Float
+      Opcode::Push.new(Source::Token::FloatValue.new(v), type)
+    when String
+      Opcode::Push.new(Source::Token::StringValue.new(v), type)
+    when Bool
+      Opcode::Push.new(Source::Token::BoolValue.new(v), type)
+    else
+      raise error("unexpected value #{v.inspect}")
+    end
   end
 end

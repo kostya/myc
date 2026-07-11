@@ -82,14 +82,8 @@ class Myc::Mycc::CodeGenerator
       @indent -= 1
 
       if init = var.init
-        case init
-        when TypedAST::IntLiteral
-          emit("INITIAL #{init.value}")
-        when TypedAST::FloatLiteral
-          emit("INITIAL #{init.value}")
-        when TypedAST::StringLiteral
-          emit("INITIAL \"#{init.value}\"")
-        end
+        emit("INITIAL")
+        emit_init_element(init)
       end
 
       emit("PRIVATE") if var.is_static
@@ -104,6 +98,29 @@ class Myc::Mycc::CodeGenerator
     end
     io.rewind
     io
+  end
+
+  private def emit_init_element(elem)
+    case elem
+    when TypedAST::IntLiteral
+      emit(" #{elem.value}")
+    when TypedAST::CharLiteral
+      emit(" #{elem.value}")
+    when TypedAST::FloatLiteral
+      emit(" #{elem.value}")
+    when TypedAST::StringLiteral
+      emit(" \"#{Backend::AbstractBuilder.escaped_string(elem.value)}\"")
+    when TypedAST::Cast
+      emit_init_element(elem.operand)
+    when TypedAST::ZeroInitializer
+      emit(" 0" * elem.type.flat_elements_count)
+    when TypedAST::InitList
+      elem.elements.each do |elem|
+        emit_init_element(elem)
+      end
+    else
+      raise "Unsupported init element: #{elem.class}"
+    end
   end
 
   private def emit(str : String)

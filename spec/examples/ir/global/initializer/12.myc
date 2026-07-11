@@ -1,0 +1,17 @@
+STRUCT :Bla
+  TYPE :i32
+  TYPE :u8
+  TYPE :f64
+ENDSTRUCT
+
+GLOBAL :bla
+  TYPE :Bla
+  INITIAL 42 :A 35
+ENDGLOBAL
+
+FUNC :main
+  BODY
+    GLOBAL :bla
+    INSPECT
+ENDFUNC
+

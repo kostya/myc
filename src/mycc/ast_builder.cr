@@ -573,7 +573,11 @@ class Myc::Mycc::ASTBuilder
 
     if (is_static || @current_function_name.empty?) && !is_extern
       if init.nil? || (init.is_a?(TypedAST::Cast) && is_zero_cast?(init))
-        init = TypedAST::IntLiteral.new(0_i64, var_type, location(cursor))
+        if var_type.is_a?(Type::FlatType) || var_type.is_a?(Type::StructType)
+          init = TypedAST::ZeroInitializer.new(var_type, location(cursor))
+        else
+          init = TypedAST::IntLiteral.new(0_i64, var_type, location(cursor))
+        end
       end
     end
 

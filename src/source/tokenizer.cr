@@ -92,11 +92,11 @@ class Myc::Source::Tokenizer
       else
         case name = consume_ident
         when "true"
-          Token::Arg.new(true)
+          Token::BoolValue.new(true)
         when "false"
-          Token::Arg.new(false)
+          Token::BoolValue.new(false)
         else
-          Token::Arg.new(name)
+          Token::StringValue.new(name)
         end
       end
     when ' ', '\t'
@@ -119,17 +119,17 @@ class Myc::Source::Tokenizer
       end
       nil
     when '"'
-      Token::Arg.new consume_string('"')
+      Token::StringValue.new consume_string('"')
     when '\''
-      Token::Arg.new consume_string('\'')
+      Token::StringValue.new consume_string('\'')
     when ':'
-      Token::Arg.new consume_string_until_separator
+      Token::StringValue.new consume_string_until_separator
     when .ascii_number?
       value = extract_int_or_float
       unless separator?(current_char)
         raise error("expected separator after number")
       end
-      Token::Arg.new(value)
+      value.is_a?(Int64) ? Token::IntValue.new(value.as(Int64)) : Token::FloatValue.new(value.as(Float64))
     when '-'
       move_next
       if current_char.ascii_number?
@@ -139,7 +139,7 @@ class Myc::Source::Tokenizer
           raise error("expected separator after number")
         end
 
-        Token::Arg.new(value)
+        value.is_a?(Int64) ? Token::IntValue.new(value.as(Int64)) : Token::FloatValue.new(value.as(Float64))
       else
         raise error("unexpected symbol '-'")
       end

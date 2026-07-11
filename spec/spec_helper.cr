@@ -54,8 +54,8 @@ abstract struct Myc::Source::Token
     case t = self
     when Opcode
       io << "O:#{t.code.to_s}:#{offset}"
-    when Arg
-      io << "V:#{t.v.inspect}:#{offset}"
+    when Value
+      io << "V:#{t.val.inspect}:#{offset}"
     when OpcodeUnknown
       io << "OU:#{t.name}:#{offset}"
     else
@@ -252,6 +252,6 @@ class Examples
 end
 
 require "../src/backend/llvm/all"
-require "../src/backend/qbe/all"
 require "../src/backend/c/all"
+require "../src/backend/qbe/all"
 require "../src/backend/mycc/all"

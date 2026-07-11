@@ -39,62 +39,76 @@ class Myc::Backend::C::Builder < Myc::Backend::AbstractBuilder
   end
 
   def global_register(mod : Mod, global : Mod::GlobalDef)
-    g = Value.new(BBVal.new("#{global.name}"), global.type, Value::MM::Ref, global.constant ? Value::PP::GlobalConstant.new(global.name) : Value::PP::Global.new(global.name))
+    g = Value.new(BBVal.new("#{global.name}"), global.type, Value::MM::Ref,
+      global.constant ? Value::PP::GlobalConstant.new(global.name) : Value::PP::Global.new(global.name))
     @global_links[global.name] = g
-
-    init_val = if val = global.initial_value
-                 constant_value?(val, global.type).try(&.bbval.as(BBVal).val)
-               end
-
-    unless global.initial_keyword
-      @data_io << "extern "
-    end
 
     if global.private_flag
       @data_io << "static "
+    else
+      unless global.initial_keyword
+        @data_io << "extern "
+      end
     end
 
     @data_io << "const " if global.constant
     @data_io << c_type(global.type)
     @data_io << ' '
     @data_io << global.name
-    if init_val
-      @data_io << " = "
-      init_val.to_s(@data_io)
+
+    if global.initial_keyword
+      if global.initial_values.size > 0
+        vp = AbstractBuilder::ValuesParser.new(global.initial_values, global.type, mod, Location.new(mod.filename, global.node.offset))
+        init = vp.parse
+
+        @data_io << " = "
+        c_constant(init, @data_io)
+      end
     end
+
     @data_io << ";\n"
   end
 
-  def constant_value?(value : Source::Token::ArgType, type : Type) : Value?
-    val = case value
-          when String
-            "\"#{escaped_string(value)}\""
-          when Bool
-            value ? "1" : "0"
-          when Int, Int64
-            case type
-            when Type::PtrType
-              if value == 0
-                "NULL"
-              else
-                return nil
-              end
-            when Type::StructType, Type::FlatType, Type::EnumType
-              if value == 0
-                "{0}"
-              else
-                return nil
-              end
-            else
-              value.to_s
-            end
-          when Float32, Float64
-            value.to_s
-          else
-            return nil
-          end
+  def c_constant(init : InitValue, io : IO)
+    case init
+    when InitValue::Intval
+      io << init.val
+    when InitValue::Boolval
+      io << (init.val ? 1 : 0)
+    when InitValue::F32
+      io << init.val
+    when InitValue::F64
+      io << init.val
+    when InitValue::Str
+      io << '"' << AbstractBuilder.escaped_string(init.str) << '"'
+    when InitValue::Zero
+      io << "NULL"
+    when InitValue::GlobalRef
+      io << '&' << init.name
+    when InitValue::FnRef
+      io << init.name
+    when InitValue::StructInit
+      io << '{'
+      init.fields.each_with_index do |field, i|
+        io << ", " if i > 0
+        c_constant(field, io)
+      end
+      io << '}'
+    when InitValue::FlatInit
+      io << '{'
+      init.elements.each_with_index do |elem, i|
+        io << ", " if i > 0
+        c_constant(elem, io)
+      end
+      io << '}'
+    when InitValue::FlatStr
+      io << '"' << AbstractBuilder.escaped_string(init.str) << '"'
+    end
+  end
 
-    Value.new(BBVal.new(val), type, Value::MM::Val, Value::PP::Primitive.new)
+  def init_value(ival : InitValue) : Value
+    val = String.build { |s| c_constant(ival, s) }
+    Value.new(BBVal.new(val), ival.type, Value::MM::Val, Value::PP::Primitive.new)
   end
 
   def find_global(name : String) : Value?

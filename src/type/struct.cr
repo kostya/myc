@@ -24,4 +24,12 @@ class Myc::Type::StructType < Myc::Type
       io << self.id_name
     end
   end
+
+  def flat_elements_count : UInt64
+    res = 0_u64
+    data.each do |type|
+      res += type.flat_elements_count
+    end
+    res
+  end
 end

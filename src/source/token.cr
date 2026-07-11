@@ -3,6 +3,12 @@ abstract struct Myc::Source::Token
   record Eof < Token
   record Opcode < Token, code : Myc::Opcode::Code
   record OpcodeUnknown < Token, name : String
-  alias ArgType = Int64 | Float64 | String | Bool
-  record Arg < Token, v : ArgType
+
+  abstract struct Value < Token
+  end
+
+  record IntValue < Value, val : Int64
+  record BoolValue < Value, val : Bool
+  record StringValue < Value, val : String
+  record FloatValue < Value, val : Float64
 end

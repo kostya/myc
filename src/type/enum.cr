@@ -29,6 +29,17 @@ class Myc::Type::EnumType < Myc::Type
     t.hidden = true
     @payload_type = t
   end
+
+  def flat_elements_count : UInt64
+    res = 0_u64
+    if t = index_type
+      res += t.flat_elements_count
+    end
+    if pt = payload_type
+      res += pt.flat_elements_count
+    end
+    res
+  end
 end
 
 class Myc::Type::EnumVariantType < Myc::Type
@@ -44,5 +55,9 @@ class Myc::Type::EnumVariantType < Myc::Type
 
   def field_type?(index : Int32) : Tuple(Int32, Type)?
     parent_type.field_type?(index)
+  end
+
+  def flat_elements_count : UInt64
+    parent_type.flat_elements_count
   end
 end

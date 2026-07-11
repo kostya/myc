@@ -20,4 +20,12 @@ class Myc::Type::FlatType < Myc::Type
     io << elements_count
     io << '>'
   end
+
+  def flat_elements_count : UInt64
+    res = 0_u64
+    if tt = target_type
+      res += tt.flat_elements_count * elements_count
+    end
+    res
+  end
 end

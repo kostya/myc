@@ -63,23 +63,6 @@ class Myc::Mod::Typer
     find_in_caches(id_name) || Parser.new(id_name, self, loc).get_type
   end
 
-  def std_value_type?(v) : Type?
-    case v
-    when UInt64  then u64
-    when Int64   then i64
-    when UInt32  then u32
-    when Int32   then i32
-    when Int16   then i16
-    when UInt16  then u16
-    when Int8    then i8
-    when UInt8   then u8
-    when Bool    then bool
-    when String  then u8p
-    when Float32 then f32
-    when Float64 then f64
-    end
-  end
-
   def to_ptr(type : Type, offset : UInt32 = 0) : Type
     find("ptr<#{type.id_name}>", Location.new(mod.filename, offset))
   end

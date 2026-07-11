@@ -60,19 +60,20 @@ class Myc::Backend::Llvm::Builder < Myc::Backend::AbstractBuilder
   end
 
   def global_register(mod : Mod, global : Mod::GlobalDef)
-    llvm_type = llvm_type(global.type)
-    var = llvm_mod.globals.add(llvm_type, global.name)
+    _llvm_type = llvm_type(global.type)
+    var = llvm_mod.globals.add(_llvm_type, global.name)
 
-    if initial_value = global.initial_keyword
-      if initial_value = global.initial_value
-        if val = _constant_value?(initial_value, global.type)
-          var.initializer = val
-        else
-          raise global.node.error("cant translate constant #{initial_value.inspect}", mod.filename)
-        end
+    if global.initial_keyword
+      var.linkage = LLVM::Linkage::Internal
+      if global.initial_values.size > 0
+        vp = AbstractBuilder::ValuesParser.new(global.initial_values, global.type, mod, Location.new(mod.filename, global.node.offset))
+        init = vp.parse
+        var.initializer = llvm_val(init)
       else
-        var.initializer = llvm_type.undef
+        var.initializer = _llvm_type.undef
       end
+    else
+      var.linkage = LLVM::Linkage::External
     end
 
     var.linkage = global.private_flag ? LLVM::Linkage::Internal : LLVM::Linkage::External
@@ -85,43 +86,36 @@ class Myc::Backend::Llvm::Builder < Myc::Backend::AbstractBuilder
     global_links[global.name] = g
   end
 
-  def _constant_value?(value : Source::Token::ArgType, type : Type) : LLVM::Value?
-    case type
-    when Type::IntType
-      case value
-      when Int
-        llvm_type(type).const_int(value)
-      end
-    when Type::BoolType
-      case value
-      when Bool
-        llvm_type(type).const_int(value ? 1 : 0)
-      when Int
-        if value == 1
-          llvm_type(type).const_int(1)
-        elsif value == 0
-          llvm_type(type).const_int(0)
-        end
-      end
-    when Type::FloatType
-      case value
-      when Float32 then llvm_type(type).const_float(value)
-      when Float64 then llvm_type(type).const_double(value)
-      when Int     then llvm_type(type).const_double(value.to_f64)
-      end
-    when Type::StructType, Type::FlatType, Type::EnumType, Type::Fn
-      case value
-      when Int
-        if value == 0
-          llvm_type(type).null
-        end
-      end
-    when Type::PtrType
-      case value
-      when String then string_constant(value)
-      when Int
-        llvm_type(type).null if value == 0
-      end
+  def llvm_val(init : InitValue) : LLVM::Value
+    case init
+    when InitValue::Intval
+      llvm_type(init.type).const_int(init.val)
+    when InitValue::Boolval
+      llvm_type(init.type).const_int(init.val ? 1 : 0)
+    when InitValue::F32
+      llvm_type(init.type).const_float(init.val)
+    when InitValue::F64
+      llvm_type(init.type).const_double(init.val)
+    when InitValue::Str
+      string_constant(init.str)
+    when InitValue::Zero
+      llvm_type(init.type).null
+    when InitValue::GlobalRef
+      global_links[init.name].bbval.as(BBVal).llvm
+    when InitValue::FnRef
+      llvm_func = func_link(init.name, init.type.as(Type::Fn)).llvm_function
+      LLVM::Value.new(llvm_func.to_unsafe)
+    when InitValue::StructInit
+      fields = init.fields.map { |f| llvm_val(f) }
+      llvm_type(init.type).const_struct(fields)
+    when InitValue::FlatInit
+      elem_type = llvm_type(init.type.as(Type::FlatType).target_type)
+      elems = init.elements.map { |e| llvm_val(e) }
+      elem_type.const_array(elems)
+    when InitValue::FlatStr
+      llvm_mod.context.const_bytes(init.str.to_slice)
+    else
+      raise "unreachable"
     end
   end
 
@@ -167,10 +161,8 @@ class Myc::Backend::Llvm::Builder < Myc::Backend::AbstractBuilder
     end
   end
 
-  def constant_value?(value : Source::Token::ArgType, type : Type) : Value?
-    if llvm_val = _constant_value?(value, type)
-      Value.new(BBVal.new(llvm_val), type, Value::MM::Val, Value::PP::Primitive.new)
-    end
+  def init_value(ival : InitValue) : Value
+    Value.new(BBVal.new(llvm_val(ival)), ival.type, Value::MM::Val, Value::PP::Primitive.new)
   end
 
   def find_global(name : String) : Value?

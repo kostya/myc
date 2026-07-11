@@ -1,6 +1,6 @@
 class Myc::Source::Node
   property code : Myc::Opcode::Code
-  property values : Array(Token::ArgType)?
+  property values : Array(Token::Value)?
 
   property offset : UInt32 = 0
   property comment : String?

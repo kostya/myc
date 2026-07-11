@@ -26,7 +26,8 @@ class Myc::Backend::QBE::Builder < Myc::Backend::AbstractBuilder
   end
 
   def global_register(mod : Mod, global : Mod::GlobalDef)
-    g = Value.new(BBVal.new("$#{global.name}"), global.type, Value::MM::Ref, global.constant ? Value::PP::GlobalConstant.new(global.name) : Value::PP::Global.new(global.name))
+    g = Value.new(BBVal.new("$#{global.name}"), global.type, Value::MM::Ref,
+      global.constant ? Value::PP::GlobalConstant.new(global.name) : Value::PP::Global.new(global.name))
     @global_links[global.name] = g
 
     return unless global.initial_keyword
@@ -37,45 +38,84 @@ class Myc::Backend::QBE::Builder < Myc::Backend::AbstractBuilder
       visibility = ""
     end
 
-    if global.type.needs_blit?
-      fields = flatten_data_fields(global.type).join(", ")
-      @data_io << "#{visibility}data $#{global.name} = { #{fields} }\n"
+    fields = if global.initial_keyword && global.initial_values.size > 0
+               vp = AbstractBuilder::ValuesParser.new(global.initial_values, global.type, mod, Location.new(mod.filename, global.node.offset))
+
+               fields1 = qbe_flatten_init(vp.parse)
+
+               fields1.map { |t, v| "#{qbe_type(t)} #{v}" }
+             else
+               fields1 = zero_flatten(global.type)
+
+               fields1.map { |t, v| "#{qbe_type(t)} #{v}" }
+             end
+
+    @data_io << "#{visibility}data $#{global.name} = { #{fields.join(", ")} }\n"
+  end
+
+  def qbe_flatten_init(init : InitValue) : Array(Tuple(Type, String))
+    case init
+    when InitValue::StructInit
+      init.fields.flat_map { |f| qbe_flatten_init(f) }
+    when InitValue::FlatInit
+      init.elements.flat_map { |e| qbe_flatten_init(e) }
+    when InitValue::FlatStr
+      [{init.type, "\"#{init.str}\""}]
+    when InitValue::Intval
+      [{init.type, init.val.to_s}]
+    when InitValue::Boolval
+      [{init.type, init.val ? "1" : "0"}]
+    when InitValue::F32
+      [{init.type, sprintf("s_%a", init.val)}]
+    when InitValue::F64
+      [{init.type, sprintf("d_%a", init.val)}]
+    when InitValue::Str
+      [{init.type, string_constant(init.str)}]
+    when InitValue::Zero
+      [{init.type, "0"}]
+    when InitValue::GlobalRef
+      [{init.type, "$#{init.name}"}]
+    when InitValue::FnRef
+      [{init.type, "$#{init.name}"}]
     else
-      init_val = if val = global.initial_value
-                   constant_value?(val, global.type).try(&.bbval.as(BBVal).val) || 0
-                 else
-                   0
-                 end
-      @data_io << "#{visibility}data $#{global.name} = { #{qbe_type(global.type)} #{init_val} }\n"
+      raise "unreachable"
     end
   end
 
-  def constant_value?(value : Source::Token::ArgType, type : Type) : Value?
-    if val = case value
-             when Int
-               case type
-               when Type::PtrType
-                 if value == 0
-                   "0"
-                 end
-               else
-                 value.to_s
-               end
-             when Bool
-               value ? "1" : "0"
-             when Float32, Float64
-               case type
-               when Type::FloatType
-                 if type.bytes_count == 4
-                   sprintf("s_%a", value.to_f32)
-                 else
-                   sprintf("d_%a", value.to_f64)
-                 end
-               end
-             when String
-               string_constant(value)
-             end
-      Value.new(BBVal.new(val), type, Value::MM::Val, Value::PP::Primitive.new)
+  def init_value(ival : InitValue) : Value
+    vals = qbe_flatten_init(ival)
+    val = vals.map { |_, v| v }.join(", ")
+    Value.new(BBVal.new(val), ival.type, Value::MM::Val, Value::PP::Primitive.new)
+  end
+
+  private def zero_flatten(type : Type) : Array(Tuple(Type, String))
+    case type
+    when Type::StructType
+      type.data.flat_map { |t| zero_flatten(t) }.to_a
+    when Type::FlatType
+      type.elements_count.times.flat_map { zero_flatten(type.target_type) }.to_a
+    when Type::EnumType
+      if index_type = type.index_type
+        fields = zero_flatten(index_type)
+        payload_count = @layout.enum_payload_count(type)
+        if payload_count > 0
+          fields + payload_count.times.map { {index_type, "0"} }.to_a
+        else
+          fields
+        end
+      else
+        fields = [] of Tuple(Type, String)
+        payload_count = @layout.enum_payload_count(type)
+        if payload_count > 0
+          fields + payload_count.times.map { {type.payload_type.not_nil!.target_type, "0"} }.to_a
+        else
+          fields
+        end
+      end
+    when Type::PtrType, Type::Fn, Type::IntType, Type::FloatType, Type::BoolType
+      [{type.as(Type), "0"}]
+    else
+      raise "unexpected type in global data: #{type.class}"
     end
   end
 
@@ -95,7 +135,7 @@ class Myc::Backend::QBE::Builder < Myc::Backend::AbstractBuilder
     @string_constants.put_if_absent(str) do
       name = "str_#{@str_counter}"
       @str_counter += 1
-      @data_io << "data $#{name} = { b \"#{escaped_string(str)}\", b 0 }\n"
+      @data_io << "data $#{name} = { b \"#{AbstractBuilder.escaped_string(str)}\", b 0 }\n"
       "$#{name}"
     end
   end
@@ -123,33 +163,6 @@ class Myc::Backend::QBE::Builder < Myc::Backend::AbstractBuilder
       @funcs.each do |fb|
         copy_io(fb.body_io, f)
       end
-    end
-  end
-
-  private def flatten_data_fields(type : Type) : Array(String)
-    case type
-    when Type::StructType
-      type.data.flat_map { |t| flatten_data_fields(t) }
-    when Type::FlatType
-      type.elements_count.times.to_a.flat_map { flatten_data_fields(type.target_type) }
-    when Type::EnumType
-      fields = type.index_type ? flatten_data_fields(type.index_type.not_nil!) : [] of String
-      payload_count = @layout.enum_payload_count(type)
-      if payload_count > 0
-        fields + payload_count.times.to_a.map { "w 0" }
-      else
-        fields
-      end
-    when Type::IntType
-      ["#{qbe_type(type)} 0"]
-    when Type::FloatType
-      ["#{qbe_type(type)} 0"]
-    when Type::BoolType
-      ["w 0"]
-    when Type::PtrType, Type::Fn
-      ["l 0"]
-    else
-      raise "unexpected type in global data: #{type.class}"
     end
   end
 end

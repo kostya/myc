@@ -1,0 +1,9 @@
+=== Escape Backslash Tests ===
+  regex: (?i)etc/passwd|wp-admin|\.\./
+  PATTERN0: (?i)etc/passwd|wp-admin|\.\./
+  PATTERN: (?i)etc/passwd|wp-admin|\.\./
+  PATTERN2: /api/[^ " ]+
+  dots: hello\.\.world
+  normal: line1\nline2\t tab
+  mixed: path\to\\file\.txt
+=== DONE ===

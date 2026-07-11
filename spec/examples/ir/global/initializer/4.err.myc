@@ -1,0 +1,11 @@
+GLOBAL :bla
+  TYPE "fn<i32, i32>"
+  INITIAL :hello22
+ENDGLOBAL
+
+FUNC :main
+  BODY
+    GLOBAL :bla
+    INVOKE
+ENDFUNC
+

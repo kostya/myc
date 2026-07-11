@@ -33,6 +33,10 @@ abstract class Myc::Type
   protected def normalize_name(name : String) : String
     name.gsub(/[^a-zA-Z0-9_]/, "_")
   end
+
+  def flat_elements_count : UInt64
+    1_u64
+  end
 end
 
 require "./type/*"

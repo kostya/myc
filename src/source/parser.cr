@@ -177,11 +177,11 @@ module Myc::Source
       values = node.values
       while true
         case ct = current_token
-        when Token::Arg
+        when Token::Value
           if values
-            values << ct.v
+            values << ct
           else
-            values = [ct.v] of Token::ArgType
+            values = [ct] of Token::Value
             node.values = values
           end
           move_next

@@ -13,7 +13,7 @@
 #   PUSH "hello"           ; ptr<u8>
 #
 class Myc::Opcode::Push < Myc::Opcode
-  getter value : Source::Token::ArgType
+  getter value : Source::Token::Value
   getter type : Type?
 
   def initialize(@value, @type = nil)

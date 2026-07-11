@@ -67,9 +67,10 @@ class Myc::Source::Serialize
     end
   end
 
-  private def format_value(v : Token::ArgType, io : IO)
+  private def format_value(v : Token::Value, io : IO)
     case v
-    when String
+    when Token::StringValue
+      v = v.val
       if v.empty? || Tokenizer::SEPARATOR.any? { |sep| v.includes?(sep) }
         v.inspect(io)
       else
@@ -77,7 +78,7 @@ class Myc::Source::Serialize
         io << v
       end
     else
-      io << v
+      io << v.val
     end
   end
 end

@@ -71,8 +71,8 @@ class Myc::Mod::Loader
     values = node.values
     raise error("#{node.code} expected only 1 value", node) if !values || values.size != 1
     case v = values.first
-    when String
-      return v
+    when Source::Token::StringValue
+      return v.val
     else
       raise error("#{node.code} expect string value, not #{v.inspect}", node)
     end
@@ -80,8 +80,8 @@ class Myc::Mod::Loader
 
   private def get_string_value(node, value) : String
     case v = value
-    when String
-      return v
+    when Source::Token::StringValue
+      return v.val
     else
       raise error("#{node.code} expect string value, not #{value.inspect}", node)
     end
@@ -89,8 +89,8 @@ class Myc::Mod::Loader
 
   private def get_int_value(node, value) : Int
     case v = value
-    when Int
-      return v
+    when Source::Token::IntValue
+      return v.val
     else
       raise error("#{node.code} expect Int value, not #{value.inspect}", node)
     end
@@ -100,8 +100,8 @@ class Myc::Mod::Loader
     values = node.values
     raise error("#{node.code} expected only 1 value", node) if !values || values.size != 1
     case v = values.first
-    when Int
-      return v
+    when Source::Token::IntValue
+      return v.val
     else
       raise error("#{node.code} expect int value, not #{v.inspect}", node)
     end
@@ -111,10 +111,10 @@ class Myc::Mod::Loader
     values = node.values
     raise error("#{node.code} expected only 2 value", node) if !values || values.size != 2
     case v = values.first
-    when String
+    when Source::Token::StringValue
       case v2 = values[1]
-      when String
-        {v, v2}
+      when Source::Token::StringValue
+        {v.val, v2.val}
       else
         raise error("#{node.code} expect second string value, not #{v2.inspect}", node)
       end
@@ -535,7 +535,7 @@ class Myc::Mod::Loader
     global_name = get_only_one_string_value(node)
 
     global_type = nil
-    init_value = nil
+    init_values = nil
     constant_flag = false
     initial_keyword = false
     global_private = false
@@ -546,10 +546,8 @@ class Myc::Mod::Loader
         raise error("TYPE already defined for GLOBAL #{global_name}", op) if global_type
         global_type = find_type(get_only_one_string_value(op), op)
       when Opcode::Code::INITIAL
-        raise error("INITIAL already defined for GLOBAL #{global_name}", op) if init_value
-        values = op.values
-        raise error("INITIAL expected <= 1 value", op) if values && values.size > 1
-        init_value = values.try &.first?
+        raise error("INITIAL already defined for GLOBAL #{global_name}", op) if init_values
+        init_values = op.values
         initial_keyword = true
       when Opcode::Code::CONSTANT
         raise error("CONSTANT already defined for GLOBAL", op) if constant_flag
@@ -565,7 +563,8 @@ class Myc::Mod::Loader
 
     raise error("missing TYPE for GLOBALDEF #{global_name}", node) unless global_type
 
-    @mod.global_defs << Mod::GlobalDef.new(node, global_name, global_type, initial_keyword, init_value, constant_flag, global_private)
+    init_values ||= Array(Source::Token::Value).new
+    @mod.global_defs[global_name] = Mod::GlobalDef.new(node, global_name, global_type, initial_keyword, init_values, constant_flag, global_private)
   end
 
   def find_type(name : String, node : Source::Node) : Type

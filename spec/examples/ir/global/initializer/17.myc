@@ -1,0 +1,27 @@
+STRUCT :Data
+  TYPE "flat<fn<i32, void>, 2>"
+  TYPE :ptr<u8>
+ENDSTRUCT
+
+STRUCT :Container
+  TYPE :i32
+  TYPE :Data
+ENDSTRUCT
+
+GLOBAL :complex
+  TYPE :Container
+  INITIAL 42 :my_handler :my_handler :hello
+ENDGLOBAL
+
+FUNC :my_handler
+  ARGS
+    TYPE :i32
+  BODY
+ENDFUNC
+
+FUNC :main
+  BODY
+    GLOBAL :complex
+    INSPECT
+ENDFUNC
+

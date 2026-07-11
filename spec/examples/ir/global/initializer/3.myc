@@ -1,0 +1,19 @@
+GLOBAL :bla
+  TYPE :fn<void>
+  INITIAL :hello
+ENDGLOBAL
+
+FUNC :hello
+  BODY
+    PUSH "Hello\n"
+    PRINTF 0
+ENDFUNC
+
+FUNC :main
+  BODY
+    GLOBAL :bla
+    INVOKE
+    GLOBAL :bla
+    INSPECT
+ENDFUNC
+

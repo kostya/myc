@@ -16,7 +16,7 @@ class Myc::Mod::Saver
       end
     end
 
-    @mod.global_defs.each do |global|
+    @mod.global_defs.each_value do |global|
       dom.sections << save_global(global)
     end
 
@@ -35,10 +35,30 @@ class Myc::Mod::Saver
     dom
   end
 
+  private def value_to_token(v)
+    case v
+    when Int
+      Source::Token::IntValue.new(v)
+    when String
+      Source::Token::StringValue.new(v)
+    when Bool
+      Source::Token::BoolValue.new(v)
+    when Float
+      Source::Token::FloatValue.new(v)
+    when Source::Token::Value
+      v
+    else
+      raise "unknown value unreachable"
+    end
+  end
+
   private macro opcode(code, *values)
     %node = Source::Node::Opcode.new({{code}})
     {% unless values.empty? %}
-      %node.values = [{{values.splat}}] of Source::Token::ArgType
+      %node.values = %values = [] of Source::Token::Value
+    {% end %}
+    {% for value in values %}
+      %values << value_to_token({{value}})
     {% end %}
     %node
   end
@@ -46,7 +66,10 @@ class Myc::Mod::Saver
   private macro container(code, *values)
     %node = Source::Node::Container.new({{code}})
     {% unless values.empty? %}
-      %node.values = [{{values.splat}}] of Source::Token::ArgType
+      %node.values = %values = [] of Source::Token::Value
+    {% end %}
+    {% for value in values %}
+      %values << value_to_token({{value}})
     {% end %}
     %node
   end
@@ -54,7 +77,10 @@ class Myc::Mod::Saver
   private macro sequence(code, *values)
     %node = Source::Node::Sequence.new({{code}})
     {% unless values.empty? %}
-      %node.values = [{{values.splat}}] of Source::Token::ArgType
+      %node.values = %values = [] of Source::Token::Value
+    {% end %}
+    {% for value in values %}
+      %values << value_to_token({{value}})
     {% end %}
     %node
   end
@@ -119,11 +145,9 @@ class Myc::Mod::Saver
     g_node.list << save_type(global.type)
 
     if global.initial_keyword
-      if init = global.initial_value
-        g_node.list << opcode(Opcode::Code::INITIAL, init)
-      else
-        g_node.list << opcode(Opcode::Code::INITIAL)
-      end
+      node = Source::Node::Opcode.new(Opcode::Code::INITIAL)
+      node.values = global.initial_values
+      g_node.list << node
     end
 
     if global.constant
@@ -274,7 +298,7 @@ class Myc::Mod::Saver
 
     op.cases_seq.each_with_index do |case_seq, index|
       case_node = sequence(Opcode::Code::CASE)
-      case_node.values = [op.values[index]] of Source::Token::ArgType
+      case_node.values = [value_to_token(op.values[index])] of Source::Token::Value
       node.sections << case_node
       save_seq_list(case_seq, case_node, locals_saved)
     end
