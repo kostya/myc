@@ -197,12 +197,16 @@ class Myc::Backend::C::Builder < Myc::Backend::AbstractBuilder
       s << name
       s << '('
 
-      type_fn.args.each_with_index do |t, i|
-        s << ", " if i != 0
-        s << c_type(t)
-        s << ' '
-        s << "arg"
-        s << i
+      if name == "main"
+        s << "int arg0, char *arg1[]"
+      else
+        type_fn.args.each_with_index do |t, i|
+          s << ", " if i != 0
+          s << c_type(t)
+          s << ' '
+          s << "arg"
+          s << i
+        end
       end
 
       if type_fn.vaarg
