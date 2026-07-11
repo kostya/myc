@@ -259,12 +259,12 @@ class Myc::Backend::QBE::BB < Myc::Backend::AbstractBB
     when .lnot?
       case type
       when Type::IntType, Type::BoolType
-        emit "#{t} =w ceqw #{val}, 0"
+        emit "#{t} =#{qbe_type} ceqw #{val}, 0"
       end
     when .bnot?
       case type
       when Type::IntType
-        emit "#{t} =w xor #{val}, -1"
+        emit "#{t} =#{qbe_type} xor #{val}, -1"
       end
     when .neg?
       emit "#{t} =#{qbe_type} neg #{val}"
