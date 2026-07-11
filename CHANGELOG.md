@@ -1,5 +1,6 @@
-## 0.7.0-dev
-* ENUM added TAG TYPE, and TAG SKIP
+## 0.7.0 (12.07.2026)
+* ENUM added TAG TYPE, and TAG SKIP.
+* Mycc finally compile LangArena benchmark.
 
 ## 0.6.0 (07.07.2026)
 * ALLOCA: for vla
