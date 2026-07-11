@@ -34,7 +34,7 @@ struct Myc::Backend::C::TypeTranslator
   end
 
   private def do_simple_translate(type : Type::BoolType)
-    "int"
+    "uint8_t"
   end
 
   private def do_simple_translate(type : Type::IntType)
