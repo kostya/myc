@@ -344,6 +344,7 @@ The `TypedAST(mycc) -> IR(myc)` stage — as expected, is one of the simplest ([
 ### Difference from Clang:
 
 clang: `C -> Parse(libclang) -> Clang CodeGen -> LLVM -> binary`
+
 mycc: `C -> Parse(libclang) -> mycc CodeGen -> IR(myc) -> [LLVM/QBE/C] -> binary`
 
 ### Limitations: 
@@ -371,7 +372,7 @@ Results for linux64, gcc 13.3, clang 20.1.
 | mycc(c, --release, clang) | 5091ms | 102Mb | 52.1s |
 | mycc(c, --release, gcc) | 5128ms | 86Mb | 53.7s |
 
-Currently, mycc is slower in the benchmarks. This is due to several suboptimal stages:
+Currently, mycc is slower at compile time in the benchmarks. Run time is close. This is due to several suboptimal stages:
 - libclang adds parsing overhead of about 10ms per file.
 - IR is generated as text and then parsed again — this adds another ~10ms of overhead per file (also, because of this, error locations are not yet available).
 - There are no self optimization passes yet — and probably never will be :)
