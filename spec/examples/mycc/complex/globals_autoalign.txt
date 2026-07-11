@@ -1,0 +1,56 @@
+=== LUT Tests ===
+=== CHAR_LUT ===
+  CHAR_LUT[0] = '.'
+  CHAR_LUT[1] = '-'
+  CHAR_LUT[2] = '+'
+  CHAR_LUT[3] = '*'
+  CHAR_LUT[4] = 'X'
+  CHAR_LUT[5] = 'M'
+=== SHORT_LUT ===
+  SHORT_LUT[0] = 10
+  SHORT_LUT[1] = 20
+  SHORT_LUT[2] = 30
+  SHORT_LUT[3] = 40
+=== INT_LUT ===
+  INT_LUT[0] = 100
+  INT_LUT[1] = 200
+  INT_LUT[2] = 300
+  INT_LUT[3] = 400
+  INT_LUT[4] = 500
+=== LL_LUT ===
+  LL_LUT[0] = 1000
+  LL_LUT[1] = 2000
+  LL_LUT[2] = 3000
+=== FLOAT_LUT ===
+  FLOAT_LUT[0] = 1.500000
+  FLOAT_LUT[1] = 2.500000
+  FLOAT_LUT[2] = 3.500000
+=== DOUBLE_LUT ===
+  DOUBLE_LUT[0] = 1.500000
+  DOUBLE_LUT[1] = 2.500000
+  DOUBLE_LUT[2] = 3.500000
+=== STRANGE_CHAR ===
+  STRANGE_CHAR[0] = 'A'
+  STRANGE_CHAR[1] = 'B'
+  STRANGE_CHAR[2] = 'C'
+  STRANGE_CHAR[3] = 'D'
+  STRANGE_CHAR[4] = 'E'
+  STRANGE_CHAR[5] = 'F'
+  STRANGE_CHAR[6] = 'G'
+=== STRANGE_SHORT ===
+  STRANGE_SHORT[0] = 11
+  STRANGE_SHORT[1] = 22
+  STRANGE_SHORT[2] = 33
+=== STRANGE_INT ===
+  STRANGE_INT[0] = 111
+  STRANGE_INT[1] = 222
+  STRANGE_INT[2] = 333
+  STRANGE_INT[3] = 444
+=== PARTIAL ===
+  PARTIAL[0] = 1 (expect 1)
+  PARTIAL[1] = 2 (expect 2)
+  PARTIAL[2] = 3 (expect 3)
+  PARTIAL[3] = 0 (expect 0)
+  PARTIAL[4] = 0 (expect 0)
+  PARTIAL[5] = 0 (expect 0)
+=== DONE ===

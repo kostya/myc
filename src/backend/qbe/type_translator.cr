@@ -1,4 +1,4 @@
-struct Myc::Backend::QBE::TypeTranslator
+class Myc::Backend::QBE::TypeTranslator
   getter builder : Builder
 
   def initialize(@builder)
