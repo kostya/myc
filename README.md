@@ -385,7 +385,6 @@ Currently, mycc is slower at compile time in the benchmarks. Run time is close. 
 Requires LLVM/libclang >= 20.
 
 ```sh
-# Build
 # sudo apt install llvm-20 libclang-20-dev
 shards install
 crystal build src/cli/mycc.cr -o ./mycc
