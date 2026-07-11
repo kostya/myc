@@ -1018,18 +1018,23 @@ abstract class Myc::Backend::AbstractVisitor
     "#{tag}_#{@unique_id}"
   end
 
+  private def push(v : Int, type = nil)
+    Opcode::Push.new(Source::Token::IntValue.new(v), type)
+  end
+
+  private def push(v : Float, type = nil)
+    Opcode::Push.new(Source::Token::FloatValue.new(v), type)
+  end
+
+  private def push(v : String, type = nil)
+    Opcode::Push.new(Source::Token::StringValue.new(v), type)
+  end
+
+  private def push(v : Bool, type = nil)
+    Opcode::Push.new(Source::Token::BoolValue.new(v), type)
+  end
+
   private def push(v, type = nil)
-    case v
-    when Int
-      Opcode::Push.new(Source::Token::IntValue.new(v), type)
-    when Float
-      Opcode::Push.new(Source::Token::FloatValue.new(v), type)
-    when String
-      Opcode::Push.new(Source::Token::StringValue.new(v), type)
-    when Bool
-      Opcode::Push.new(Source::Token::BoolValue.new(v), type)
-    else
-      raise error("unexpected value #{v.inspect}")
-    end
+    raise error("unexpected value #{v.inspect}")
   end
 end

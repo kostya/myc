@@ -10,7 +10,7 @@
 * Whole IR spec fits in 30 minutes of reading. 
 * Compiles to native code via LLVM, QBE, or C. 
 * Fast compilation, zero overhead. 
-* ~6800 lines in Crystal.
+* ~7000 lines in Crystal.
 * Includes mycc as POC: a C subset compiler using myc as backend and libclang for parsing.
 
 
@@ -85,7 +85,7 @@ All opcodes [self documented](https://github.com/kostya/myc/tree/master/src/opco
 
 # mycc: a C subset compiler
 
-POC: a C subset compiler using myc as backend and libclang for parsing in 2700 lines. Require LLVM >= 20.
+POC: a C subset compiler using myc as backend and libclang for parsing in 2800 lines. Require LLVM >= 20.
 
 ```sh
 # Build
