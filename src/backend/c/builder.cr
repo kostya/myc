@@ -13,6 +13,8 @@ class Myc::Backend::C::Builder < Myc::Backend::AbstractBuilder
     @data_io = IO::Memory.new
     @typedef_io = IO::Memory.new
     @typedef_forward_io = IO::Memory.new
+    @typedef_array_struct_io = IO::Memory.new
+    @typedef_array_simple_io = IO::Memory.new
   end
 
   def type_translator
@@ -124,7 +126,9 @@ class Myc::Backend::C::Builder < Myc::Backend::AbstractBuilder
       add_shared_header(f)
 
       copy_io(@typedef_forward_io, f)
+      copy_io(@typedef_array_simple_io, f)
       copy_io(@typedef_io, f)
+      copy_io(@typedef_array_struct_io, f)
       copy_io(@data_io, f)
 
       @funcs.each do |fb|
@@ -166,8 +170,12 @@ class Myc::Backend::C::Builder < Myc::Backend::AbstractBuilder
     @typedef_forward_io << "typedef struct #{name} #{name};\n"
   end
 
-  def forward_declare_array(name, elem_type, count)
-    @typedef_forward_io << "typedef #{elem_type} #{name}[#{count}];\n"
+  def forward_declare_array(name, elem_type : Type, count)
+    if elem_type.needs_blit?
+      @typedef_array_struct_io << "typedef #{c_type(elem_type)} #{name}[#{count}];\n"
+    else
+      @typedef_array_simple_io << "typedef #{c_type(elem_type)} #{name}[#{count}];\n"
+    end
   end
 
   def define_struct(name, fields)

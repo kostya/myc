@@ -21,7 +21,7 @@ struct Myc::Backend::C::TypeTranslator
     when Type::EnumType
       @builder.forward_declare(type.backend_name)
     when Type::FlatType
-      @builder.forward_declare_array(type.backend_name, translate(type.target_type), type.elements_count)
+      @builder.forward_declare_array(type.backend_name, type.target_type, type.elements_count)
     end
 
     @cache[type.id_name] = type.backend_name
