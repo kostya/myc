@@ -405,6 +405,13 @@ crystal build src/cli/mycc.cr -o ./mycc
 
 # show qbe dump
 ./mycc examples/mycc/sieve.c d | ./myc-qbe d
+
+# include paths example
+MYCC_INCLUDE='/opt/homebrew/include,/usr/local/include' ./mycc examples/mycc/sieve.c c
+
+# Build object file for custom linking
+./mycc o --release examples/mycc/sieve.c sieve.o
+clang sieve.o -lm -o ./sieve
 ```
 
 ## License
