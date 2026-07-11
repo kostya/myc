@@ -197,6 +197,12 @@ if ENV["FILTER"] && !ENV["FILTER"].empty?
   runs.select! { |r| r.name.downcase.include?(ENV["FILTER"].downcase) }
 end
 
+if ENV["MYC_CI"] == "1"
+  runs.select! do |r|
+    r.name == "mycc(qbe, --release)" || r.name == "mycc(c, --release, clang)" || r.name == "mycc(llvm, --release)"
+  end
+end
+
 runs.each do |run|
   run.build_all
 end

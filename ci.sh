@@ -2,6 +2,7 @@
 set -o pipefail
 
 export CC=clang
+export MYC_CI=1
 
 BUILD_STATUS=0
 
@@ -37,7 +38,7 @@ run_step "SPEC" crystal spec
 run_step "BUILD" sh build.sh
 run_step "BENCHMARK" bash -c "cd benchmark/ && ruby run.rb"
 run_step "BENCHMARK BF COMPILER" bash -c "cd benchmark/brainfuck-compiler && ruby run.rb"
-run_step "LANG ARENA" bash -c "cd /benchark && ruby run_lang_arena.rb"
+run_step "LANG ARENA" bash -c "cd benchmark && ruby run_lang_arena.rb"
 
 if [ $BUILD_STATUS -eq 0 ]; then
     echo -e "${GREEN}ALL STEPS PASSED!${NC}"
