@@ -418,7 +418,7 @@ abstract class Myc::Backend::AbstractVisitor
       when Type::IntType
         if op.op.add? || op.op.sub?
           @stack << rhs
-          visit Opcode::To.new(mod.typer.u64)
+          visit Opcode::As.new(mod.typer.i64)
           visit Opcode::Unary.new(:neg) if op.op.sub?
           rhs = pop_rhs
           self << lhs.offset(self, rhs)
