@@ -9,7 +9,7 @@
 * ~29 stack-based opcodes. 
 * Whole IR spec fits in 30 minutes of reading. 
 * Compiles to native code via LLVM, QBE, or C. 
-* Fast compilation, zero overhead. 
+* Fast compilation, "zero" overhead (I hope). 
 * ~7000 lines in Crystal.
 * Includes mycc as POC: a C subset compiler using myc as backend and libclang for parsing.
 
@@ -25,7 +25,7 @@
 
 ### Current status
 
-Alpha. But already powerful. All 3 backends work smoothly. 4000 tests pass. Mycc can compile and run 24 of 29 .c files from [LangArena](https://github.com/kostya/LangArena) benchmark. Mycc already close to c99 standard.
+Alpha. But already powerful. All 3 backends work smoothly. 4100 tests pass. mycc can compile [LangArena](https://github.com/kostya/LangArena) benchmark (230k non-trivial C code).
 
 ### Ultimate goal
 
@@ -33,16 +33,16 @@ Beat LLVM (joke). Real goal: beat gcc :).
 
 ## Benchmark: 
 
-Mandelbrot renderer from mandel.bf (by Erik Bosman). All IR represent the same program. Shows whether Myc adds overhead over direct backend usage. Running on Ryzen3800+Linux in benchmark/brainfuck-compiler.
+Mandelbrot renderer from mandel.bf (by Erik Bosman). All IRs represent the same program. This shows whether Myc adds overhead over direct backend usage. Running on Ryzen3800+Linux in benchmark/brainfuck-compiler.
 
 | IR | Compiler | IR size, Kb | Compile time | Run time |
 |:---------:|:---------:|:---------:|:---------:|:---------:|
-| llvm-ll | clang(-O3) | 1529 | 1668ms | 618ms |
-| myc | myc-llvm(--release) | 486 | 1552ms | 632ms |
-| qbe-ssa | qbe + clang(as+linker) | 345 | 197ms + 58ms | 812ms |
-| myc | myc-qbe(--release) | 486 | 1041ms | 833ms |
-| c | clang(-O3) | 128 | 1711ms | 641ms |
-| myc | myc-c(--release) | 486 | 1902ms | 619ms |
+| llvm-ll | clang(-O3) | 1529 | 1528ms | 621ms |
+| myc | myc-llvm(--release) | 486 | 1528ms | 631ms |
+| qbe-ssa | qbe + clang(as+linker) | 345 | 199ms + 63ms | 807ms |
+| myc | myc-qbe(--release) | 486 | 1047ms | 833ms |
+| c | clang(-O3) | 128 | 1576ms | 635ms |
+| myc | myc-c(--release) | 486 | 1822ms | 638ms |
 
 Myc adds "zero" overhead over the LLVM and C backends. The myc-qbe backend adds overhead due to suboptimal code generation, which will be addressed by future peephole optimization passes.
 
@@ -50,7 +50,7 @@ Myc adds "zero" overhead over the LLVM and C backends. The myc-qbe backend adds 
 
 Requires [Crystal](https://crystal-lang.org) to compile the myc compiler.
 
-Quick Start (compile and run first program).
+### Quick Start (compile and run first program).
 
 ```sh
 echo 'FUNC main BODY PUSH "Hello myc\n" PRINTF 0 ENDFUNC' | crystal src/cli/llvm.cr r
@@ -83,30 +83,6 @@ All opcodes [self documented](https://github.com/kostya/myc/tree/master/src/opco
 * 6 Control flow: IF/THEN/ELSE, LOOP/INIT/COND/BODY/STEP, SWITCH/CASE, BREAK, NEXT, RET.
 * Types: STRUCT, ENUM/VARIANT, FLAT + void, bool, i8..i64, u8..u64, f32, f64, ptr<T>.
 
-# mycc: a C subset compiler
-
-POC: a C subset compiler using myc as backend and libclang for parsing in 2800 lines. Require LLVM >= 20.
-
-```sh
-# Build
-# sudo apt install llvm-20 libclang-20-dev
-shards install; crystal build src/cli/mycc.cr -o ./mycc
-
-# Show mycIR output
-./mycc examples/mycc/sieve.c d
-
-# Compile (LLVM backend)
-./mycc examples/mycc/sieve.c c --release
-
-# Build and run (QBE backend)
-./mycc examples/mycc/sieve.c --backend qbe r --release
-
-# Show optimized LLVM IR dump
-./mycc examples/mycc/sieve.c d | ./myc-llvm d --release
-
-# Show qbe dump
-./mycc examples/mycc/sieve.c d | ./myc-qbe d
-```
 
 ## Examples:
 
@@ -117,31 +93,13 @@ cd benchmark/brainfuck-compiler
 python3 bf2myc.py mandel.bf | ../../myc-llvm run --release
 ```
 
-## More benchmarks from examples/
+## More examples.
 
 ```sh
 ./myc-llvm run --release examples/ir/mandel.myc
 ./myc-llvm run --release examples/ir/bf.myc
 ./myc-llvm run --release examples/ir/loop.myc
 ```
-
-| Benchmark | Backend | Compile | Run |
-|:----------|:-------:|--------:|----:|
-| mandel.myc | myc-llvm | 1561ms | 633ms |
-| | myc-qbe | 1048ms | 834ms |
-| | myc-c | 1883ms | 618ms |
-| bf.myc | myc-llvm | 75ms | 2570ms |
-| | myc-qbe | 59ms | 4233ms |
-| | myc-c | 94ms | 2865ms |
-| loop.myc | myc-llvm | 61ms | 169ms |
-| | myc-qbe | 56ms | 2437ms |
-| | myc-c | 75ms | 140ms |
-| loop.c | myc-llvm | 81ms | 142ms |
-| | myc-qbe | 76ms | 2437ms |
-| | myc-c | 95ms | 127ms |
-| sieve.c | myc-llvm | 90ms | 439ms |
-| | myc-qbe | 76ms | 449ms |
-| | myc-c | 106ms | 446ms |
 
 ### Factorial in mycIR, examples/ir/fact.myc, translation
 
@@ -368,6 +326,86 @@ OPTIONS:
 ```
 
 </details>
+
+
+
+# mycc - an alternative C compiler, implemented as a POC for fun.
+
+As a proof of concept, over the course of 3 weeks and 2800 lines of code, I implemented mycc: a compiler for a subset of the C language (roughly close to the C99 standard) built on top of myc. Mycc already successfully compiles and runs [LangArena](https://github.com/kostya/LangArena) — a benchmark suite consisting of 50 tests and 9,000 lines of non-trivial C code (json, base64, multithreaded matmul, neural net, compression, maze A*, bf interpreter, and others) with heavy macros like uthash. For the parser, I used libclang — it's an overhead, but it's the simplest solution for a POC.
+
+## How it works:
+
+`C source -> SyntaxTree(libclang/clang.cr) -> TypedAST(mycc) -> IR(myc) -> [LLVM/QBE/C] -> binary`
+
+The most challenging part was `SyntaxTree -> TypedAST`. The file [ast_builder.cr](https://github.com/kostya/myc/blob/master/src/mycc/ast_builder.cr) contains 1700 lines of code. libclang returns a non-normalized AST with many edge cases that need to be transformed into a consistent form. Additionally, C has a ton of implicit behavior: implicit type conversions, array decay, and others. Only the edge cases necessary for compiling LangArena are implemented here; there's likely still a lot uncovered.
+
+The `TypedAST(mycc) -> IR(myc)` stage — as expected, is one of the simplest ([codegen.cr](https://github.com/kostya/myc/blob/master/src/mycc/codegen.cr), 700 lines) — a single-pass generation of stack-based IR directly from the AST.
+
+### Difference from Clang:
+
+clang: `C -> Parse(libclang) -> Clang CodeGen -> LLVM -> binary`
+mycc: `C -> Parse(libclang) -> mycc CodeGen -> IR(myc) -> [LLVM/QBE/C] -> binary`
+
+### Limitations: 
+
+Rare features are not implemented: 2D VLA, complex numbers, variadic macros, longjmp, bitfields, and anonymous nested structs. I wouldn't try building Linux or sqlite with it. It has only been tested on arm64 and linux64.
+
+## LangArena Benchmark:
+
+Compares Clang, Gcc, Cproc(QBE), and Mycc on [LangArena benchmark](https://github.com/kostya/LangArena).
+
+The `./c` directory of LangArena contains 29 `.c` files (230KB total). All compilers build these files sequentially without using cache or threads. Link time is not counted — it's roughly 50ms for all, and precompiled dependencies were also used. The results show:
+- `Build time` — total build time for all 29 files
+- `Build rss` — average RSS during compilation per file
+- `Bench Runtime` — benchmark execution time
+
+Results for linux64, gcc 13.3, clang 20.1.
+
+| Compiler | Build time | Build rss | Bench Runtime |
+|:-------|-------------:|-----:|----:|
+| clang(-O3) | 3079ms | 105Mb | 52.1s |
+| gcc(-O3) | 3495ms | 34Mb | 52.3s |
+| cproc | 932ms | 12Mb | 72.7s |
+| mycc(llvm, --release) | 4269ms | 101Mb | 53.2s |
+| mycc(qbe, --release) | 2939ms | 86Mb | 72.8s |
+| mycc(c, --release, clang) | 5091ms | 102Mb | 52.1s |
+| mycc(c, --release, gcc) | 5128ms | 86Mb | 53.7s |
+
+Currently, mycc is slower in the benchmarks. This is due to several suboptimal stages:
+- libclang adds parsing overhead of about 10ms per file.
+- IR is generated as text and then parsed again — this adds another ~10ms of overhead per file (also, because of this, error locations are not yet available).
+- There are no self optimization passes yet — and probably never will be :)
+- The code generation is primitive, with a lot of redundant load/store operations.
+- Haven't managed to beat clang or gcc yet — but coming for you.
+
+
+## mycc: build compiler.
+
+Requires LLVM/libclang >= 20.
+
+```sh
+# Build
+# sudo apt install llvm-20 libclang-20-dev
+shards install
+crystal build src/cli/mycc.cr -o ./mycc
+```
+
+## mycc: usage example.
+```
+# compile file
+./mycc c --release examples/mycc/sieve.c
+
+# compile file with --backend option
+./mycc c --release --backend llvm examples/mycc/sieve.c
+./mycc c --release --backend qbe examples/mycc/sieve.c
+./mycc c --release --backend c examples/mycc/sieve.c
+
+# show optimized llvm ir dump
+./mycc examples/mycc/sieve.c d | ./myc-llvm d --release
+
+# show qbe dump
+./mycc examples/mycc/sieve.c d | ./myc-qbe d
+```
 
 ## License
 
