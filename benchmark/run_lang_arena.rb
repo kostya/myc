@@ -142,12 +142,24 @@ runs << Myc.new(
 )
 
 runs << Myc.new(
-  name: "mycc(c, release)",
-  cmd: "../mycc o --release --backend c",
-  build_dir: "/tmp/myc_bench_la/mycc-c",
-  output: "./bin_la_myc_c",
+  name: "mycc(c, release, clang)",
+  cmd: "CC=clang ../mycc o --release --backend c",
+  build_dir: "/tmp/myc_bench_la/mycc-c-clang",
+  output: "./bin_la_myc_c_clang",
   version: "../myc-c --version",
 )
+
+runs << Myc.new(
+  name: "mycc(c, release, gcc)",
+  cmd: "CC=gcc ../mycc o --release --backend c",
+  build_dir: "/tmp/myc_bench_la/mycc-c-gcc",
+  output: "./bin_la_myc_c_gcc",
+  version: "../myc-c --version",
+)
+
+unless ENV["FILTER"].empty?
+  runs.select! { |r| r.name.downcase.include?(ENV["FILTER"].downcase) }
+end
 
 runs.each do |run|
   run.build_all
