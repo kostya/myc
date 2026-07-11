@@ -1,5 +1,5 @@
 module Myc
-  VERSION = "0.7.0"
+  VERSION = "0.8.0-dev"
   COMMIT  = `git rev-parse --short HEAD`.chomp
   EXT     = ".myc"
 end
