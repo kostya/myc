@@ -2,7 +2,7 @@
 #
 # Pops two values, performs the operation, pushes result.
 # First popped = left operand, second popped = right operand.
-# All types must match exactly — no implicit conversions.
+# All types must match exactly — but allowed TO coercion.
 #
 # STACK: [left, right] -> [result]
 #

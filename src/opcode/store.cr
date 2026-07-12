@@ -1,6 +1,6 @@
 # STORE - Store Value
 #
-# Writes a value to an l-value (pointer from LOCAL, GLOBAL, FIELD, DEREF).
+# Writes a value to an l-value.
 #
 # STACK: [l-value, value] - []
 #
