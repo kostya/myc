@@ -25,7 +25,7 @@
 
 ### Current status
 
-Alpha. But already powerful. All 3 backends work smoothly. 4100 tests pass. mycc can compile [LangArena](https://github.com/kostya/LangArena) benchmark (230k non-trivial C code).
+Alpha. But already powerful. All 3 backends work smoothly. 4100 tests pass. mycc can compile [LangArena](https://github.com/kostya/LangArena) benchmark (230kb non-trivial C code).
 
 ### Ultimate goal
 
