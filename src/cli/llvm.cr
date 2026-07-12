@@ -3,7 +3,7 @@ require "../backend/llvm/all"
 
 class Myc::Cli::Llvm < Myc::Cli
   private def backend_version
-    ", LLVM backend version: `#{LibLLVM::VERSION}`"
+    ", LLVM: #{LibLLVM::VERSION}"
   end
 
   def cli_name

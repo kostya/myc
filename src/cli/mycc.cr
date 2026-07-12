@@ -2,8 +2,8 @@ require "./cli"
 require "../backend/mycc/all"
 
 class Myc::Cli::Mycc < Myc::Cli
-  private def backend_version
-    ", Mycc compiler"
+  protected def version_string
+    "myc #{VERSION}, c99-like compiler (https://github.com/kostya/myc)"
   end
 
   def cli_name

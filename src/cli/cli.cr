@@ -99,8 +99,8 @@ class Myc::Cli
     end
   end
 
-  private def version_string
-    "MycCompiler version #{VERSION}-#{COMMIT}#{backend_version}"
+  protected def version_string
+    "myc #{VERSION}#{backend_version} (https://github.com/kostya/myc)"
   end
 
   private def show_version
