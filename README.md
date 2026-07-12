@@ -360,6 +360,8 @@ The `./c` directory of LangArena contains 29 `.c` files (230KB total). All compi
 - `Build rss` — average RSS during compilation per file
 - `Bench Runtime` — benchmark execution time
 
+To run it: `cd benchmark; ruby /run_lang_arena.rb`, needs to install cproc,qbe,clang,gcc system wide, compile mycc and install ithash (`sudo apt install uthash-dev`).
+
 Results for linux64, gcc 13.3, clang 20.1.
 
 | Compiler | Build time | Build rss | Bench Runtime |
