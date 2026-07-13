@@ -205,7 +205,7 @@ abstract class Myc::Backend::AbstractBackend
     path = tempfile_path(prefix, ext)
     yield path
   ensure
-    if path && ENV["MYC_VERBOSE"]? != "1"
+    if path && ENV["MYC_KEEP_TEMP_FILES"]? != "1"
       File.delete(path) rescue nil
     end
   end

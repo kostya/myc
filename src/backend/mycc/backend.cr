@@ -94,8 +94,9 @@ class Myc::Backend::Mycc::Backend < Myc::Backend::AbstractBackend
       res
     end
 
-    tmp = "/tmp/mycc_temp#{rand(100)}.myc"
-    File.open(tmp, "w") { |f| IO.copy(io, f) }
-    super(tmp)
+    path = AbstractBackend.tempfile_path("mycc", "myc")
+    File.open(path, "w") { |f| IO.copy(io, f) }
+    data.files_to_cleanup << path
+    super(path)
   end
 end

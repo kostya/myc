@@ -5,7 +5,9 @@ ENV["MYC_SPEC"] = "1"
 
 class Myc::Backend::AbstractBackend
   def spec_run
-    _run
+    res = _run
+    data.clean_temp_files
+    res
   end
 end
 

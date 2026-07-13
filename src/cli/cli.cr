@@ -17,9 +17,20 @@ class Myc::Cli
     property options = Hash(String, String).new
     property unparsed_argv = Array(String).new
     property stdin_filename : String? = nil
+    property files_to_cleanup = Array(String).new
 
     def error(msg)
       Error::Cli.new(msg)
+    end
+
+    def clean_temp_files
+      if ENV["MYC_KEEP_TEMP_FILES"]? != "1"
+        files_to_cleanup.each do |filename|
+          if File.file?(filename)
+            File.delete(filename) rescue nil
+          end
+        end
+      end
     end
   end
 
@@ -41,6 +52,7 @@ class Myc::Cli
         File.open(path, "w") { |f| f.puts content }
         data.values << path
         data.stdin_filename = path
+        data.files_to_cleanup << path
       end
     end
 
@@ -193,9 +205,7 @@ USAGE
     puts "-" * 100
     exit(1)
   ensure
-    if filename = data.stdin_filename
-      File.delete(filename)
-    end
+    data.clean_temp_files
     Myc.print_timers
   end
 end
