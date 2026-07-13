@@ -207,5 +207,6 @@ USAGE
   ensure
     data.clean_temp_files
     Myc.print_timers
+    exit(0)
   end
 end
