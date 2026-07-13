@@ -349,7 +349,7 @@ mycc: `C -> Parse(libclang) -> mycc CodeGen -> IR(myc) -> [LLVM/QBE/C] -> binary
 
 ### Limitations: 
 
-Rare features are not implemented: 2D VLA, complex numbers, longjmp, bitfields, and anonymous nested structs. I wouldn't try building Linux or sqlite with it. It has only been tested on arm64 and linux64.
+Rare features are not implemented: 2D VLA, complex numbers, longjmp, bitfields, asm, volatile, and anonymous nested structs. I wouldn't try building Linux or sqlite with it. It has only been tested on arm64 and linux64.
 
 ## LangArena Benchmark:
 
@@ -360,7 +360,9 @@ The `./c` directory of LangArena contains 29 `.c` files (230KB total). All compi
 - `Build rss` — average RSS during compilation per file
 - `Bench Runtime` — benchmark execution time
 
-To run it: `cd benchmark; ruby run_lang_arena.rb`, needs to install cproc,qbe,clang,gcc system wide, compile mycc and install uthash and pcre2 (`sudo apt install uthash-dev libpcre2-dev`).
+This is not just a random benchmark - each of the 50 LangArena tests validates its output using checksums. A compiler cannot "cheat" by deleting or skip work. This benchmark is also a part of CI.
+
+To run it: `cd benchmark; ruby run_lang_arena.rb`, needs to add cproc,qbe,clang,gcc to PATH, compile `mycc` and install uthash and pcre2 (`sudo apt install uthash-dev libpcre2-dev`).
 
 Results for linux64, gcc 13.3, clang 20.1.
 
@@ -380,8 +382,7 @@ Currently, mycc is slower at compile time in the benchmarks. Run time is close. 
 - There are no self optimization passes yet — and probably never will be :)
 - The code generation is primitive, with a lot of redundant load/store operations.
 - Haven't managed to beat clang or gcc yet — but coming for you.
-
-
+ 
 ## mycc: build compiler.
 
 Requires LLVM/libclang >= 20.
