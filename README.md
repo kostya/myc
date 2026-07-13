@@ -389,7 +389,7 @@ Requires LLVM/libclang >= 20.
 ```sh
 # sudo apt install llvm-20 libclang-20-dev
 shards install
-crystal build src/cli/mycc.cr -o ./mycc
+crystal build src/cli/mycc.cr --release -o ./mycc
 ```
 
 ## mycc: usage example.
