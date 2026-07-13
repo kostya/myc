@@ -136,9 +136,9 @@ Usage: ./#{cli_name} COMMAND [OPTIONS] INPUT [INPUT]* [OUTPUT]
 Commands:
 
   compile|c  ; compile multiple #{ext} files into executable binary
-             ;   ./#{cli_name} c file{ext} out
-             ;   ./#{cli_name} c --release *{ext} out
-             ;   cat file{ext} | ./#{cli_name} c --release out
+             ;   ./#{cli_name} c file#{ext} out
+             ;   ./#{cli_name} c --release *#{ext} out
+             ;   cat file#{ext} | ./#{cli_name} c --release out
 
   run|r      ; compile multiple #{ext} files and run the program
              ;   ./#{cli_name} r file#{ext}
