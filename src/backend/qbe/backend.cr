@@ -5,6 +5,10 @@ class Myc::Backend::QBE::Backend < Myc::Backend::AbstractBackend
     "QBE"
   end
 
+  def self.version_string
+    "QBE e786f06"
+  end
+
   def new_builder : AbstractBuilder
     layout = Layout.new(common_options.target || detect_native_target)
     Builder.new(self, layout)

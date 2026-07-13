@@ -3,7 +3,7 @@ require "../backend/qbe/all"
 
 class Myc::Cli::QBE < Myc::Cli
   private def backend_version
-    ", QBE e786f06"
+    ", " + Myc::Backend::QBE::Backend.version_string
   end
 
   def cli_name

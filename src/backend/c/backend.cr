@@ -3,8 +3,8 @@ class Myc::Backend::C::Backend < Myc::Backend::AbstractBackend
     "C"
   end
 
-  def self.version
-    `#{CC} --version`
+  def self.version_string
+    "#{`#{CC} --version 2>/dev/null | head -n 1`.strip}"
   end
 
   def new_builder : AbstractBuilder

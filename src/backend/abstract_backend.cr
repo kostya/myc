@@ -6,6 +6,10 @@ abstract class Myc::Backend::AbstractBackend
   abstract def obj(mod : Mod, output : String)
   abstract def new_builder : AbstractBuilder
 
+  def self.version_string
+    "Abstract"
+  end
+
   CC = ENV["CC"]? || ENV["cc"]? || "cc"
 
   getter data : Cli::Data

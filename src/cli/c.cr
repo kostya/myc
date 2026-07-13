@@ -3,7 +3,7 @@ require "../backend/c/all"
 
 class Myc::Cli::C < Myc::Cli
   private def backend_version
-    ", C backend, `#{Backend::C::Backend::CC}` version: `#{Backend::C::Backend.version}`"
+    ", " + Myc::Backend::C::Backend.version_string
   end
 
   def cli_name

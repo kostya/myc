@@ -3,6 +3,10 @@ class Myc::Backend::Llvm::Backend < Myc::Backend::AbstractBackend
     "LLVM"
   end
 
+  def self.version_string
+    "LLVM: #{LibLLVM::VERSION}"
+  end
+
   def new_builder : AbstractBuilder
     layout = Layout.new(common_options.target || Target.from_triple(LLVM.default_target_triple))
     Builder.new(self, layout, common_options.release ? LLVM::CodeGenOptLevel::Aggressive : LLVM::CodeGenOptLevel::None)

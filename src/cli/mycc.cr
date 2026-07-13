@@ -3,7 +3,21 @@ require "../backend/mycc/all"
 
 class Myc::Cli::Mycc < Myc::Cli
   protected def version_string
-    "myc #{VERSION}, c99-like compiler (https://github.com/kostya/myc)"
+    "myc #{VERSION}-#{COMMIT}, c99-like compiler (backend: #{backend_version}) (https://github.com/kostya/myc)"
+  end
+
+  private def backend_version
+    backend = data.options["backend"]?.try(&.downcase.strip)
+    case backend
+    when "c"
+      Myc::Backend::C::Backend.version_string
+    when "qbe"
+      Myc::Backend::QBE::Backend.version_string
+    when "llvm"
+      Myc::Backend::Llvm::Backend.version_string
+    else
+      "unknown"
+    end
   end
 
   def cli_name

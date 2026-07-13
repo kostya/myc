@@ -114,7 +114,7 @@ class Myc::Cli
   end
 
   protected def version_string
-    "myc #{VERSION}#{backend_version} (https://github.com/kostya/myc)"
+    "myc #{VERSION}-#{COMMIT}#{backend_version} (https://github.com/kostya/myc)"
   end
 
   private def show_version
