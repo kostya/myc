@@ -3,7 +3,6 @@ require "fileutils"
 unless File.directory?("../plugins/LangArena")
   `git clone https://github.com/kostya/LangArena.git ../plugins/LangArena`
   Dir.chdir("../plugins/LangArena/c") do
-    `git checkout myc_bench`
     `make deps`
     `make -j prod`
     f = File.read("./deps/yyjson/src/yyjson.h")

@@ -349,7 +349,7 @@ mycc: `C -> Parse(libclang) -> mycc CodeGen -> IR(myc) -> [LLVM/QBE/C] -> binary
 
 ### Limitations: 
 
-Rare features are not implemented: 2D VLA, complex numbers, variadic macros, longjmp, bitfields, and anonymous nested structs. I wouldn't try building Linux or sqlite with it. It has only been tested on arm64 and linux64.
+Rare features are not implemented: 2D VLA, complex numbers, longjmp, bitfields, and anonymous nested structs. I wouldn't try building Linux or sqlite with it. It has only been tested on arm64 and linux64.
 
 ## LangArena Benchmark:
 
