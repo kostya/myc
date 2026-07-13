@@ -37,9 +37,11 @@ class Myc::Cli
     unless STDIN.tty?
       content = STDIN.gets_to_end
       path = Backend::AbstractBackend.tempfile_path("stdin", "myc")
-      File.open(path, "w") { |f| f.puts content }
-      data.values << path
-      data.stdin_filename = path
+      unless content.blank?
+        File.open(path, "w") { |f| f.puts content }
+        data.values << path
+        data.stdin_filename = path
+      end
     end
 
     argv = ARGV.dup
