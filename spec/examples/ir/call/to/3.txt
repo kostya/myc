@@ -1,1 +1,1 @@
-bad arg 0 type, expected: i32, got: f32
+unknown safe transform from f32 to i32

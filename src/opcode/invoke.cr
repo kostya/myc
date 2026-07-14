@@ -8,11 +8,11 @@
 # STACK: [fn_ptr, arg0, ..., argN] - [retval?]
 #
 #   FUNC :printf ARGS TYPE :ptr<u8> RETURN TYPE :i32 ATTRIBUTES ATTR :vaarg ENDFUNC
-# 
+#
 #   ADDR :printf
 #   LOCAL :f "fn<ptr<u8>, ..., i32>"
-#   STORE 
-#   
+#   STORE
+#
 #   PUSH 1
 #   PUSH "hello %d\n"
 #   LOCAL :f

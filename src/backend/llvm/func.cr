@@ -18,6 +18,9 @@ class Myc::Backend::Llvm::Func < Myc::Backend::AbstractFunc
         raise Error::ErrorLoc.new("unknown attr #{attr}", Location.new(func_def.mod.filename, func_def.node.offset))
       end
     end
+    unless builder.backend.common_options.final
+      @link.llvm_function.add_attribute LLVM::Attribute::NoInline
+    end
     super
   end
 

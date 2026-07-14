@@ -157,38 +157,74 @@ runs << Cc.new(
 )
 
 runs << Myc.new(
-  name: "mycc(llvm, --release)",
-  cmd: "../mycc o --release --backend llvm",
+  name: "mycc(llvm)",
+  cmd: "../mycc o --backend llvm",
   build_dir: "/tmp/myc_bench_la/mycc-llvm",
   output: "./bin_la_myc_llvm",
-  version: "../myc-llvm --version",
+  version: "../mycc --backend llvm --version",
   env: "",
 )
 
 runs << Myc.new(
-  name: "mycc(qbe, --release)",
-  cmd: "../mycc o --release --backend qbe",
+  name: "mycc(qbe)",
+  cmd: "../mycc o --backend qbe",
   build_dir: "/tmp/myc_bench_la/mycc-qbe",
   output: "./bin_la_myc_qbe",
-  version: "../myc-qbe --version",
+  version: "../mycc --backend qbe --version",
   env: "",
 )
 
 runs << Myc.new(
-  name: "mycc(c, --release, clang)",
-  cmd: "../mycc o --release --backend c",
+  name: "mycc(c, clang)",
+  cmd: "../mycc o --backend c",
   build_dir: "/tmp/myc_bench_la/mycc-c-clang",
   output: "./bin_la_myc_c_clang",
-  version: "../myc-c --version",
+  version: "../mycc --backend c --version",
   env: "CC=clang",
 )
 
 runs << Myc.new(
-  name: "mycc(c, --release, gcc)",
-  cmd: "../mycc o --release --backend c",
+  name: "mycc(c, gcc)",
+  cmd: "../mycc o --backend c",
   build_dir: "/tmp/myc_bench_la/mycc-c-gcc",
   output: "./bin_la_myc_c_gcc",
-  version: "../myc-c --version",
+  version: "../mycc --backend c --version",
+  env: "CC=gcc",
+)
+
+runs << Myc.new(
+  name: "mycc(llvm, final)",
+  cmd: "../mycc o --final --backend llvm",
+  build_dir: "/tmp/myc_bench_la/mycc-llvm-final",
+  output: "./bin_la_myc_llvm_final",
+  version: "../mycc --backend llvm --version",
+  env: "",
+)
+
+runs << Myc.new(
+  name: "mycc(qbe, final)",
+  cmd: "../mycc o --final --backend qbe",
+  build_dir: "/tmp/myc_bench_la/mycc-qbe-final",
+  output: "./bin_la_myc_qbe_final",
+  version: "../mycc --backend qbe --version",
+  env: "",
+)
+
+runs << Myc.new(
+  name: "mycc(c, final, clang)",
+  cmd: "../mycc o --final --backend c",
+  build_dir: "/tmp/myc_bench_la/mycc-c-clang-final",
+  output: "./bin_la_myc_c_clang_final",
+  version: "../mycc --backend c --version",
+  env: "CC=clang",
+)
+
+runs << Myc.new(
+  name: "mycc(c, final, gcc)",
+  cmd: "../mycc o --final --backend c",
+  build_dir: "/tmp/myc_bench_la/mycc-c-gcc-final",
+  output: "./bin_la_myc_c_gcc_final",
+  version: "../mycc --backend c --version",
   env: "CC=gcc",
 )
 
@@ -198,7 +234,7 @@ end
 
 if ENV["MYC_CI"] == "1"
   runs.select! do |r|
-    r.name == "mycc(qbe, --release)" || r.name == "mycc(c, --release, clang)" || r.name == "mycc(llvm, --release)"
+    r.name == "mycc(qbe)" || r.name == "mycc(c, clang)" || r.name == "mycc(llvm)"
   end
 end
 

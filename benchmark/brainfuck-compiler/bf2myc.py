@@ -4,9 +4,9 @@ Brainfuck to mycIR translator.
 Usage: python3 bf2myc.py input.bf [output.myc]
 
 python3 bf2myc.py mandel.bf mandel.myc
-time ../../myc-llvm c --release mandel.myc bin_bf_myc_llvm
-time ../../myc-c c --release mandel.myc bin_bf_myc_c
-time ../../myc-qbe c --release mandel.myc bin_bf_myc_qbe
+time ../../myc-llvm c mandel.myc bin_bf_myc_llvm
+time ../../myc-c c mandel.myc bin_bf_myc_c
+time ../../myc-qbe c mandel.myc bin_bf_myc_qbe
 """
 
 import sys

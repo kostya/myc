@@ -22,7 +22,7 @@
 #   PUSH 1
 #   CREATE "flat<i32, 3>"      ; flat<i32, 3>(1, 2, 3)
 #   INSPECT
-# 
+#
 class Myc::Opcode::Create < Myc::Opcode
   getter type : Type
 

@@ -27,7 +27,7 @@
 #
 #   GLOBAL :counter
 #   INSPECT
-# 
+#
 class Myc::Opcode::Global < Myc::Opcode
   getter name : String
 

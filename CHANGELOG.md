@@ -1,4 +1,8 @@
 ## 0.8.0-dev
+* added SLOT opcode
+* added custom inliner on myc side, enabled by default
+* [BREAKING CHANGE] option --release was deleted
+* [BREAKING CHANGE] default compile mode is performant enough for daily usage (like golang), use --final only for release builds when you need extra 5-15% performance at cost of much slower compilation
 
 ## 0.7.0 (12.07.2026)
 * ENUM added TAG TYPE, and TAG SKIP.

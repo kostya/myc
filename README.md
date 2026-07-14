@@ -34,14 +34,18 @@ Mandelbrot renderer from mandel.bf (by Erik Bosman). All IRs represent the same 
 
 | IR | Compiler | IR size, Kb | Compile time | Run time |
 |:---------:|:---------:|:---------:|:---------:|:---------:|
-| llvm-ll | clang(-O3) | 1529 | 1528ms | 621ms |
-| myc | myc-llvm(--release) | 486 | 1528ms | 631ms |
-| qbe-ssa | qbe + clang(as+linker) | 345 | 199ms + 63ms | 807ms |
-| myc | myc-qbe(--release) | 486 | 1047ms | 833ms |
-| c | clang(-O3) | 128 | 1576ms | 635ms |
-| myc | myc-c(--release) | 486 | 1822ms | 638ms |
+| llvm-ll | clang(-O3) | 1529 | 1525ms | 618ms |
+| myc | myc-llvm(default) | 486 | 255ms | 683ms |
+| myc | myc-llvm(final) | 486 | 1546ms | 637ms |
+| qbe-ssa | qbe + clang(as+linker) | 345 | 205ms + 63ms | 810ms |
+| myc | myc-qbe(default) | 486 | 1039ms | 833ms |
+| c | clang(-O3) | 128 | 1588ms | 635ms |
+| myc | myc-c(default) | 486 | 1515ms | 635ms |
+| myc | myc-c(final) | 486 | 1822ms | 636ms |
 
-Myc adds "zero" overhead over the LLVM and C backends. The myc-qbe backend adds overhead due to suboptimal code generation, which will be addressed by future peephole optimization passes.
+Default mode: faster compilation, ~10% slower runtime vs Clang -O3. Final mode: matches Clang -O3. 
+Clang can probably match default mode with the right flags, but Myc gives you this out of the box without tuning. 
+QBE backend needs improvement.
 
 ## Install
 
@@ -87,15 +91,15 @@ All opcodes [self documented](https://github.com/kostya/myc/tree/master/src/opco
 
 ```sh
 cd benchmark/brainfuck-compiler
-python3 bf2myc.py mandel.bf | ../../myc-llvm run --release
+python3 bf2myc.py mandel.bf | ../../myc-llvm run
 ```
 
 ## More examples.
 
 ```sh
-./myc-llvm run --release examples/ir/mandel.myc
-./myc-llvm run --release examples/ir/bf.myc
-./myc-llvm run --release examples/ir/loop.myc
+./myc-llvm run examples/ir/mandel.myc
+./myc-llvm run examples/ir/bf.myc
+./myc-llvm run examples/ir/loop.myc
 ```
 
 ### Factorial in mycIR, examples/ir/fact.myc, translation
@@ -291,35 +295,31 @@ Commands:
 
   compile|c  ; compile multiple .myc files into executable binary
              ;   ./myc-llvm c file.myc out
-             ;   ./myc-llvm c --release *.myc out
-             ;   cat file.myc | ./myc-llvm c --release out
+             ;   cat file.myc | ./myc-llvm c out
 
   run|r      ; compile multiple .myc files and run the program
              ;   ./myc-llvm r file.myc
-             ;   ./myc-llvm r --release file.myc
-             ;   cat file.myc | ./myc-llvm r --release
+             ;   cat file.myc | ./myc-llvm r
 
   obj|o      ; compile one .myc file into object file (.o) for linking
              ;   ./myc-llvm o file.myc file.o
-             ;   ./myc-llvm o --release file.myc file.o
-             ;   cat file.myc | ./myc-llvm o --release file.o
+             ;   cat file.myc | ./myc-llvm o file.o
 
   dump|d     ; output backend IR to console (for debugging and optimization analysis)
              ;   ./myc-llvm d file.myc
-             ;   ./myc-llvm d --release file.myc
-             ;   cat file.myc | ./myc-llvm d --release
+             ;   cat file.myc | ./myc-llvm d
 
-  beautify|b ; format, validate, and add auto-comments(--annotate) to .myc files
-             ;   ./#{cli_name} b .
-             ;   ./#{cli_name} b --annotate src/
-             ;   ./#{cli_name} b file1.myc file2.myc
+  beautify|b ; format, validate, and add auto-comments to .myc files (--annotate adds stack state comments)
+             ;   ./myc-llvm b .
+             ;   ./myc-llvm b --annotate src/
+             ;   ./myc-llvm b file1.myc file2.myc
 
   version|v  ; display version information
              ;   ./myc-llvm version
 
 OPTIONS:
-  --release ; compile in performance mode (optimizations enabled)
-  --target=TARGET   (TARGET: arm64, x86_64, x86, wasm32, ...; default: native)
+  --final ; Slow compilation, for final build only.
+  --target=TARGET   (TARGET: arm64, x86_64, x86, ...; default: native)
 ```
 
 </details>
@@ -334,7 +334,7 @@ As a proof of concept, over the course of 3 weeks and 2800 lines of code, I impl
 
 `C source -> SyntaxTree(libclang/clang.cr) -> TypedAST(mycc) -> IR(myc) -> [LLVM/QBE/C] -> binary`
 
-The most challenging part was `SyntaxTree -> TypedAST`. The file [ast_builder.cr](https://github.com/kostya/myc/blob/master/src/mycc/ast_builder.cr) contains 1700 lines of code. libclang returns a non-normalized AST with many edge cases that need to be transformed into a consistent form. Additionally, C has a ton of implicit behavior: implicit type conversions, array decay, and others. Only the edge cases necessary for compiling LangArena are implemented here; there's likely still a lot uncovered.
+The most challenging part was `SyntaxTree -> TypedAST`. The file [ast_builder.cr](https://github.com/kostya/myc/blob/master/src/mycc/ast_builder.cr) contains 1700 lines of code. libclang returns a non-normalized Tree with many edge cases that need to be transformed into a consistent form. Additionally, C has a ton of implicit behavior. Only the edge cases necessary for compiling LangArena are implemented here; there's likely still a lot uncovered.
 
 The `TypedAST(mycc) -> IR(myc)` stage — as expected, is one of the simplest ([codegen.cr](https://github.com/kostya/myc/blob/master/src/mycc/codegen.cr), 700 lines) — a single-pass generation of stack-based IR directly from the AST.
 
@@ -365,20 +365,23 @@ Results for linux64, gcc 13.3, clang 20.1.
 
 | Compiler | Build time | Build rss | Bench Runtime |
 |:-------|-------------:|-----:|----:|
-| clang(-O3) | 3079ms | 105Mb | 52.1s |
-| gcc(-O3) | 3495ms | 34Mb | 52.3s |
-| cproc | 932ms | 12Mb | 72.7s |
-| mycc(llvm, --release) | 4269ms | 101Mb | 53.2s |
-| mycc(qbe, --release) | 2939ms | 86Mb | 72.8s |
-| mycc(c, --release, clang) | 5091ms | 102Mb | 52.1s |
-| mycc(c, --release, gcc) | 5128ms | 86Mb | 53.7s |
+| clang(-O3) | 3093ms | 105Mb | 52.1s |
+| gcc(-O3) | 3512ms | 34Mb | 52.2s |
+| cproc | 922ms | 12Mb | 73.0s |
+| mycc(llvm) | 3251ms | 98Mb | 59.6s |
+| mycc(qbe) | 2851ms | 86Mb | 68.1s |
+| mycc(c, clang) | 4582ms | 101Mb | 58.2s |
+| mycc(c, gcc) | 3783ms | 86Mb | 60.1s |
+| mycc(llvm, final) | 4199ms | 101Mb | 53.2s |
+| mycc(qbe, final) | 2855ms | 86Mb | 68.3s |
+| mycc(c, final, clang) | 5026ms | 102Mb | 52.4s |
+| mycc(c, final, gcc) | 5049ms | 86Mb | 53.6s |
 
-Currently, mycc is slower at compile time in the benchmarks. Run time is close. This is due to several suboptimal stages:
-- libclang adds parsing overhead of about 10ms per file.
+Currently, mycc is slower at compile time in the benchmarks. Run time for final is close, for default is 5-15% slower as expected. This is due to several suboptimal stages:
+- libclang adds parsing overhead of about 30-60ms per file (which is huge).
 - IR is generated as text and then parsed again — this adds another ~10ms of overhead per file (also, because of this, error locations are not yet available).
-- There are no self optimization passes yet — and probably never will be :)
-- The code generation is primitive, with a lot of redundant load/store operations.
- 
+
+
 ## mycc: build compiler.
 
 Requires LLVM/libclang >= 20.
@@ -392,15 +395,18 @@ crystal build src/cli/mycc.cr --release -o ./mycc
 ## mycc: usage example.
 ```
 # compile file
-./mycc c --release examples/mycc/sieve.c
+./mycc c examples/mycc/sieve.c
 
 # compile file with --backend option
-./mycc c --release --backend llvm examples/mycc/sieve.c
-./mycc c --release --backend qbe examples/mycc/sieve.c
-./mycc c --release --backend c examples/mycc/sieve.c
+./mycc c --backend llvm examples/mycc/sieve.c
+./mycc c --backend qbe examples/mycc/sieve.c
+./mycc c --backend c examples/mycc/sieve.c
 
-# show optimized llvm ir dump
-./mycc examples/mycc/sieve.c d | ./myc-llvm d --release
+# show myc dump
+./mycc examples/mycc/sieve.c d
+
+# show llvm ir dump
+./mycc examples/mycc/sieve.c d | ./myc-llvm d
 
 # show qbe dump
 ./mycc examples/mycc/sieve.c d | ./myc-qbe d
@@ -409,7 +415,7 @@ crystal build src/cli/mycc.cr --release -o ./mycc
 MYCC_INCLUDE='/opt/homebrew/include,/usr/local/include' ./mycc examples/mycc/sieve.c c
 
 # Build object file for custom linking
-./mycc o --release examples/mycc/sieve.c sieve.o
+./mycc o examples/mycc/sieve.c sieve.o
 clang sieve.o -lm -o ./sieve
 ```
 

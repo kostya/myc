@@ -12,6 +12,10 @@ BACKENDS = {
   "myc-llvm"  => "../myc-llvm",
   "myc-qbe"   => "../myc-qbe",
   "myc-c"     => "../myc-c",
+
+  "myc-llvm-final"  => "../myc-llvm --final",
+  "myc-qbe-final"   => "../myc-qbe --final",
+  "myc-c-final"     => "../myc-c --final",
 }
 
 MYCC = "../mycc"
@@ -32,18 +36,18 @@ FILES.each do |file, expected_md5|
   puts "%-30s " % "============ #{test_name} ================"
   
   BACKENDS.each do |backend_name, backend_cmd|
-    print "%-30s " % "#{backend_name} --release "
+    print "%-30s " % "#{backend_name} "
     compile_time = 0.0
     compile_file = file
 
     bin_name = "/tmp/myc_test_bench"
     
     if test_name.end_with?(".c")
-      cmd = "#{MYCC} c --release --backend #{backend_name.sub("myc-", "")} #{compile_file} #{bin_name}"
+      cmd = "#{MYCC} c --backend #{backend_name.sub("myc-", "")} #{compile_file} #{bin_name}"
       File.delete(bin_name) rescue nil
       compile_time += measure { `#{cmd}` }
     else
-      cmd = "#{backend_cmd} c --release #{compile_file} #{bin_name}"
+      cmd = "#{backend_cmd} c #{compile_file} #{bin_name}"
       File.delete(bin_name) rescue nil
       compile_time += measure { `#{cmd}` }
     end

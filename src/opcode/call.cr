@@ -15,7 +15,7 @@
 #   PUSH 1
 #   PUSH "hello %d\n"
 #   CALL :printf 1
-# 
+#
 class Myc::Opcode::Call < Myc::Opcode
   getter name : String
   getter vaargs_count : Int32

@@ -1,5 +1,5 @@
 abstract class Myc::Backend::AbstractBackend
-  record CommonOptions, target : Target?, release : Bool
+  record CommonOptions, target : Target?, final : Bool
 
   abstract def name
   abstract def dump(mod : Mod, output : String)
@@ -170,6 +170,19 @@ abstract class Myc::Backend::AbstractBackend
       l = Mod::Loader.new(dom, input)
       l.load
       l.mod.validate!
+      unless ENV["MYC_DISABLE_INLINER"]? == "1"
+        Myc.measure("inliner") do
+          i = Myc::Mod::Inliner.new(l.mod)
+          i.calc_stats
+          i.inline!
+        end
+
+        if save_result = ENV["MYC_SAVE_INLINER_RESULT"]?
+          s = Mod::Saver.new(l.mod)
+          dom = s.save
+          File.open(save_result, "w") { |f| Myc::Source::Serialize.new(dom, f).serialize }
+        end
+      end
       l.mod
     end
   end
@@ -254,8 +267,8 @@ abstract class Myc::Backend::AbstractBackend
                Target.from_triple(target_str)
              end
 
-    release = !!data.options["release"]?
-    CommonOptions.new(target: target, release: release)
+    final = !!data.options["final"]?
+    CommonOptions.new(target: target, final: final)
   end
 
   protected def detect_native_target : Target
@@ -274,7 +287,7 @@ abstract class Myc::Backend::AbstractBackend
   def debug_flags : String
     String.build do |s|
       s << '('
-      s << (common_options.release ? "release" : "debug")
+      s << (common_options.final ? "final" : "default")
       if target = common_options.target
         s << ", "
         s << target.arch.to_s

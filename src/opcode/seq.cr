@@ -4,7 +4,7 @@
 # Not an opcode itself - created automatically by the parser.
 #
 class Myc::Opcode::Seq < Myc::Opcode
-  getter list = Array(Opcode).new
+  property list = Array(Opcode).new
   property stack_balance = 0
 
   def <<(op : Opcode)

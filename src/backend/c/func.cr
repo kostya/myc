@@ -43,6 +43,11 @@ class Myc::Backend::C::Func < Myc::Backend::AbstractFunc
         raise Error::ErrorLoc.new("unknown attr #{attr}", Location.new(func_def.mod.filename, func_def.node.offset))
       end
     end
+    unless builder.backend.common_options.final
+      unless attrs.includes?("noinline")
+        attrs += "__attribute__((noinline)) "
+      end
+    end
     emit("#{attrs}#{builder.func_head_str(@func_def.name, @func_def.type_fn, is_static)} {")
 
     v = new_visitor

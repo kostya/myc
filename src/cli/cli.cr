@@ -106,8 +106,10 @@ class Myc::Cli
 
   private def option_require_argument?(arg : String)
     case arg
-    when "release", "annotate"
+    when "final", "annotate"
       false
+    when "release"
+      raise Error::Cli.new("--release option was deleted, default build already performant")
     else
       true
     end
@@ -151,23 +153,19 @@ Commands:
 
   compile|c  ; compile multiple #{ext} files into executable binary
              ;   ./#{cli_name} c file#{ext} out
-             ;   ./#{cli_name} c --release *#{ext} out
-             ;   cat file#{ext} | ./#{cli_name} c --release out
+             ;   cat file#{ext} | ./#{cli_name} c out
 
   run|r      ; compile multiple #{ext} files and run the program
              ;   ./#{cli_name} r file#{ext}
-             ;   ./#{cli_name} r --release file#{ext}
-             ;   cat file#{ext} | ./#{cli_name} r --release
+             ;   cat file#{ext} | ./#{cli_name} r
 
   obj|o      ; compile one #{ext} file into object file (.o) for linking
              ;   ./#{cli_name} o file#{ext} file.o
-             ;   ./#{cli_name} o --release file#{ext} file.o
-             ;   cat file#{ext} | ./#{cli_name} o --release file.o
+             ;   cat file#{ext} | ./#{cli_name} o file.o
 
   dump|d     ; output backend IR to console (for debugging and optimization analysis)
              ;   ./#{cli_name} d file#{ext}
-             ;   ./#{cli_name} d --release file#{ext}
-             ;   cat file#{ext} | ./#{cli_name} d --release
+             ;   cat file#{ext} | ./#{cli_name} d
 
   beautify|b ; format, validate, and add auto-comments to #{ext} files (--annotate adds stack state comments)
              ;   ./#{cli_name} b .
@@ -178,7 +176,7 @@ Commands:
              ;   ./#{cli_name} version
 
 OPTIONS:
-  --release ; compile in performance mode (optimizations enabled)
+  --final ; Slow compilation, for final build only.
   --target=TARGET   (TARGET: arm64, x86_64, x86, ...; default: native)
 USAGE
   end

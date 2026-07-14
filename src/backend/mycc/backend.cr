@@ -15,10 +15,6 @@ class Myc::Backend::Mycc::Backend < Myc::Backend::AbstractBackend
     filename.ends_with?(ext) || filename.ends_with?(".myc")
   end
 
-  def self.version
-    `#{Myc::VERSION}`
-  end
-
   def new_builder : AbstractBuilder
     raise "unreachable"
   end
@@ -28,9 +24,11 @@ class Myc::Backend::Mycc::Backend < Myc::Backend::AbstractBackend
   end
 
   def dump(mod : Mod, output : String)
-    saver = Mod::Saver.new(mod)
-    dom = saver.save
-    File.open(output, "w") { |f| Myc::Source::Serialize.new(dom, f).serialize }
+    Myc.measure("mycc_dump") do
+      saver = Mod::Saver.new(mod)
+      dom = saver.save
+      File.open(output, "w") { |f| Myc::Source::Serialize.new(dom, f).serialize }
+    end
   end
 
   @myc_backend : Myc::Backend::AbstractBackend?
@@ -62,40 +60,40 @@ class Myc::Backend::Mycc::Backend < Myc::Backend::AbstractBackend
     raise data.error("input not found `#{input}`") unless File.exists?(input)
     raise data.error("input not file `#{input}`") unless File.file?(input)
 
-    io = Myc.measure("mycc") do
-      Myc.debug(:mycc) do
-        puts "---------------------------- Source ---------------------------------"
-        puts File.read(input)
-      end
+    Myc.debug(:mycc) do
+      puts "---------------------------- Source ---------------------------------"
+      puts File.read(input)
+    end
 
-      source = ::Myc::Mycc::Source.new(input)
-      tu = source.clang_parse
+    source = Myc.measure("mycc_new_source") { ::Myc::Mycc::Source.new(input) }
+    tu = Myc.measure("mycc_clang_parse") { source.clang_parse }
 
-      Myc.debug(:mycc) do
-        puts "---------------------------- ClangAST ---------------------------------"
-        source.debug_ast(tu.cursor)
-      end
+    Myc.debug(:mycc) do
+      puts "---------------------------- ClangAST ---------------------------------"
+      source.debug_ast(tu.cursor)
+    end
 
-      builder = ::Myc::Mycc::ASTBuilder.new(source, tu)
-      ast = builder.build
+    builder = Myc.measure("mycc_new_astb") { ::Myc::Mycc::ASTBuilder.new(source, tu) }
+    ast = Myc.measure("mycc_build") { builder.build }
 
-      Myc.debug(:mycc) do
-        puts "---------------------------- TypedAST ---------------------------------"
-        p ast
-      end
+    Myc.debug(:mycc) do
+      puts "---------------------------- TypedAST ---------------------------------"
+      p ast
+    end
 
+    io = Myc.measure("mycc_codegen") do
       c = ::Myc::Mycc::CodeGenerator.new(builder.mod.typer, builder)
-      res = c.generate(ast)
+      c.generate(ast)
+    end
 
-      Myc.debug(:mycc) do
-        puts "-------------------------------------------------------------"
-      end
-
-      res
+    Myc.debug(:mycc) do
+      puts "-------------------------------------------------------------"
     end
 
     path = AbstractBackend.tempfile_path("mycc", "myc")
-    File.open(path, "w") { |f| IO.copy(io, f) }
+    Myc.measure("mycc_store_myc") do
+      File.open(path, "w") { |f| IO.copy(io, f) }
+    end
     data.files_to_cleanup << path
     super(path)
   end

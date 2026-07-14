@@ -85,11 +85,11 @@ class Examples
     expect : String,
     categories : Array(String),
     multi_modules : Array(String) do
-    def register(backend : String, release : Bool)
+    def register(backend : String, final : Bool)
       test_name = if kind.c?
-                    "[#{backend}#{release ? 1 : 0}] [cat #{rel_filename}] (crystal src/cli/mycc.cr #{rel_filename} --backend #{backend.downcase} d)"
+                    "[#{backend}#{final ? 1 : 0}] [cat #{rel_filename}] (crystal src/cli/mycc.cr #{rel_filename} --backend #{backend.downcase} d)"
                   else
-                    "[#{backend}#{release ? 1 : 0}] [cat #{rel_filename}] (crystal src/cli/#{backend.downcase}.cr #{rel_filename} d)"
+                    "[#{backend}#{final ? 1 : 0}] [cat #{rel_filename}] (crystal src/cli/#{backend.downcase}.cr #{rel_filename} d)"
                   end
 
       if @pending
@@ -97,26 +97,26 @@ class Examples
       elsif error
         it(test_name) do
           ex = expect_raises(Myc::Error, "") do
-            run(backend, release)
+            run(backend, final)
           end
           s = String.build { |io| ex.print(io) }
           s.gsub(/\e\[[\d;]*m/, "").should contain(expect)
         end
       else
         it(test_name) do
-          run(backend, release).should eq expect
+          run(backend, final).should eq expect
         end
       end
     end
 
-    def run(backend : String, release : Bool)
+    def run(backend : String, final : Bool)
       p filename if ENV["FILENAME"]? == "1"
       data = Myc::Cli::Data.new
       data.mode = :run
       data.values << filename
 
-      if release
-        data.options["release"] = ""
+      if final
+        data.options["final"] = ""
       end
 
       unless multi_modules.empty?

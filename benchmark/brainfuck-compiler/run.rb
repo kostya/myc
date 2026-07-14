@@ -17,10 +17,18 @@ CFG = {
 	}, 
 	"myc-llvm": {
 		"ir": "myc",
-		"compiler": "myc-llvm(--release)",
+		"compiler": "myc-llvm(default)",
 		"src": "mandel.myc",
-		"cmd": "#{MYC_LLVM} c --release mandel.myc bin_bf_myc_llvm",
+		"cmd": "#{MYC_LLVM} c mandel.myc bin_bf_myc_llvm",
 		"run": "./bin_bf_myc_llvm",
+		"py": "python3 bf2myc.py mandel.bf mandel.myc"
+	},
+	"myc-llvm-final": {
+		"ir": "myc",
+		"compiler": "myc-llvm(final)",
+		"src": "mandel.myc",
+		"cmd": "#{MYC_LLVM} c --final mandel.myc bin_bf_myc_llvm_final",
+		"run": "./bin_bf_myc_llvm_final",
 		"py": "python3 bf2myc.py mandel.bf mandel.myc"
 	},
 	"qbe": {
@@ -33,9 +41,9 @@ CFG = {
 	}, 
 	"myc-qbe": {
 		"ir": "myc",
-		"compiler": "myc-qbe(--release)",
+		"compiler": "myc-qbe(default)",
 		"src": "mandel.myc",
-		"cmd": "#{MYC_QBE} c --release mandel.myc bin_bf_myc_qbe",
+		"cmd": "#{MYC_QBE} c mandel.myc bin_bf_myc_qbe",
 		"run": "./bin_bf_myc_qbe",
 		"py": "python3 bf2myc.py mandel.bf mandel.myc"
 	},
@@ -49,10 +57,18 @@ CFG = {
 	}, 
 	"myc-c": {
 		"ir": "myc",
-		"compiler": "myc-c(--release)",
+		"compiler": "myc-c(default)",
 		"src": "mandel.myc",
-		"cmd": "#{MYC_C} c --release mandel.myc bin_bf_myc_c",
+		"cmd": "#{MYC_C} c mandel.myc bin_bf_myc_c",
 		"run": "./bin_bf_myc_c",
+		"py": "python3 bf2myc.py mandel.bf mandel.myc"
+	},
+	"myc-c-final": {
+		"ir": "myc",
+		"compiler": "myc-c(final)",
+		"src": "mandel.myc",
+		"cmd": "#{MYC_C} c --final mandel.myc bin_bf_myc_c_final",
+		"run": "./bin_bf_myc_c_final",
 		"py": "python3 bf2myc.py mandel.bf mandel.myc"
 	},
 }

@@ -25,10 +25,18 @@ class Myc::Backend::C::Backend < Myc::Backend::AbstractBackend
               "-Wno-implicit-function-declaration",
               "-o", output,
               tmp]
-      args << "-O3" if common_options.release
-      if c_flgs = ENV["C_FLAGS"]?
-        args += c_flgs.split(" ")
+
+      if common_options.final
+        args << "-O3"
+      else
+        args << "-O1"
+        args << "-fno-inline"
       end
+
+      if c_flgs = ENV["MYC_C_FLAGS"]?
+        args += c_flgs.split(",")
+      end
+
       Myc.measure("c_obj") do
         self.class.run_cmd(CC, args)
       end
