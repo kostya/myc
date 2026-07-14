@@ -3,8 +3,7 @@
 # Converts top of stack to the given type.
 # Supported:
 #   Int-Int, Int-Float, Float-Float, Float-Int,
-#   Bool-Int, Int,Float-Bool,
-#   Ptr-Ptr, Ptr-Int, Flat-any,
+#   Bool-Int, Ptr-Ptr, Ptr-Int, Flat-any,
 #   Enum-Variant, Variant-Enum.
 #
 # STACK: [value] - [value as TYPE]
@@ -19,7 +18,7 @@
 #   AS :i32       ; 1
 #
 #   LOCAL :var :Option
-#   AS :Option::Some  ; variant access
+#   AS :Option::Some  ; Enum variant access
 #
 class Myc::Opcode::As < Myc::Opcode
   getter type : Type

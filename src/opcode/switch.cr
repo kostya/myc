@@ -4,6 +4,9 @@
 # CASE values are compile-time constants. ELSE branch is optional.
 # All branches must leave stack balanced.
 #
+# To return a value from a branch, store it in a LOCAL variable. 
+# Branches cannot leave values on the stack.
+# 
 # STACK: [Int] - []
 #
 #   LOCAL :opt :Option

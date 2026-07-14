@@ -12,6 +12,7 @@
 #   PUSH true
 #   PUSH 1.5
 #   CREATE "struct<f64, bool>" ; struct<f64, bool>(1.5000000, true)
+#   INSPECT
 #
 #   PUSH 42
 #   CREATE :Option::Some       ; Option::Some(42)
@@ -20,7 +21,8 @@
 #   PUSH 2
 #   PUSH 1
 #   CREATE "flat<i32, 3>"      ; flat<i32, 3>(1, 2, 3)
-#
+#   INSPECT
+# 
 class Myc::Opcode::Create < Myc::Opcode
   getter type : Type
 

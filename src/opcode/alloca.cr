@@ -4,11 +4,9 @@
 # is popped from the stack (must be integer), and a pointer to the
 # allocated memory is pushed.
 #
-# Used for variable-length arrays (VLA) and other dynamic stack
-# allocations.
+# Used for variable-length arrays (VLA). For variables use LOCAL.
 #
-# The allocated memory is automatically freed when the current
-# function returns (stack unwinding).
+# The allocated memory is automatically freed when the current function returns.
 #
 # STACK: [count:i64] - [ptr<T>]
 #

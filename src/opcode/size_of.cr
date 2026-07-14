@@ -1,9 +1,8 @@
-# SIZEOF - Size of Type
+# SIZEOF - Size of Type or Value Type.
 #
 # Pushes the size in bytes of the given type onto the stack.
-# Works with any type including primitives, pointers, and structs.
-# If no type argument is given, pops a value from the stack and
-# pushes its size instead.
+# Works with any type.
+# If no type argument is given, pops a value from the stack and pushes its size instead.
 #
 # With type argument:
 #   STACK: [] - [Int]
@@ -17,14 +16,14 @@
 # Without type argument (dynamic):
 #   STACK: [value] - [Int]
 #
-#   PUSH 42 :i32
+#   PUSH 42
 #   SIZEOF            ; pops 42, pushes 4 (size of i32)
 #
 #   LOCAL :p :ptr<u8>
 #   SIZEOF            ; pops ptr, pushes 8 (pointer size)
 #
 # Example with malloc:
-#   PUSH 5 :i32
+#   PUSH 5
 #   SIZEOF :i32
 #   BINARY :mul       ; 5 * sizeof(i32) = 20
 #   CALL :malloc      ; allocate 20 bytes

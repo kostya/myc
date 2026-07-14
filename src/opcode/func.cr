@@ -4,7 +4,7 @@
 # Without BODY: external link (C function, other module).
 # With empty BODY: no-op function.
 #
-# STACK: caller pushes args, callee pops via PARAM
+# STACK: caller pushes args, callee used them via PARAM
 #
 #   ; Definition
 #   FUNC :add
@@ -27,4 +27,5 @@
 #   PUSH 20      ; arg1
 #   PUSH 10      ; arg0
 #   CALL :add    ; add(10, 20)
-#
+#   INSPECT
+# 

@@ -2,19 +2,14 @@
 #
 # Safely converts top of stack to the given type.
 # Only allows widening/promotion conversions, never truncation.
-# Used automatically by BINARY and CALL operations.
+# Used automatically by BINARY, CALL, INVOKE, STORE, RET operations.
+# For data loss coercions use AS instead.
 #
 # Allowed conversions:
 #   Int   -> Larger Int   (u8 -> i32, i32 -> i64)
 #   Int   -> Float        (i32 -> f64)
 #   Float -> Larger Float (f32 -> f64)
 #   ptr<T> -> ptr<void>   (type erasure, always safe)
-#
-# Forbidden (use AS instead):
-#   Larger Int -> Smaller Int (i64 -> i32) - data loss
-#   Float -> Smaller Float     (f64 -> f32) - precision loss
-#   Float -> Int               (f64 -> i32) - fractional loss
-#   ptr<void> -> ptr<T>        - use explicit AS
 #
 # STACK: [value] - [value as TYPE]
 #

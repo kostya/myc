@@ -1,7 +1,6 @@
 # FIELD - Struct/Enum/Flat Field Access
 #
-# Extracts a field by index. Returns l-value (can be stored).
-# Works on structs, enums, enum variants, and flat arrays.
+# Extracts a field by index. Returns l-value.
 #
 # STACK: [composite] - [field]
 #

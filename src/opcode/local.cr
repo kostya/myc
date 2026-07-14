@@ -1,6 +1,6 @@
 # LOCAL - Local Variable Access
 #
-# Pushes a pointer (l-value) to a stack-allocated variable.
+# Pushes a local variable (always l-value). Create if not exists.
 # Type required on first use, optional after. Must match if given.
 #
 # STACK: [] - [ptr<T>]
@@ -11,10 +11,6 @@
 #
 #   LOCAL :x               ; reuse, type already known
 #   INSPECT                ; 42
-#
-#   PUSH 1
-#   LOCAL :flag :u8        ; first use, type u8
-#   STORE                  ; flag = 1
 #
 class Myc::Opcode::Local < Myc::Opcode
   getter name : String

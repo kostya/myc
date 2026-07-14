@@ -1,10 +1,10 @@
 # LOOP - Structured Loop
 #
 # INIT (once) - COND - BODY - STEP - COND ...
-# COND must push Bool.
+# COND must push bool.
 # BREAK exits, NEXT jumps to STEP.
 #
-# STACK: balanced within each section
+# STACK: balanced within each section (except COND).
 #
 #   ; for i = 0; i < 10; i++
 #   LOOP

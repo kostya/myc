@@ -3,20 +3,27 @@
 # Pops a Bool condition. Executes THEN if true, ELSE if false.
 # Both branches must leave stack balanced.
 #
+# To return a value from a branch, store it in a LOCAL variable. 
+# Branches cannot leave values on the stack.
+#
 # STACK: [Bool] - []
 #
 #   PUSH 5
 #   PUSH 10
-#   BINARY :less     ; 10 < 5? - false
+#   BINARY :less
 #   IF
 #     THEN
 #       PUSH "yes"
-#       PRINTF 0
+#       LOCAL :result :ptr<u8>
+#       STORE
 #     ELSE
 #       PUSH "no"
-#       PRINTF 0
+#       LOCAL :result
+#       STORE
 #   ENDIF
-#
+#   LOCAL :result   ; load result back
+#   INSPECT
+# 
 class Myc::Opcode::If < Myc::Opcode
   property then_seq : Seq
   property else_seq : Seq

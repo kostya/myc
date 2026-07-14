@@ -1,7 +1,6 @@
 # DEREF - Pointer Dereference
 #
 # Converts a pointer to an l-value for reading or writing.
-# Does NOT load the value - just produces an address usable with STORE.
 #
 # STACK: [ptr<T>] - [T (l-value)]
 #

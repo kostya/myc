@@ -1,9 +1,9 @@
 # ADDR - Address Of Variable or Function
 #
-# Without argument: takes the address of a local variable (Alloca).
+# Without argument: takes the address of a local variable (LOCAL).
 # With argument: creates a function pointer.
 #
-# STACK (variable): [Alloca] - [ptr<T>]
+# STACK (variable): [LOCAL] - [ptr<T>]
 # STACK (function): [] - [fn<Args, Ret>]
 #
 #   ; Variable address

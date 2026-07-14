@@ -9,24 +9,22 @@
 #   PUSH 10      ; right
 #   PUSH 5       ; left
 #   BINARY :less ; 5 < 10 -> true
+#   INSPECT
 #
 #   PUSH 3       ; right
 #   PUSH 2       ; left
 #   BINARY :sub  ; 2 - 3 -> -1
+#   INSPECT
 #
 # Operations:
 #   Arithmetic (Int/Float): add, sub, mul, div, rem
 #   Bitwise (Int/Bool):     and, or, xor, shl, shr, sar
 #   Comparison (-> Bool):    eq, not_eq, less, less_eq, more, more_eq
 #
-# Bool is a single-bit Int. Bitwise ops on Bool give logical results.
-# For logical ops on Int, convert to Bool first: AS :bool or != 0.
-#
 # Pointer arithmetic:
-#   When left is ptr<T> and right is Int, :add and :sub perform
-#   pointer arithmetic (Int × sizeof(T)).
+#   When left is ptr<T> and right is Int, :add and :sub perform pointer arithmetic.
 #
-#   PUSH 3 :i32
+#   PUSH 3
 #   LOCAL :arr :ptr<i32>
 #   BINARY :add           ; arr + 3 * sizeof(i32)
 #

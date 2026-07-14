@@ -25,6 +25,9 @@
 #   GLOBAL :counter        ; i32
 #   STORE                  ; counter = 42
 #
+#   GLOBAL :counter
+#   INSPECT
+# 
 class Myc::Opcode::Global < Myc::Opcode
   getter name : String
 

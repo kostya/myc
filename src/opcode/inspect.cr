@@ -1,6 +1,6 @@
 # INSPECT - Debug Print Stack Top
 #
-# Pops and prints the top value in human-readable format.
+# Pops and prints the top value in human readable format.
 # All types supported. Use STACK :dup to keep value.
 #
 # STACK: [value] - []

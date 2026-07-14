@@ -15,6 +15,7 @@
 #   ; Create via CREATE
 #   PUSH 42
 #   CREATE :Option::Some      ; tag auto-set to 1
+#   INSPECT
 #
 #   ; Create manually
 #   PUSH 1
@@ -26,6 +27,7 @@
 #   AS :Option::Some
 #   FIELD 1
 #   STORE                   ; payload = 42
+#   INSPECT
 #
 #   ; Match
 #   LOCAL :opt :Option

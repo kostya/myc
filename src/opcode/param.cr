@@ -1,7 +1,6 @@
 # PARAM - Function Parameter Access
 #
 # Pushes the value of a function parameter by index (0-based).
-# Read-only. Must be inside a FUNC body.
 #
 # STACK: [] - [param_value]
 #
