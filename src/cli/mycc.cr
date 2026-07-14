@@ -3,7 +3,7 @@ require "../backend/mycc/all"
 
 class Myc::Cli::Mycc < Myc::Cli
   protected def version_string
-    "myc #{VERSION}-#{COMMIT}, c99-like compiler (backend: #{backend_version}) (https://github.com/kostya/myc)"
+    "myc #{VERSION}-#{COMMIT}, c99-subset compiler (backend: #{backend_version}) (https://github.com/kostya/myc)"
   end
 
   private def backend_version
