@@ -300,6 +300,8 @@ class Myc::Mod::Loader
       Opcode::Goto.new(get_only_one_string_value(node)).with_position(node)
     when Opcode::Code::LABEL
       Opcode::Label.new(get_only_one_string_value(node)).with_position(node)
+    when Opcode::Code::SLOT
+      Opcode::Slot.new(get_only_one_string_value(node)).with_position(node)
     else
       raise error("unknown opcode #{node.code}", node)
     end

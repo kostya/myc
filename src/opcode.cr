@@ -33,6 +33,7 @@ class Myc::Opcode
     GOTO
     LABEL
     ALLOCA
+    SLOT
 
     UNDEF    = 500
     TYPE

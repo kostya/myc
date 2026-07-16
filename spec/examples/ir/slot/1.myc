@@ -1,0 +1,12 @@
+FUNC :main
+  BODY
+    PUSH 1
+    SLOT :a
+    PUSH 2
+    SLOT :b
+    SLOT :a
+    SLOT :b
+    BINARY :add
+    INSPECT
+ENDFUNC
+

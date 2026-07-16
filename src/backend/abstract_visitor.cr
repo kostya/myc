@@ -25,6 +25,7 @@ abstract class Myc::Backend::AbstractVisitor
     @pending_labels = Hash(String, AbstractBB).new
     @labels = Hash(String, AbstractBB).new
     @fake_bb = @bb.class.new("__myc_fake_bb__", @builder, @func, @func_def)
+    @slots = Hash(String, Value).new
   end
 
   def visit
@@ -986,6 +987,14 @@ abstract class Myc::Backend::AbstractVisitor
     goto_bb = @labels[op.label]? || @pending_labels[op.label]? || (@pending_labels[op.label] = @bb.next(op.label))
     @bb.jmp(goto_bb)
     @bb = fake_bb
+  end
+
+  def visit(op : Opcode::Slot)
+    if slot = @slots[op.name]?
+      self << slot
+    else
+      @slots[op.name] = pop
+    end
   end
 
   def visit(op : Opcode)
