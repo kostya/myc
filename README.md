@@ -25,11 +25,8 @@
 
 ### Current status
 
-Alpha. But already powerful. All 3 backends work smoothly. 4100 tests pass. mycc can compile [LangArena](https://github.com/kostya/LangArena) benchmark (230kb non-trivial C code).
+Alpha. But already powerful. All 3 backends work smoothly. 4100 tests pass. mycc can compile [LangArena](https://github.com/kostya/LangArena) benchmark (230kb non-trivial C code). Failed to beat gcc and clang in terms of compile time and speed, so I've cooled off a bit towards this project and take a break.
 
-### Ultimate goal
-
-Beat LLVM (joke). Real goal: beat gcc :).
 
 ## Benchmark: 
 
@@ -381,7 +378,6 @@ Currently, mycc is slower at compile time in the benchmarks. Run time is close. 
 - IR is generated as text and then parsed again — this adds another ~10ms of overhead per file (also, because of this, error locations are not yet available).
 - There are no self optimization passes yet — and probably never will be :)
 - The code generation is primitive, with a lot of redundant load/store operations.
-- Haven't managed to beat clang or gcc yet — but coming for you.
  
 ## mycc: build compiler.
 
