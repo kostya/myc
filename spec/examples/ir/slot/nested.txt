@@ -1,0 +1,2 @@
+left slot = 42
+right slot = 42

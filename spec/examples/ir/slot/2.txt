@@ -1,0 +1,1 @@
+< using slot x out of it scope

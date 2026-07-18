@@ -9,8 +9,14 @@
 # used in manually written IR. For regular temporary values,
 # use LOCAL/STORE instead.
 #
-# STACK: [value] - [] (first use, create)
-# STACK: [] - [value] (subsequent use, read)
+# SCOPING: A SLOT cannot escape its defining scope. If a SLOT is
+# created inside an IF/THEN or ELSE branch, it cannot be used
+# outside that branch. The verifier will reject such usage.
+# This ensures each SLOT has a single definition point reachable
+# from all its uses.
+#
+# STACK: [value] -> [] (first use, create)
+# STACK: [] -> [value] (subsequent use, read)
 #
 #   ; First use: create slot, store 42
 #   PUSH 42
@@ -22,6 +28,16 @@
 #   BINARY :add      ; 10 + 42 = 52
 #   SLOT :tmp2       ; tmp2 = 52 (new slot)
 #
+#   ; INVALID: SLOT used outside its defining branch
+#   IF
+#     THEN
+#       PUSH 1
+#       SLOT :x      ; x created in THEN branch
+#     ELSE
+#       PUSH 2
+#       SLOT :y      ; y created in ELSE branch
+#   ENDIF
+#   SLOT :x          ; ERROR: x not in scope here
 class Myc::Opcode::Slot < Myc::Opcode
   getter name : String
 

@@ -25,7 +25,8 @@ abstract class Myc::Backend::AbstractVisitor
     @pending_labels = Hash(String, AbstractBB).new
     @labels = Hash(String, AbstractBB).new
     @fake_bb = @bb.class.new("__myc_fake_bb__", @builder, @func, @func_def)
-    @slots = Hash(String, Value).new
+    @slots = Deque(Hash(String, Value)).new
+    @all_slots = Hash(String, Value).new
   end
 
   def visit
@@ -121,6 +122,7 @@ abstract class Myc::Backend::AbstractVisitor
   def visit(op : Opcode::Seq)
     old_stack = @stack
     @stack = Deque(Value).new
+    @slots << Hash(String, Value).new
 
     op.list.each { |child| visit_child(child) }
 
@@ -130,6 +132,7 @@ abstract class Myc::Backend::AbstractVisitor
 
     @stack.each { |v| old_stack << v }
     @stack = old_stack
+    @slots.pop
   end
 
   protected def visit_child(child : Opcode)
@@ -990,11 +993,24 @@ abstract class Myc::Backend::AbstractVisitor
   end
 
   def visit(op : Opcode::Slot)
-    if slot = @slots[op.name]?
-      self << slot
-    else
-      @slots[op.name] = pop
+    found_slot = nil
+    @slots.reverse_each do |slots_hash|
+      if s = slots_hash[op.name]?
+        found_slot = s
+        break
+      end
     end
+
+    if found_slot
+      self << found_slot
+      return
+    end
+
+    raise error("using slot #{op.name} out of it scope") if @all_slots.has_key?(op.name)
+
+    value = pop
+    @slots.last[op.name] = value
+    @all_slots[op.name] = value
   end
 
   def visit(op : Opcode)

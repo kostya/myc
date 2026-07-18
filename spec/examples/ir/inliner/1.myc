@@ -1,0 +1,24 @@
+FUNC :add
+  ARGS
+    TYPE :i32
+    TYPE :i32
+  RETURN
+    TYPE :i32
+  BODY
+    PARAM 1
+    PARAM 0
+    BINARY :add
+    RET
+ENDFUNC
+
+FUNC :test_inline
+  BODY
+    PUSH 10
+    PUSH 5
+    CALL :add
+    INSPECT
+ENDFUNC
+
+FUNC :main BODY
+  CALL :test_inline
+ENDFUNC

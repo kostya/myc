@@ -1,0 +1,13 @@
+FUNC :main BODY
+  PUSH false
+  IF
+    THEN
+      PUSH 1
+      SLOT :x
+    ELSE
+      PUSH 2
+      SLOT :y
+  ENDIF
+  SLOT :x
+  INSPECT
+ENDFUNC

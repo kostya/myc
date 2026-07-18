@@ -1,0 +1,1 @@
+using slot tmp out of it scope
