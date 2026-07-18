@@ -1,0 +1,38 @@
+STRUCT :Pair
+  TYPE :i32
+  TYPE :ptr<u8>
+ENDSTRUCT
+
+GLOBAL :pair
+  TYPE :Pair
+  INITIAL 5 "hello"
+  CONSTANT
+ENDGLOBAL
+
+FUNC :printf
+  ATTRIBUTES
+    ATTR :vaarg
+  ARGS
+    TYPE :ptr<u8>
+  RETURN
+    TYPE :i32
+ENDFUNC
+
+FUNC :main
+  RETURN
+    TYPE :i32
+  BODY
+    GLOBAL :pair
+    ADDR
+    DEREF
+    FIELD 1
+    GLOBAL :pair
+    ADDR
+    DEREF
+    FIELD 0
+    PUSH "%d %s\n"
+    CALL :printf 2
+    STACK :drop
+    PUSH 0
+    RET
+ENDFUNC

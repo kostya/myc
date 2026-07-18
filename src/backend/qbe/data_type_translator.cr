@@ -1,6 +1,10 @@
 require "./type_translator"
 
 class Myc::Backend::QBE::DataTypeTranslator < Myc::Backend::QBE::TypeTranslator
+  private def do_translate(type : Type::BoolType)
+    "b"
+  end
+
   private def do_translate(type : Type::IntType)
     case type.bytes_count
     when 8 then "l"
