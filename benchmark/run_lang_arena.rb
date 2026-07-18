@@ -73,6 +73,7 @@ class Run
     end
 
     puts "--------------------- linking (#{name}) #{v} -------------------------------"
+    File.delete(@output) rescue nil
     link(objs)
   end
 

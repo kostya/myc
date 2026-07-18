@@ -39,6 +39,7 @@ run_step "BUILD" sh build.sh
 run_step "BENCHMARK" bash -c "cd benchmark/ && ruby run.rb"
 run_step "BENCHMARK BF COMPILER" bash -c "cd benchmark/brainfuck-compiler && ruby run.rb"
 run_step "LANG ARENA" bash -c "cd benchmark && ruby run_lang_arena.rb"
+run_step "LANG ARENA MYC" bash -c "cd benchmark && ruby run_lang_arena_myc.rb"
 
 if [ $BUILD_STATUS -eq 0 ]; then
     echo -e "${GREEN}ALL STEPS PASSED!${NC}"

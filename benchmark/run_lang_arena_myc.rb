@@ -11,6 +11,7 @@ ROOT = "../plugins/LangArena"
 def compile(backend, output, flag)
   measure do
     link_flags = "MYC_LINKER_FLAGS='-lpcre2-8 #{ROOT}/c/target/deps/prod/libbase64.o #{ROOT}/c/target/deps/prod/yyjson.o' "
+    File.delete(output) rescue nil
     cmd = "#{link_flags} ../myc-#{backend} #{ROOT}/myc/*.myc c #{output} #{flag}"
     `#{cmd}`
   end
@@ -54,6 +55,12 @@ OPTS = [
     "opts" => ["c", "./bin_langarena_myc_c_clang_final", "--final"],
   },
 ]
+
+if ENV["MYC_CI"] == "1"
+  OPTS.select! do |r|
+    r['name'] == "myc-llvm(default)" || r['name'] == "myc-qbe(default)" || r['name'] == "myc-c(default, clang)"
+  end
+end
 
 OPTS.each do |h|
   puts "Compile #{h["name"]}"
