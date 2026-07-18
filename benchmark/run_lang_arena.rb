@@ -139,6 +139,24 @@ runs << Cc.new(
 )
 
 runs << Cc.new(
+  name: "clang(-O1)",
+  cmd: "clang -O1 -c",
+  build_dir: "/tmp/myc_bench_la/clang_o1",
+  output: "./bin_la_clang_o1",
+  version: "clang --version",
+  env: "",
+)
+
+runs << Cc.new(
+  name: "clang(-O0)",
+  cmd: "clang -O0 -c",
+  build_dir: "/tmp/myc_bench_la/clang_o0",
+  output: "./bin_la_clang_o0",
+  version: "clang --version",
+  env: "",
+)
+
+runs << Cc.new(
   name: "gcc(-O3)",
   cmd: "gcc -O3 -c",
   build_dir: "/tmp/myc_bench_la/gcc",
