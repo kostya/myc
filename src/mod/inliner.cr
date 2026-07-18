@@ -204,15 +204,24 @@ class Myc::Mod::Inliner
 
     def get_dup_seq : Opcode::Seq
       local_map = Hash(String, String).new
-      _get_dup_seq(@inline_func_def.body.not_nil!, local_map)
+      slot_map = Hash(String, String).new
+      _get_dup_seq(@inline_func_def.body.not_nil!, local_map, slot_map)
     end
 
-    def _get_dup_seq(seq : Opcode::Seq, local_map) : Opcode::Seq
+    def _get_dup_seq(seq : Opcode::Seq, local_map, slot_map) : Opcode::Seq
       return seq if seq.list.empty?
 
       new_list = [] of Opcode
       seq.list.each do |op|
         case op
+        when Opcode::Slot
+          if l = slot_map[op.name]?
+            new_list << Opcode::Slot.new(l)
+          else
+            new_name = "#{inline_prefix}_#{op.name}"
+            slot_map[op.name] = new_name
+            new_list << Opcode::Slot.new(new_name)
+          end
         when Opcode::Local
           if l = local_map[op.name]?
             new_list << Opcode::Local.new(l, op.type)
@@ -241,21 +250,21 @@ class Myc::Mod::Inliner
           new_list << Opcode::Slot.new("#{inline_prefix}_#{op.index}")
         when Opcode::If
           new_list << Opcode::If.new(
-            _get_dup_seq(op.then_seq, local_map),
-            _get_dup_seq(op.else_seq, local_map)
+            _get_dup_seq(op.then_seq, local_map, slot_map),
+            _get_dup_seq(op.else_seq, local_map, slot_map)
           )
         when Opcode::Loop
           new_list << Opcode::Loop.new(
-            _get_dup_seq(op.init_seq, local_map),
-            _get_dup_seq(op.cond_seq, local_map),
-            _get_dup_seq(op.body_seq, local_map),
-            _get_dup_seq(op.step_seq, local_map),
+            _get_dup_seq(op.init_seq, local_map, slot_map),
+            _get_dup_seq(op.cond_seq, local_map, slot_map),
+            _get_dup_seq(op.body_seq, local_map, slot_map),
+            _get_dup_seq(op.step_seq, local_map, slot_map),
           )
         when Opcode::Switch
           new_list << Opcode::Switch.new(
-            op.cases_seq.map { |seq| _get_dup_seq(seq, local_map) },
+            op.cases_seq.map { |seq| _get_dup_seq(seq, local_map, slot_map) },
             op.values,
-            _get_dup_seq(op.else_seq, local_map),
+            _get_dup_seq(op.else_seq, local_map, slot_map),
           )
         else
           new_list << op

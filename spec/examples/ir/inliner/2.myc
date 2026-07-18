@@ -1,0 +1,52 @@
+STRUCT :S
+  TYPE :i32
+ENDSTRUCT
+
+GLOBAL :G
+  TYPE :S
+  INITIAL 5
+  CONSTANT
+ENDGLOBAL
+
+FUNC :get
+  ARGS
+    TYPE :ptr<S>
+  RETURN
+    TYPE :i32
+  BODY
+    PARAM 0
+    DEREF
+    FIELD 0
+    RET
+ENDFUNC
+
+FUNC :empty
+  ARGS
+    TYPE :ptr<S>
+  RETURN
+    TYPE :bool
+  BODY
+    PUSH 0
+    PARAM 0
+    CALL :get
+    BINARY :eq
+    RET
+ENDFUNC
+
+FUNC :main
+  RETURN
+    TYPE :i32
+  BODY
+    GLOBAL :G
+    ADDR
+    LOCAL :s :ptr<S>
+    STORE
+    LOCAL :s
+    CALL :empty
+    INSPECT
+    LOCAL :s
+    CALL :empty
+    INSPECT
+    PUSH 0
+    RET
+ENDFUNC
