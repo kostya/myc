@@ -71,7 +71,7 @@ class Myc::Source::Serialize
     case v
     when Token::StringValue
       v = v.val
-      if v.empty? || Tokenizer::SEPARATOR.any? { |sep| v.includes?(sep) }
+      if v.empty? || Tokenizer::SEPARATOR.any? { |sep| v.includes?(sep) } || v.includes?('\\')
         v.inspect(io)
       else
         io << ':'

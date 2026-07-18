@@ -939,4 +939,20 @@ context "Validate" do
     ENDFUNC
     _____________________________res
   end
+
+  it "correct escaping" do
+    validate(<<-'_____________________________src').should eq <<-'_____________________________res'
+    GLOBAL :global_PATTERN
+      TYPE :ptr<u8>
+      INITIAL "\\d+\\.\\d+\\.\\d+\\.35"
+      PRIVATE
+    ENDGLOBAL
+    _____________________________src
+    GLOBAL :global_PATTERN
+      TYPE :ptr<u8>
+      INITIAL "\\d+\\.\\d+\\.\\d+\\.35"
+      PRIVATE
+    ENDGLOBAL
+    _____________________________res
+  end
 end
