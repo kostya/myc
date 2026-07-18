@@ -190,9 +190,9 @@ abstract class Myc::Backend::AbstractBackend
   protected def linker(objs : Array(String), output : String)
     ensure_dir(output)
     Myc.measure("linker") do
-      flags = if link_flags = ENV["MYC_LINKER_FLAGS"]?
-                objs += link_flags.split(" ")
-              end
+      if link_flags = ENV["MYC_LINKER_FLAGS"]?
+        objs += link_flags.split(" ")
+      end
 
       self.class.run_cmd(CC, objs + ["-lm", "-o", output])
     end
