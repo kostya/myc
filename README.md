@@ -34,7 +34,7 @@ Mandelbrot renderer from mandel.bf (by Erik Bosman). All IRs represent the same 
 | IR | Compiler | IR size, Kb | Compile time | Run time |
 |:---------:|:---------:|:---------:|:---------:|:---------:|
 | llvm-ll | clang(-O3) | 1529 | 1525ms | 618ms |
-| myc | myc-llvm(default) | 486 | 255ms | 683ms |
+| myc | myc-llvm(default) | 486 | **255ms** | 683ms |
 | myc | myc-llvm(final) | 486 | 1546ms | 637ms |
 | qbe-ssa | qbe + clang(as+linker) | 345 | 205ms + 63ms | 810ms |
 | myc | myc-qbe(default) | 486 | 1039ms | 833ms |
