@@ -418,7 +418,7 @@ MYCC_INCLUDE='/opt/homebrew/include,/usr/local/include' ./mycc examples/mycc/sie
 clang sieve.o -lm -o ./sieve
 ```
 
-# Mycc: New inliner (did I beat gcc and clang?).
+# New inliner (did I beat gcc and clang?).
 
 A week after the mycc release, I added an optimization pass — inlining. Here are the results. I also changed the default compilation mode — now it's like Golang: fast compilation and decent runtime.
 
