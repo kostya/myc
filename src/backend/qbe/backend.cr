@@ -1,5 +1,6 @@
 class Myc::Backend::QBE::Backend < Myc::Backend::AbstractBackend
   QBE = ENV["QBE"]? || File.join(File.dirname(__FILE__), "..", "..", "..", "plugins", "qbe", "qbe")
+  AS  = ENV["AS"]? || "as"
 
   def name
     "QBE"
@@ -23,7 +24,7 @@ class Myc::Backend::QBE::Backend < Myc::Backend::AbstractBackend
           self.class.run_cmd(QBE, ["-o", tmp2, tmp])
         end
         Myc.measure("asm_obj") do
-          self.class.run_cmd("as", ["-c", tmp2, "-o", output])
+          self.class.run_cmd(AS, ["-c", tmp2, "-o", output])
         end
       end
     end

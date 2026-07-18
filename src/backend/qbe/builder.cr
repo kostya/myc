@@ -73,7 +73,7 @@ class Myc::Backend::QBE::Builder < Myc::Backend::AbstractBuilder
     when InitValue::FlatInit
       init.elements.flat_map { |e| qbe_flatten_init(e) }
     when InitValue::FlatStr
-      [{qbe_data_type(init.type), "\"#{init.str}\""}]
+      init.str.each_byte.map { |b| {"b", b.to_s} }.to_a
     when InitValue::Intval
       [{qbe_data_type(init.type), init.val.to_s}]
     when InitValue::Boolval

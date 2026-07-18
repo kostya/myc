@@ -11,9 +11,7 @@
 #
 # SCOPING: A SLOT cannot escape its defining scope. If a SLOT is
 # created inside an IF/THEN or ELSE branch, it cannot be used
-# outside that branch. The verifier will reject such usage.
-# This ensures each SLOT has a single definition point reachable
-# from all its uses.
+# outside that branch.
 #
 # STACK: [value] -> [] (first use, create)
 # STACK: [] -> [value] (subsequent use, read)

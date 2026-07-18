@@ -23,12 +23,8 @@ FUNC :main
     TYPE :i32
   BODY
     GLOBAL :pair
-    ADDR
-    DEREF
     FIELD 1
     GLOBAL :pair
-    ADDR
-    DEREF
     FIELD 0
     PUSH "%d %s\n"
     CALL :printf 2
