@@ -1,17 +1,11 @@
-# SLOT - Named Stack Slot (Internal)
+# SLOT - Named Stack Slot.
 #
 # Creates or reads a named temporary slot on the stack.
 # First use creates the slot and pops a value from stack into it.
-# Subsequent uses push the slot's value onto the stack.
+# Subsequent uses push the slot's value onto the stack. (it is like SSA in LLVM).
 #
-# NOTE: This opcode is intended for internal compiler use only
-# (primarily for function inlining). It is not expected to be
-# used in manually written IR. For regular temporary values,
-# use LOCAL/STORE instead.
-#
-# SCOPING: A SLOT cannot escape its defining scope. If a SLOT is
-# created inside an IF/THEN or ELSE branch, it cannot be used
-# outside that branch.
+# SCOPING: A SLOT can only be used from its defining scope or deeper nested scopes.
+# It cannot escape to parent or sibling scopes.
 #
 # STACK: [value] -> [] (first use, create)
 # STACK: [] -> [value] (subsequent use, read)
