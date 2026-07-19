@@ -6,6 +6,11 @@ class Myc::Opcode
     self
   end
 
+  def with_position(opcode : Opcode)
+    self.offset = opcode.offset
+    self
+  end
+
   enum Code : UInt64
     CALL    = 0
     PUSH

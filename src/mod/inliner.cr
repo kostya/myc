@@ -156,8 +156,8 @@ class Myc::Mod::Inliner
             new_seq = get_dup_seq
             slots = [] of Opcode
             @inline_func_def.type_fn.args.size.times do |idx|
-              slots << Opcode::To.new(@inline_func_def.type_fn.args[idx])
-              slots << Opcode::Slot.new("#{inline_prefix}_#{idx}")
+              slots << Opcode::To.new(@inline_func_def.type_fn.args[idx]).with_position(op)
+              slots << Opcode::Slot.new("#{inline_prefix}_#{idx}").with_position(op)
             end
 
             new_list = [] of Opcode
@@ -172,10 +172,10 @@ class Myc::Mod::Inliner
               end
             else
               if @inline_func_def.type_fn.ret.eq?(@mod.typer.void)
-                new_list << Opcode::Label.new("#{inline_prefix}_end")
+                new_list << Opcode::Label.new("#{inline_prefix}_end").with_position(op)
               else
-                new_list << Opcode::Label.new("#{inline_prefix}_end")
-                new_list << Opcode::Local.new("#{inline_prefix}_result", @inline_func_def.type_fn.ret)
+                new_list << Opcode::Label.new("#{inline_prefix}_end").with_position(op)
+                new_list << Opcode::Local.new("#{inline_prefix}_result", @inline_func_def.type_fn.ret).with_position(op)
               end
             end
 
@@ -216,19 +216,19 @@ class Myc::Mod::Inliner
         case op
         when Opcode::Slot
           if l = slot_map[op.name]?
-            new_list << Opcode::Slot.new(l)
+            new_list << Opcode::Slot.new(l).with_position(op)
           else
             new_name = "#{inline_prefix}_#{op.name}"
             slot_map[op.name] = new_name
-            new_list << Opcode::Slot.new(new_name)
+            new_list << Opcode::Slot.new(new_name).with_position(op)
           end
         when Opcode::Local
           if l = local_map[op.name]?
-            new_list << Opcode::Local.new(l, op.type)
+            new_list << Opcode::Local.new(l, op.type).with_position(op)
           else
             new_name = "#{inline_prefix}_#{op.name}"
             local_map[op.name] = new_name
-            new_list << Opcode::Local.new(new_name, op.type)
+            new_list << Opcode::Local.new(new_name, op.type).with_position(op)
           end
         when Opcode::Ret
           if @inline_func_def.inline_stats.@ret_count == 0
@@ -239,33 +239,33 @@ class Myc::Mod::Inliner
             end
           else
             if @inline_func_def.type_fn.ret.eq?(@mod.typer.void)
-              new_list << Opcode::Goto.new("#{inline_prefix}_end")
+              new_list << Opcode::Goto.new("#{inline_prefix}_end").with_position(op)
             else
-              new_list << Opcode::Local.new("#{inline_prefix}_result", @inline_func_def.type_fn.ret)
-              new_list << Opcode::Store.new
-              new_list << Opcode::Goto.new("#{inline_prefix}_end")
+              new_list << Opcode::Local.new("#{inline_prefix}_result", @inline_func_def.type_fn.ret).with_position(op)
+              new_list << Opcode::Store.new.with_position(op)
+              new_list << Opcode::Goto.new("#{inline_prefix}_end").with_position(op)
             end
           end
         when Opcode::Param
-          new_list << Opcode::Slot.new("#{inline_prefix}_#{op.index}")
+          new_list << Opcode::Slot.new("#{inline_prefix}_#{op.index}").with_position(op)
         when Opcode::If
           new_list << Opcode::If.new(
             _get_dup_seq(op.then_seq, local_map, slot_map),
             _get_dup_seq(op.else_seq, local_map, slot_map)
-          )
+          ).with_position(op)
         when Opcode::Loop
           new_list << Opcode::Loop.new(
             _get_dup_seq(op.init_seq, local_map, slot_map),
             _get_dup_seq(op.cond_seq, local_map, slot_map),
             _get_dup_seq(op.body_seq, local_map, slot_map),
             _get_dup_seq(op.step_seq, local_map, slot_map),
-          )
+          ).with_position(op)
         when Opcode::Switch
           new_list << Opcode::Switch.new(
             op.cases_seq.map { |seq| _get_dup_seq(seq, local_map, slot_map) },
             op.values,
             _get_dup_seq(op.else_seq, local_map, slot_map),
-          )
+          ).with_position(op)
         else
           new_list << op
         end
