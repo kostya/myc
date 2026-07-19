@@ -114,7 +114,9 @@ class Cc < Run
   def build(source, out)
     include_str = INCLUDES.map{ |i| "-I#{i}" }.join(" ")
     c = "#{env} /usr/bin/time -f 'MaxRSS(%M)KB' 2>&1 #{cmd} #{include_str} #{source} -o #{out}"
-    puts "execute: `#{c}`"
+    unless ENV["MYC_CI"] == "1"
+      puts "execute: `#{c}`"
+    end
     `#{c}`
   end
 end
@@ -123,7 +125,9 @@ class Myc < Run
   def build(source, out)
     include_str = INCLUDES.join(",")
     c = "MYCC_INCLUDE=#{include_str} #{env} /usr/bin/time -f 'MaxRSS(%M)KB' 2>&1 #{cmd} #{source} #{out}"
-    puts "execute: `#{c}`"
+    unless ENV["MYC_CI"] == "1"
+      puts "execute: `#{c}`"
+    end
     `#{c}`
   end
 end
