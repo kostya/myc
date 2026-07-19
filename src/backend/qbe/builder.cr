@@ -43,53 +43,55 @@ class Myc::Backend::QBE::Builder < Myc::Backend::AbstractBuilder
       visibility = ""
     end
 
-    fields = if global.initial_keyword && global.initial_values.size > 0
-               vp = AbstractBuilder::ValuesParser.new(global.initial_values, global.type, mod, Location.new(mod.filename, global.node.offset))
-               fields1 = qbe_flatten_init(vp.parse)
-               fields1.map { |t, v| "#{t} #{v}" }
-             else
-               fields1 = zero_flatten(global.type)
-               fields1.map { |t, v| "#{t} #{v}" }
-             end
+    values = [] of Tuple(String, String)
+    if global.initial_keyword && global.initial_values.size > 0
+      vp = AbstractBuilder::ValuesParser.new(global.initial_values, global.type, mod, Location.new(mod.filename, global.node.offset))
+      qbe_flatten_init(values, vp.parse)
+    else
+      zero_flatten(values, global.type)
+    end
 
-    @data_io << "#{visibility}data $#{global.name} = { #{fields.join(", ")} }\n"
+    @data_io << "#{visibility}data $#{global.name} = { "
+    values.each_with_index do |(type_s, val_s), index|
+      @data_io << ", " if index != 0
+      @data_io << type_s
+      @data_io << ' '
+      @data_io << val_s
+    end
+    @data_io << "}\n"
   end
 
-  def qbe_flatten_init(init : InitValue) : Array(Tuple(String, String))
+  def qbe_flatten_init(res : Array(Tuple(String, String)), init : InitValue)
     case init
     when InitValue::StructInit
       struct_type = init.type.as(Type::StructType)
-      fields = [] of Tuple(String, String)
       offset = 0_u64
       init.fields.each_with_index do |f, i|
         field_offset = layout.field_offset(struct_type, i.to_u64)
-        fields << {"z", (field_offset - offset).to_s} if field_offset > offset
-        fields.concat qbe_flatten_init(f)
+        res << {"z", (field_offset - offset).to_s} if field_offset > offset
+        qbe_flatten_init(res, f)
         offset = field_offset + layout.size_of(f.type)
       end
       struct_size = layout.size_of(struct_type)
-      fields << {"z", (struct_size - offset).to_s} if struct_size > offset
-      return fields
+      res << {"z", (struct_size - offset).to_s} if struct_size > offset
     when InitValue::FlatInit
-      init.elements.flat_map { |e| qbe_flatten_init(e) }
+      init.elements.each { |e| qbe_flatten_init(res, e) }
     when InitValue::FlatStr
-      init.str.each_byte.map { |b| {"b", b.to_s} }.to_a
+      init.str.each_byte { |b| res << {"b", b.to_s} }
     when InitValue::Intval
-      [{qbe_data_type(init.type), init.val.to_s}]
+      res << {qbe_data_type(init.type), init.val.to_s}
     when InitValue::Boolval
-      [{qbe_data_type(init.type), init.val ? "1" : "0"}]
+      res << {qbe_data_type(init.type), init.val ? "1" : "0"}
     when InitValue::F32
-      [{qbe_data_type(init.type), sprintf("s_%a", init.val)}]
+      res << {qbe_data_type(init.type), sprintf("s_%a", init.val)}
     when InitValue::F64
-      [{qbe_data_type(init.type), sprintf("d_%a", init.val)}]
+      res << {qbe_data_type(init.type), sprintf("d_%a", init.val)}
     when InitValue::Str
-      [{qbe_data_type(init.type), string_constant(init.str)}]
+      res << {qbe_data_type(init.type), string_constant(init.str)}
     when InitValue::Zero
-      [{qbe_data_type(init.type), "0"}]
-    when InitValue::GlobalRef
-      [{qbe_data_type(init.type), "$#{init.name}"}]
-    when InitValue::FnRef
-      [{qbe_data_type(init.type), "$#{init.name}"}]
+      res << {qbe_data_type(init.type), "0"}
+    when InitValue::GlobalRef, InitValue::FnRef
+      res << {qbe_data_type(init.type), "$#{init.name}"}
     else
       raise "unreachable"
     end
@@ -100,38 +102,27 @@ class Myc::Backend::QBE::Builder < Myc::Backend::AbstractBuilder
   end
 
   def init_value(ival : InitValue) : Value
-    vals = qbe_flatten_init(ival)
-    val = vals.map { |_, v| v }.join(", ")
-    Value.new(BBVal.new(val), ival.type, Value::MM::Val, Value::PP::Primitive.new)
+    values = [] of Tuple(String, String)
+    qbe_flatten_init(values, ival)
+    Value.new(BBVal.new(values[0][1]), ival.type, Value::MM::Val, Value::PP::Primitive.new)
   end
 
-  private def zero_flatten(type : Type) : Array(Tuple(String, String))
+  private def zero_flatten(res : Array(Tuple(String, String)), type : Type)
     case type
     when Type::StructType
       size = layout.size_of(type)
-      size > 0 ? [{"z", size.to_s}] : [] of Tuple(String, String)
+      res << {"z", size.to_s} if size > 0
     when Type::FlatType
-      type.elements_count.times.flat_map { zero_flatten(type.target_type) }.to_a
+      type.elements_count.times { zero_flatten(res, type.target_type) }
     when Type::EnumType
       if index_type = type.index_type
-        fields = zero_flatten(index_type)
-        payload_count = @layout.enum_payload_count(type)
-        if payload_count > 0
-          fields + payload_count.times.map { {qbe_data_type(index_type), "0"} }.to_a
-        else
-          fields
-        end
+        zero_flatten(res, index_type)
+        @layout.enum_payload_count(type).times { res << {qbe_data_type(index_type), "0"} }
       else
-        fields = [] of Tuple(String, String)
-        payload_count = @layout.enum_payload_count(type)
-        if payload_count > 0
-          fields + payload_count.times.map { {qbe_data_type(type.payload_type.not_nil!.target_type), "0"} }.to_a
-        else
-          fields
-        end
+        @layout.enum_payload_count(type).times { res << {qbe_data_type(type.payload_type.not_nil!.target_type), "0"} }
       end
     when Type::PtrType, Type::Fn, Type::IntType, Type::FloatType, Type::BoolType
-      [{qbe_data_type(type), "0"}]
+      res << {qbe_data_type(type), "0"}
     else
       raise "unexpected type in global data: #{type.class}"
     end
