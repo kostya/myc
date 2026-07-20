@@ -1,5 +1,8 @@
 ## 0.9.0-dev
 
+## 0.8.1 (20.07.2026)
+* Fix inliner
+
 ## 0.8.0 (18.07.2026)
 * added SLOT opcode
 * added custom inliner on myc side, enabled by default
