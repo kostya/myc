@@ -1,6 +1,6 @@
 class Myc::Mycc::CodeGenerator
   getter io : IO
-  getter typer : Mod::Typer
+  getter typer : Typer
   getter builder : ASTBuilder
 
   class VarInfo

@@ -164,7 +164,7 @@ class Myc::Backend::Layout
     payload_size > 0 ? (payload_size + 3) // 4 : 0_u64
   end
 
-  def ptr_as_int_type(typer : Mod::Typer) : Type::IntType
+  def ptr_as_int_type(typer : Typer) : Type::IntType
     target.pointer_size == 8 ? typer.u64.as(Type::IntType) : typer.u32.as(Type::IntType)
   end
 

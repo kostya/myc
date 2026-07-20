@@ -50,12 +50,14 @@ describe "Typer" do
   end
 
   it "finds named types from module" do
-    mod = Myc::Mod.new("1", "/tmp/1")
-    point = Myc::Type::StructType.new("Point")
+    typer = spec_typer
+    mod = Myc::Mod.new("1", "/tmp/1", typer)
+    point = Myc::Type::StructType.new(Myc::Location.new("/tmp/1", 0), "Point")
     point.data << mod.typer.i32
     point.data << mod.typer.i32
     node = Myc::Source::Node.new(Myc::Opcode::Code::TYPE)
     mod.type_defs["Point"] = Myc::Mod::TypeDef.new(node, point)
+    typer.types_cache["Point"] = point
 
     t = mod.typer.find(" Point ", Myc::Location.new("/tmp/1", 0))
     t.to_s.should eq "Point"

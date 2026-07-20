@@ -4,7 +4,9 @@ abstract class Myc::Type
   getter id_name : String
   getter backend_name : String
 
-  def initialize(@id_name)
+  getter loc : Location
+
+  def initialize(@loc, @id_name)
     @backend_name = normalize_name(id_name)
   end
 

@@ -12,25 +12,26 @@ abstract class Myc::Backend::AbstractBuilder
   end
 
   def add_std_funcs
-    void = Mod::Typer::STD_TYPES["void"]
-    i32 = Mod::Typer::STD_TYPES["i32"]
-    u32 = Mod::Typer::STD_TYPES["u32"]
+    void = Typer::STD_TYPES["void"]
+    i32 = Typer::STD_TYPES["i32"]
+    u32 = Typer::STD_TYPES["u32"]
 
-    u64 = Mod::Typer::STD_TYPES["u64"]
+    u64 = Typer::STD_TYPES["u64"]
 
-    u8p = Mod::Typer::STD_TYPES["ptr<u8>"]
-    voidp = Mod::Typer::STD_TYPES["ptr<void>"]
+    u8p = Typer::STD_TYPES["ptr<u8>"]
+    voidp = Typer::STD_TYPES["ptr<void>"]
 
-    f32 = Mod::Typer::STD_TYPES["f32"]
-    f64 = Mod::Typer::STD_TYPES["f64"]
+    f32 = Typer::STD_TYPES["f32"]
+    f64 = Typer::STD_TYPES["f64"]
 
     h = Hash(String, Type::Fn).new
+    loc = Location.new("std", 0)
 
-    h["printf"] = Type::Fn.new([u8p], i32, vaarg: true)
-    h["malloc"] = Type::Fn.new([u64], voidp)
-    h["calloc"] = Type::Fn.new([u64, u64], voidp)
-    h["memset"] = Type::Fn.new([voidp, i32, u64], voidp)
-    h["free"] = Type::Fn.new([voidp], void)
+    h["printf"] = Type::Fn.new(loc, [u8p], i32, vaarg: true)
+    h["malloc"] = Type::Fn.new(loc, [u64], voidp)
+    h["calloc"] = Type::Fn.new(loc, [u64, u64], voidp)
+    h["memset"] = Type::Fn.new(loc, [voidp, i32, u64], voidp)
+    h["free"] = Type::Fn.new(loc, [voidp], void)
 
     h
   end

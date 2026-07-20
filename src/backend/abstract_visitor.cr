@@ -185,7 +185,7 @@ abstract class Myc::Backend::AbstractVisitor
         else
           fname = generate_inspect_func_name(arg)
           builder.inspect_funcs[arg.type] = fname
-          generate_inspect_func(arg.type, fname)
+          generate_inspect_func(op, arg.type, fname)
           fname
         end
 
@@ -212,8 +212,8 @@ abstract class Myc::Backend::AbstractVisitor
     "__myc_inspect_#{mod.name}_#{arg.type.backend_name}"
   end
 
-  private def generate_inspect_func(type : Type, func_name : String)
-    type_fn = Type::Fn.new([mod.typer.voidp, mod.typer.i32], mod.typer.void)
+  private def generate_inspect_func(op : Opcode, type : Type, func_name : String)
+    type_fn = Type::Fn.new(Location.new(@mod.filename, op.offset), [mod.typer.voidp, mod.typer.i32], mod.typer.void)
     fdef = Mod::FuncDef.new(@func_def.node, @mod, func_name, type_fn)
     @builder.inspect_type_fns[func_name] = fdef
     fdef.attributes = %w{noinline private}
@@ -233,7 +233,7 @@ abstract class Myc::Backend::AbstractVisitor
 
     arg = [
       Opcode::Param.new(0),
-      Opcode::As.new(mod.typer.to_ptr(type, current_op.offset)),
+      Opcode::As.new(mod.typer.to_ptr(type, loc)),
       Opcode::Deref.new,
     ] of Opcode
 
@@ -284,7 +284,7 @@ abstract class Myc::Backend::AbstractVisitor
           else_seq << Opcode::Printf.new(1)
 
           body << Opcode::Param.new(0)
-          body << Opcode::As.new(mod.typer.to_ptr(type, current_op.offset))
+          body << Opcode::As.new(mod.typer.to_ptr(type, loc))
           body << Opcode::Deref.new
           body << Opcode::As.new(ptr_int_type)
           body << push(0_i64, ptr_int_type)
@@ -681,13 +681,13 @@ abstract class Myc::Backend::AbstractVisitor
     visit Opcode::SizeOf.new(op.type)
     visit Opcode::Stack.new(:swap2)
     visit Opcode::Call.new("calloc")
-    visit Opcode::As.new(mod.typer.to_ptr(op.type, op.offset))
+    visit Opcode::As.new(mod.typer.to_ptr(op.type, loc))
   end
 
   def visit(op : Opcode::Alloca)
     visit Opcode::To.new(mod.typer.u64)
     size = pop_rhs
-    self << @bb.vla(op.type, mod.typer.to_ptr(op.type, current_op.offset), size)
+    self << @bb.vla(op.type, mod.typer.to_ptr(op.type, loc), size)
   end
 
   def visit(op : Opcode::SizeOf)
@@ -1061,5 +1061,9 @@ abstract class Myc::Backend::AbstractVisitor
 
   private def push(v, type = nil)
     raise error("unexpected value #{v.inspect}")
+  end
+
+  def loc : Location
+    Location.new(@mod.filename, current_op.offset)
   end
 end

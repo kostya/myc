@@ -2,7 +2,7 @@ class Myc::Type::StructType < Myc::Type
   property data = Array(Type).new
   property explicit_alignment : UInt64?
 
-  def initialize(@id_name)
+  def initialize(@loc, @id_name)
     @backend_name = normalize_name(id_name)
   end
 

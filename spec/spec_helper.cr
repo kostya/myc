@@ -32,7 +32,7 @@ def validate(src)
 
   dom = parser.dom
 
-  l = Myc::Mod::Loader.new(dom, "/tmp/1")
+  l = Myc::Mod::Loader.new(dom, "/tmp/1", spec_typer)
   l.mod.validate!
   l.load
 
@@ -43,8 +43,7 @@ def validate(src)
 end
 
 def spec_typer
-  mod = Myc::Mod.new("1", "/tmp/1")
-  mod.typer
+  Myc::Typer.new
 end
 
 def spec_find_type(name : String) : Myc::Type

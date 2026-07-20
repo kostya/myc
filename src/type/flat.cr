@@ -3,7 +3,7 @@ class Myc::Type::FlatType < Myc::Type
   property elements_count : UInt64 = 0
   property explicit_alignment : UInt64?
 
-  def initialize(@id_name)
+  def initialize(@loc, @id_name)
     @backend_name = normalize_name(id_name)
   end
 

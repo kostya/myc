@@ -1,8 +1,11 @@
 class Myc::Mod::Loader
+  getter dom : Source::Dom
   getter mod : Mod
+  getter filename : String
+  getter typer : Typer
 
-  def initialize(@dom : Source::Dom, @filename : String)
-    @mod = Mod.new(File.basename(@filename, EXT), @filename)
+  def initialize(@dom, @filename, @typer)
+    @mod = Mod.new(File.basename(@filename, EXT), @filename, @typer)
   end
 
   def load
@@ -11,22 +14,25 @@ class Myc::Mod::Loader
       case node.code
       when Opcode::Code::STRUCT
         name = get_only_one_string_value(node)
-        struct_type = Type::StructType.new(name)
+        struct_type = Type::StructType.new(loc(node), name)
         preloaded_types[name] = node
         raise error("type #{name} already defined", node) if @mod.type_defs[name]?
         @mod.type_defs[name] = Mod::TypeDef.new(node, struct_type)
+        typer.types_cache[name] = struct_type
       when Opcode::Code::ENUM
         name = get_only_one_string_value(node)
-        enum_type = Type::EnumType.new(name, nil)
+        enum_type = Type::EnumType.new(loc(node), name, nil)
         preloaded_types[name] = node
         raise error("type #{name} already defined", node) if @mod.type_defs[name]?
         @mod.type_defs[name] = Mod::TypeDef.new(node, enum_type)
+        typer.types_cache[name] = enum_type
       when Opcode::Code::FLAT
         name = get_only_one_string_value(node)
-        ft = Type::FlatType.new(name)
+        ft = Type::FlatType.new(loc(node), name)
         preloaded_types[name] = node
         raise error("type #{name} already defined", node) if @mod.type_defs[name]?
         @mod.type_defs[name] = Mod::TypeDef.new(node, ft)
+        typer.types_cache[name] = ft
       end
     end
 
@@ -151,7 +157,7 @@ class Myc::Mod::Loader
       end
     end
 
-    type_fn = Type::Fn.new(arg_types, ret_type || @mod.typer.void, !!attributes.try(&.includes?("vaarg")))
+    type_fn = Type::Fn.new(loc(node), arg_types, ret_type || @mod.typer.void, !!attributes.try(&.includes?("vaarg")))
     if t = mod.typer.types_cache[type_fn.id_name]?
       type_fn = t.as(Type::Fn)
     else
@@ -494,7 +500,7 @@ class Myc::Mod::Loader
         end
       when Opcode::Code::VARIANT
         variant_name = get_only_one_string_value(section)
-        eet = Type::EnumVariantType.new(type.id_name + "::" + variant_name, variant_name, type, type.data.size)
+        eet = Type::EnumVariantType.new(loc(section), type.id_name + "::" + variant_name, variant_name, type, type.data.size)
         eet.hidden = true
 
         section.as(Source::Node::Sequence).list.each do |op|
@@ -511,7 +517,7 @@ class Myc::Mod::Loader
         type.data[eet.id_name] = eet
         mod.typer.types_cache[eet.id_name] = eet
 
-        ct = Type::StructType.new(eet.id_name + "::__value_type__")
+        ct = Type::StructType.new(loc(section), eet.id_name + "::__value_type__")
         ct.hidden = true
         ct.data = eet.value_types
         eet.composite_value_type = ct
@@ -571,5 +577,9 @@ class Myc::Mod::Loader
 
   def find_type(name : String, node : Source::Node) : Type
     @mod.typer.find(name, Location.new(@mod.filename, node.offset))
+  end
+
+  def loc(node : Source::Node) : Location
+    Location.new(@mod.filename, node.offset)
   end
 end

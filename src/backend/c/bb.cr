@@ -346,7 +346,7 @@ class Myc::Backend::C::BB < Myc::Backend::AbstractBB
     wrap_val(val, type, pp)
   end
 
-  private def typer : Mod::Typer
+  private def typer : Typer
     @func_def.mod.typer
   end
 

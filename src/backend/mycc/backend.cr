@@ -73,7 +73,7 @@ class Myc::Backend::Mycc::Backend < Myc::Backend::AbstractBackend
       source.debug_ast(tu.cursor)
     end
 
-    builder = Myc.measure("mycc_new_astb") { ::Myc::Mycc::ASTBuilder.new(source, tu) }
+    builder = Myc.measure("mycc_new_astb") { ::Myc::Mycc::ASTBuilder.new(source, tu, typer) }
     ast = Myc.measure("mycc_build") { builder.build }
 
     Myc.debug(:mycc) do
@@ -95,6 +95,6 @@ class Myc::Backend::Mycc::Backend < Myc::Backend::AbstractBackend
       File.open(path, "w") { |f| IO.copy(io, f) }
     end
     data.files_to_cleanup << path
-    super(path)
+    myc_backend.validate(path)
   end
 end

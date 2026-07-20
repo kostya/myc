@@ -18,7 +18,7 @@ class Myc::Error::Cmd < Myc::Error
     io << @message.colorize(:red)
     io << "\n"
 
-    if ENV["BACKTRACE"]? == "1"
+    if ENV["MYC_BACKTRACE"]? == "1"
       pp backtrace
     end
   end
@@ -45,7 +45,7 @@ class Myc::Error::ErrorLoc < Myc::Error
     io << (loc.filename + ":" + (line_number + 1).to_s + ":" + (line_position + 1).to_s + ")").colorize(:yellow)
     io << "\n\n"
 
-    if ENV["BACKTRACE"]? == "1"
+    if ENV["MYC_BACKTRACE"]? == "1"
       pp backtrace
     end
   end
@@ -156,7 +156,7 @@ class Myc::Error::ErrorVisitor < Myc::Error
 
     io << s
 
-    if ENV["BACKTRACE"]? == "1"
+    if ENV["MYC_BACKTRACE"]? == "1"
       pp backtrace
     end
   end

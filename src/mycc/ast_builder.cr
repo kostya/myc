@@ -2,11 +2,12 @@ class Myc::Mycc::ASTBuilder
   getter source : Source
   getter tu : Clang::TranslationUnit
   getter mod : Mod
+  getter typer : Typer
 
   @current_return_type : Type?
 
-  def initialize(@source, @tu)
-    @mod = Myc::Mod.new("main", source.filename)
+  def initialize(@source, @tu, @typer)
+    @mod = Myc::Mod.new("main", source.filename, @typer)
     @structs = Hash(String, Array({String, Type})).new
     @unions = {} of String => Array({String, Type})
     @current_function_name = ""
@@ -26,19 +27,21 @@ class Myc::Mycc::ASTBuilder
       if cursor.kind.struct_decl?
         name = cursor.spelling
         unless name.empty?
-          struct_type = Type::StructType.new(name)
+          struct_type = Type::StructType.new(location(cursor), name)
           node = cursor_to_node(cursor)
           unless mod.type_defs[name]?
             mod.type_defs[name] = Mod::TypeDef.new(node, struct_type)
+            typer.types_cache[name] = struct_type
           end
         end
       elsif cursor.kind.union_decl?
         name = cursor.spelling
         unless name.empty?
-          enum_type = Type::EnumType.new(name, mod.typer.i32)
+          enum_type = Type::EnumType.new(location(cursor), name, typer.i32)
           node = cursor_to_node(cursor)
           unless mod.type_defs[name]?
             mod.type_defs[name] = Mod::TypeDef.new(node, enum_type)
+            typer.types_cache[name] = enum_type
           end
         end
       end
@@ -98,7 +101,7 @@ class Myc::Mycc::ASTBuilder
     if (from.is_a?(Type::IntType) || from.is_a?(Type::FloatType) || from.is_a?(Type::PtrType)) &&
        target_type.is_a?(Type::BoolType)
       zero = from.is_a?(Type::FloatType) ? TypedAST::FloatLiteral.new(0.0, from, loc) : TypedAST::IntLiteral.new(0_i64, from, loc)
-      return TypedAST::BinaryOp.new(:not_eq, node, zero, mod.typer.bool, loc)
+      return TypedAST::BinaryOp.new(:not_eq, node, zero, typer.bool, loc)
     end
 
     if (from.is_a?(Type::IntType) || from.is_a?(Type::FloatType) || from.is_a?(Type::BoolType)) &&
@@ -112,11 +115,11 @@ class Myc::Mycc::ASTBuilder
       return TypedAST::Cast.new(addr, target_type, loc)
     end
 
-    if target_type.is_a?(Type::PtrType) && from.eq?(mod.typer.voidp)
+    if target_type.is_a?(Type::PtrType) && from.eq?(typer.voidp)
       return TypedAST::Cast.new(node, target_type, loc)
     end
 
-    if from.is_a?(Type::PtrType) && target_type.eq?(mod.typer.voidp)
+    if from.is_a?(Type::PtrType) && target_type.eq?(typer.voidp)
       return TypedAST::Cast.new(node, target_type, loc)
     end
 
@@ -125,11 +128,11 @@ class Myc::Mycc::ASTBuilder
       return TypedAST::Cast.new(node, target_type, loc)
     end
 
-    if from.is_a?(Type::Fn) && target_type.eq?(mod.typer.voidp)
+    if from.is_a?(Type::Fn) && target_type.eq?(typer.voidp)
       return TypedAST::Cast.new(node, target_type, loc)
     end
 
-    if from.eq?(mod.typer.voidp) && target_type.is_a?(Type::Fn)
+    if from.eq?(typer.voidp) && target_type.is_a?(Type::Fn)
       return TypedAST::Cast.new(node, target_type, loc)
     end
 
@@ -156,7 +159,7 @@ class Myc::Mycc::ASTBuilder
         end
         param_type = get_type(child, child.type)
         if param_type.is_a?(Type::FlatType)
-          param_type = mod.typer.to_ptr(param_type.target_type, location(child).offset)
+          param_type = typer.to_ptr(param_type.target_type, location(child))
         end
 
         @current_function_params[param_name] = TypedAST::Function::ParamInfo.new(param_name, param_type, @current_function_params.size)
@@ -182,9 +185,10 @@ class Myc::Mycc::ASTBuilder
 
     struct_type = mod.type_defs[name]?.try(&.type)
     unless struct_type.is_a?(Type::StructType)
-      struct_type = Type::StructType.new(name)
+      struct_type = Type::StructType.new(location(cursor), name)
       node = cursor_to_node(cursor)
       mod.type_defs[name] = Mod::TypeDef.new(node, struct_type)
+      typer.types_cache[name] = struct_type
     end
 
     fields = [] of {String, Type}
@@ -210,7 +214,7 @@ class Myc::Mycc::ASTBuilder
     name ||= cursor.spelling
     return if name.empty? || name.includes?("unnamed")
 
-    enum_type = Type::EnumType.new(name, mod.typer.i32)
+    enum_type = Type::EnumType.new(location(cursor), name, typer.i32)
     fields = [] of {String, Type}
 
     children(cursor).each do |child|
@@ -220,6 +224,7 @@ class Myc::Mycc::ASTBuilder
         fields << {field_name, field_type}
 
         variant = Type::EnumVariantType.new(
+          location(child),
           "#{name}::#{field_name}",
           field_name,
           enum_type,
@@ -228,9 +233,9 @@ class Myc::Mycc::ASTBuilder
         variant.value_types << field_type
         variant.hidden = true
         enum_type.data[variant.id_name] = variant
-        mod.typer.types_cache[variant.id_name] = variant
+        typer.types_cache[variant.id_name] = variant
 
-        ct = Type::StructType.new(variant.id_name + "::__value_type__")
+        ct = Type::StructType.new(location(cursor), variant.id_name + "::__value_type__")
         ct.hidden = true
         ct.data = [field_type]
         variant.composite_value_type = ct
@@ -244,6 +249,7 @@ class Myc::Mycc::ASTBuilder
 
     node = cursor_to_node(cursor)
     mod.type_defs[name] = Mod::TypeDef.new(node, enum_type)
+    typer.types_cache[name] = enum_type
     @unions[name] = fields
   end
 
@@ -262,7 +268,7 @@ class Myc::Mycc::ASTBuilder
     end
 
     unless name.empty?
-      @enum_types[name] = mod.typer.i32
+      @enum_types[name] = typer.i32
     end
   end
 
@@ -323,6 +329,7 @@ class Myc::Mycc::ASTBuilder
             underlying_type = get_type(decl_child, decl_child.typedef_decl_underlying_type)
             unless mod.type_defs[type_name]?
               mod.type_defs[type_name] = Mod::TypeDef.new(cursor_to_node(decl_child), underlying_type)
+              typer.types_cache[type_name] = underlying_type
             end
           else
             raise error("Unhandled child: #{child.kind}", decl_child)
@@ -675,14 +682,14 @@ class Myc::Mycc::ASTBuilder
     loc = node.location
 
     if node.type.is_a?(Type::PtrType)
-      zero = auto_cast(TypedAST::IntLiteral.new(0_i64, mod.typer.i32, loc), node.type, loc)
-      TypedAST::BinaryOp.new(:not_eq, node, zero, mod.typer.bool, loc)
+      zero = auto_cast(TypedAST::IntLiteral.new(0_i64, typer.i32, loc), node.type, loc)
+      TypedAST::BinaryOp.new(:not_eq, node, zero, typer.bool, loc)
     elsif node.type.is_a?(Type::FloatType)
       zero = TypedAST::FloatLiteral.new(0.0, node.type, loc)
-      TypedAST::BinaryOp.new(:not_eq, node, zero, mod.typer.bool, loc)
+      TypedAST::BinaryOp.new(:not_eq, node, zero, typer.bool, loc)
     else
       zero = TypedAST::IntLiteral.new(0_i64, node.type, loc)
-      TypedAST::BinaryOp.new(:not_eq, node, zero, mod.typer.bool, loc)
+      TypedAST::BinaryOp.new(:not_eq, node, zero, typer.bool, loc)
     end
   end
 
@@ -855,20 +862,20 @@ class Myc::Mycc::ASTBuilder
       right = ensure_bool(right)
       op_name = BINARY_MAP[op]?
       raise error("unknown binary #{op}", cursor) unless op_name
-      result = TypedAST::BinaryOp.new(op_name, left, right, mod.typer.bool, loc)
+      result = TypedAST::BinaryOp.new(op_name, left, right, typer.bool, loc)
     when "<", ">", "<=", ">=", "==", "!="
       op_name = BINARY_MAP[op]?
       raise error("unknown binary #{op}", cursor) unless op_name
 
       if left.type.is_a?(Type::PtrType) && right.type.is_a?(Type::PtrType)
-        left = TypedAST::Cast.new(left, mod.typer.u64, loc)
-        right = TypedAST::Cast.new(right, mod.typer.u64, loc)
-        result = TypedAST::BinaryOp.new(op_name, left, right, mod.typer.bool, loc)
+        left = TypedAST::Cast.new(left, typer.u64, loc)
+        right = TypedAST::Cast.new(right, typer.u64, loc)
+        result = TypedAST::BinaryOp.new(op_name, left, right, typer.bool, loc)
       else
         common = common_type(left.type, right.type)
         left = auto_cast(left, common, loc)
         right = auto_cast(right, common, loc)
-        result = TypedAST::BinaryOp.new(op_name, left, right, mod.typer.bool, loc)
+        result = TypedAST::BinaryOp.new(op_name, left, right, typer.bool, loc)
       end
     when ","
       left = build_node(children_list[0]).not_nil!
@@ -879,21 +886,21 @@ class Myc::Mycc::ASTBuilder
       op_name = BINARY_MAP[op]?
       raise error("unknown binary #{op}", cursor) unless op_name
 
-      left = auto_cast(left, mod.typer.i32, loc) if left.type.is_a?(Type::BoolType)
-      right = auto_cast(right, mod.typer.i32, loc) if right.type.is_a?(Type::BoolType)
+      left = auto_cast(left, typer.i32, loc) if left.type.is_a?(Type::BoolType)
+      right = auto_cast(right, typer.i32, loc) if right.type.is_a?(Type::BoolType)
       if left.type.is_a?(Type::PtrType) && right.type.is_a?(Type::PtrType) && op_name == :sub
-        TypedAST::BinaryOp.new(:sub, left, right, mod.typer.i64, loc)
+        TypedAST::BinaryOp.new(:sub, left, right, typer.i64, loc)
       elsif left.type.is_a?(Type::PtrType) && right.type.is_a?(Type::IntType)
-        right = auto_cast(right, mod.typer.u64, loc)
+        right = auto_cast(right, typer.u64, loc)
         TypedAST::BinaryOp.new(op_name, left, right, left.type, loc)
       elsif right.type.is_a?(Type::PtrType) && left.type.is_a?(Type::IntType)
-        left = auto_cast(left, mod.typer.u64, loc)
+        left = auto_cast(left, typer.u64, loc)
         TypedAST::BinaryOp.new(op_name, left, right, right.type, loc)
       elsif left.type.is_a?(Type::FlatType) && right.type.is_a?(Type::IntType)
         elem_type = left.type.as(Type::FlatType).target_type
-        ptr_type = mod.typer.to_ptr(elem_type, loc.offset)
+        ptr_type = typer.to_ptr(elem_type, loc)
         left = auto_cast(left, ptr_type, loc)
-        right = auto_cast(right, mod.typer.u64, loc)
+        right = auto_cast(right, typer.u64, loc)
         TypedAST::BinaryOp.new(op_name, left, right, ptr_type, loc)
       else
         common = common_type(left.type, right.type)
@@ -916,13 +923,13 @@ class Myc::Mycc::ASTBuilder
       TypedAST::UnaryOp.new(:neg, operand.not_nil!, operand.not_nil!.type, loc)
     when "!"
       if operand && operand.type.is_a?(Type::PtrType)
-        zero = auto_cast(TypedAST::IntLiteral.new(0_i64, mod.typer.i32, loc), operand.type, loc)
-        TypedAST::BinaryOp.new(:eq, operand, zero, mod.typer.bool, loc)
+        zero = auto_cast(TypedAST::IntLiteral.new(0_i64, typer.i32, loc), operand.type, loc)
+        TypedAST::BinaryOp.new(:eq, operand, zero, typer.bool, loc)
       elsif operand && operand.type.is_a?(Type::BoolType)
-        TypedAST::UnaryOp.new(:lnot, operand.not_nil!, mod.typer.bool, loc)
+        TypedAST::UnaryOp.new(:lnot, operand.not_nil!, typer.bool, loc)
       else
         zero = TypedAST::IntLiteral.new(0_i64, operand.not_nil!.type, loc)
-        TypedAST::BinaryOp.new(:eq, operand.not_nil!, zero, mod.typer.bool, loc)
+        TypedAST::BinaryOp.new(:eq, operand.not_nil!, zero, typer.bool, loc)
       end
     when "~"
       TypedAST::UnaryOp.new(:bnot, operand.not_nil!, operand.not_nil!.type, loc)
@@ -940,7 +947,7 @@ class Myc::Mycc::ASTBuilder
       if operand && operand.type.is_a?(Type::Fn)
         operand
       else
-        ptr_type = mod.typer.to_ptr(operand.not_nil!.type, loc.offset)
+        ptr_type = typer.to_ptr(operand.not_nil!.type, loc)
         TypedAST::AddrOf.new(operand.not_nil!, ptr_type, loc)
       end
     when "++", "--"
@@ -958,7 +965,7 @@ class Myc::Mycc::ASTBuilder
 
       mark_param_changed(operand.not_nil!)
 
-      op_type = is_statement ? mod.typer.void : operand.not_nil!.type
+      op_type = is_statement ? typer.void : operand.not_nil!.type
       TypedAST::UnaryOp.new(op_sym, operand.not_nil!, op_type, loc, is_statement)
     else
       operand || raise error("Unknown unary operator: #{op}", cursor)
@@ -991,7 +998,7 @@ class Myc::Mycc::ASTBuilder
 
     children(cursor).each do |child|
       if child.kind.init_list_expr?
-        nested_type = field_types[field_idx]? || mod.typer.void
+        nested_type = field_types[field_idx]? || typer.void
         elements << build_init_list(child, nested_type)
         field_idx += 1
       else
@@ -1008,7 +1015,7 @@ class Myc::Mycc::ASTBuilder
       end
     end
 
-    type = target_type || mod.typer.void
+    type = target_type || typer.void
     TypedAST::InitList.new(elements, type, location(cursor))
   end
 
@@ -1046,7 +1053,7 @@ class Myc::Mycc::ASTBuilder
     condition = if children_list.size > 1
                   ensure_bool(build_node(children_list[1]).not_nil!)
                 else
-                  TypedAST::IntLiteral.new(1_i64, mod.typer.i32, location(cursor))
+                  TypedAST::IntLiteral.new(1_i64, typer.i32, location(cursor))
                 end
     TypedAST::DoWhile.new(condition, body, location(cursor))
   end
@@ -1166,7 +1173,7 @@ class Myc::Mycc::ASTBuilder
       end
     end
 
-    TypedAST::StringLiteral.new(value, mod.typer.u8p, location(cursor))
+    TypedAST::StringLiteral.new(value, typer.u8p, location(cursor))
   end
 
   private def build_int_literal(cursor : Clang::Cursor) : TypedAST::IntLiteral
@@ -1202,11 +1209,11 @@ class Myc::Mycc::ASTBuilder
     name = cursor.spelling
     type = get_type(cursor, cursor.type)
     if @current_function_params.has_key?(name) && type.is_a?(Type::FlatType)
-      type = mod.typer.to_ptr(type.target_type, location(cursor).offset)
+      type = typer.to_ptr(type.target_type, location(cursor))
     end
     if @enum_values.has_key?(name)
       value = @enum_values[name]
-      return TypedAST::IntLiteral.new(value, mod.typer.i32, location(cursor))
+      return TypedAST::IntLiteral.new(value, typer.i32, location(cursor))
     end
     @called_functions << name if type.is_a?(Type::Fn)
     TypedAST::VarRef.new(name, type, location(cursor))
@@ -1235,7 +1242,7 @@ class Myc::Mycc::ASTBuilder
 
     from = operand.type
     if (from.is_a?(Type::PtrType) || from.is_a?(Type::Fn)) && target_type.is_a?(Type::IntType)
-      operand = TypedAST::Cast.new(operand, mod.typer.u64, location(cursor))
+      operand = TypedAST::Cast.new(operand, typer.u64, location(cursor))
     end
 
     TypedAST::Cast.new(operand, target_type, location(cursor))
@@ -1250,7 +1257,7 @@ class Myc::Mycc::ASTBuilder
                 when Type::FlatType then type.target_type
                 else                     array.type
                 end
-    index = auto_cast(index, mod.typer.u64, location(cursor))
+    index = auto_cast(index, typer.u64, location(cursor))
     TypedAST::Subscript.new(array, index, elem_type, location(cursor))
   end
 
@@ -1263,15 +1270,15 @@ class Myc::Mycc::ASTBuilder
       if ptr_count > 0
         type_name = target_type.id_name
         ptr_count.times { type_name = "ptr<#{type_name}>" }
-        target_type = mod.typer.find(type_name, location(cursor))
+        target_type = typer.find(type_name, location(cursor))
       end
     else
       type_name, ptr_count = extract_sizeof_type(cursor)
       ptr_count.times { type_name = "ptr<#{type_name}>" }
-      target_type = mod.typer.find(type_name, location(cursor))
+      target_type = typer.find(type_name, location(cursor))
     end
 
-    TypedAST::SizeOf.new(target_type, mod.typer.u64, location(cursor))
+    TypedAST::SizeOf.new(target_type, typer.u64, location(cursor))
   end
 
   SIZEOF_TYPE_ALIASES = {
@@ -1333,7 +1340,7 @@ class Myc::Mycc::ASTBuilder
     field_type = struct_type
 
     if struct_type.is_a?(Type::EnumType)
-      variant_type = mod.typer.find("#{struct_type.id_name}::#{field_name}", location(cursor))
+      variant_type = typer.find("#{struct_type.id_name}::#{field_name}", location(cursor))
       casted = TypedAST::Cast.new(obj, variant_type, location(cursor))
       field_type = struct_type.data[variant_type.id_name]?.try(&.value_types.first?) || struct_type
       return TypedAST::FieldAccess.new(casted, field_name, 1, field_type, location(cursor))
@@ -1548,33 +1555,33 @@ class Myc::Mycc::ASTBuilder
     end
 
     case canonical.kind
-    when .void?                  then mod.typer.void
-    when .bool?                  then mod.typer.bool
-    when .char_s?                then mod.typer.u8
-    when .s_char?                then mod.typer.i8
-    when .char_u?, .u_char?      then mod.typer.u8
-    when .w_char?                then mod.typer.u32
-    when .short?                 then mod.typer.i16
-    when .int?                   then mod.typer.i32
-    when .u_short?               then mod.typer.u16
-    when .u_int?                 then mod.typer.u32
-    when .long?, .long_long?     then mod.typer.i64
-    when .u_long?, .u_long_long? then mod.typer.u64
-    when .u_int128?, .int128?    then mod.typer.find("flat<i32, 4>", location(cursor))
-    when .float?                 then mod.typer.f32
-    when .double?                then mod.typer.f64
-    when .long_double?           then mod.typer.f64
+    when .void?                  then typer.void
+    when .bool?                  then typer.bool
+    when .char_s?                then typer.u8
+    when .s_char?                then typer.i8
+    when .char_u?, .u_char?      then typer.u8
+    when .w_char?                then typer.u32
+    when .short?                 then typer.i16
+    when .int?                   then typer.i32
+    when .u_short?               then typer.u16
+    when .u_int?                 then typer.u32
+    when .long?, .long_long?     then typer.i64
+    when .u_long?, .u_long_long? then typer.u64
+    when .u_int128?, .int128?    then typer.find("flat<i32, 4>", location(cursor))
+    when .float?                 then typer.f32
+    when .double?                then typer.f64
+    when .long_double?           then typer.f64
     when .variable_array?
       elem_type = get_type(cursor, canonical.array_element_type, count)
-      mod.typer.to_ptr(elem_type, location(cursor).offset)
+      typer.to_ptr(elem_type, location(cursor))
     when .block_pointer?
-      mod.typer.voidp
+      typer.voidp
     when .pointer?
       pointee = get_type(cursor, canonical.pointee_type, count)
       if pointee.is_a?(Type::Fn)
         pointee
       else
-        mod.typer.to_ptr(get_type(cursor, canonical.pointee_type, count), location(cursor).offset)
+        typer.to_ptr(get_type(cursor, canonical.pointee_type, count), location(cursor))
       end
     when .record?
       spelling = canonical.spelling
@@ -1607,17 +1614,17 @@ class Myc::Mycc::ASTBuilder
 
       if name.starts_with?("union ")
         name = name.sub("union ", "")
-        mod.typer.find(name, location(cursor))
+        typer.find(name, location(cursor))
       elsif name.starts_with?("struct ")
         name = name.sub("struct ", "")
-        mod.typer.find(name, location(cursor))
+        typer.find(name, location(cursor))
       else
-        mod.typer.find(name, location(cursor))
+        typer.find(name, location(cursor))
       end
     when .constant_array?
-      mod.typer.find("flat<#{get_type(cursor, canonical.array_element_type, count)}, #{canonical.array_size}>", location(cursor))
+      typer.find("flat<#{get_type(cursor, canonical.array_element_type, count)}, #{canonical.array_size}>", location(cursor))
     when .incomplete_array?
-      mod.typer.to_ptr(get_type(cursor, canonical.array_element_type, count), location(cursor).offset)
+      typer.to_ptr(get_type(cursor, canonical.array_element_type, count), location(cursor))
     when .elaborated?
       get_type(cursor, canonical.named_type, count)
     when .function_proto?
@@ -1638,24 +1645,24 @@ class Myc::Mycc::ASTBuilder
         io << ret.id_name
         io << '>'
       end
-      type_fn = Type::Fn.new(arg_types, ret, vaarg: vaarg)
-      mod.typer.types_cache[id_name] ||= type_fn
+      type_fn = Type::Fn.new(location(cursor), arg_types, ret, vaarg: vaarg)
+      typer.types_cache[id_name] ||= type_fn
       type_fn
     when .function_no_proto?
       ret = get_type(cursor, canonical.result_type, count)
       id_name = "fn<#{ret.id_name}>"
-      mod.typer.find(id_name, location(cursor))
+      typer.find(id_name, location(cursor))
     when .typedef?
       get_type(cursor, canonical.canonical_type, count)
     when .unexposed?
       if canonical.spelling.includes?("builtin")
-        mod.typer.voidp
+        typer.voidp
       else
         raise error("UNKNOWN TYPE: #{canonical.kind} #{canonical.spelling}", cursor)
       end
     when .enum?
       name = canonical.spelling.sub("enum ", "")
-      @enum_types[name]? || mod.typer.i32
+      @enum_types[name]? || typer.i32
     else
       raise error("UNKNOWN TYPE: #{canonical.kind} #{canonical.spelling}", cursor)
     end
@@ -1711,7 +1718,7 @@ class Myc::Mycc::ASTBuilder
   private def auto_decay(node : TypedAST::Node) : TypedAST::Node
     if node.type.is_a?(Type::FlatType)
       flat_type = node.type.as(Type::FlatType)
-      ptr_type = @mod.typer.to_ptr(flat_type.target_type, node.location.offset)
+      ptr_type = @typer.to_ptr(flat_type.target_type, node.location)
       addr = TypedAST::AddrOf.new(node, ptr_type, node.location)
       return TypedAST::Cast.new(addr, ptr_type, node.location)
     end

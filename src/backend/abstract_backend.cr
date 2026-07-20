@@ -14,9 +14,11 @@ abstract class Myc::Backend::AbstractBackend
 
   getter data : Cli::Data
   getter common_options : CommonOptions
+  getter typer : Typer
 
   def initialize(@data)
     @common_options = parse_common_options
+    @typer = Typer.new
   end
 
   def run
@@ -167,7 +169,7 @@ abstract class Myc::Backend::AbstractBackend
       parser = Source::Parser.new(input, tokens)
       parser.parse
       dom = parser.dom
-      l = Mod::Loader.new(dom, input)
+      l = Mod::Loader.new(dom, input, typer)
       l.load
       l.mod.validate!
       unless ENV["MYC_DISABLE_INLINER"]? == "1"
