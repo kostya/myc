@@ -14,4 +14,8 @@ class Myc::Mod::FuncDef
   def have_ret?
     !type_fn.ret.eq?(mod.typer.void)
   end
+
+  def deep_walk(&block : Opcode ->)
+    body.try &.deep_walk(&block)
+  end
 end

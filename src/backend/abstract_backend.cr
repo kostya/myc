@@ -30,6 +30,7 @@ abstract class Myc::Backend::AbstractBackend
     in .obj?       then _obj
     in .dump?      then _dump
     in .beautify?  then _beautify
+    in .merge?     then _merge
     in .undefined? then raise data.error("unknown mode #{data.mode}")
     end
   rescue ex : Error
@@ -157,6 +158,30 @@ abstract class Myc::Backend::AbstractBackend
         puts "error! (#{ex.message})".colorize(:red)
       end
     end
+  end
+
+  protected def _merge
+    files = [] of String
+    data.values.each do |file|
+      if filename_source?(file)
+        files << file
+      else
+        raise data.error("unexpected file to merge #{file}")
+      end
+    end
+
+    mods = files.map do |input|
+      validate(input)
+    end
+
+    mod = Mod.new("summary", "/tmp/summary", typer)
+    Myc.measure("merge") do
+      mods.each { |m| mod.merge!(m) }
+    end
+    Myc.measure("merge_clean") do
+      mod.clean_unused_types_and_globals
+    end
+    Myc::Source::Serialize.new(Mod::Saver.new(mod).save, STDOUT).serialize
   end
 
   protected def validate(input : String) : Mod

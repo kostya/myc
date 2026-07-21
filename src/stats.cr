@@ -25,12 +25,12 @@ module Myc::Stats
 
   def print_timers
     if ENV["MYC_TIMERS"]? == "1"
-      STDOUT << "{"
+      STDERR << "{"
       TIMES.each_with_index do |(k, v), i|
-        STDOUT << ", " if i != 0
-        STDOUT << "\"#{k}\": %.7f" % {v}
+        STDERR << ", " if i != 0
+        STDERR << "\"#{k}\": %.7f" % {v}
       end
-      STDOUT << "}"
+      STDERR << "}"
     end
   end
 end

@@ -17,21 +17,21 @@ class Myc::Mod::Loader
         struct_type = Type::StructType.new(loc(node), name)
         preloaded_types[name] = node
         raise error("type #{name} already defined", node) if @mod.type_defs[name]?
-        @mod.type_defs[name] = Mod::TypeDef.new(node, struct_type)
+        @mod.type_defs[name] = Mod::TypeDef.new(@mod, node, struct_type)
         typer.types_cache[name] = struct_type
       when Opcode::Code::ENUM
         name = get_only_one_string_value(node)
         enum_type = Type::EnumType.new(loc(node), name, nil)
         preloaded_types[name] = node
         raise error("type #{name} already defined", node) if @mod.type_defs[name]?
-        @mod.type_defs[name] = Mod::TypeDef.new(node, enum_type)
+        @mod.type_defs[name] = Mod::TypeDef.new(@mod, node, enum_type)
         typer.types_cache[name] = enum_type
       when Opcode::Code::FLAT
         name = get_only_one_string_value(node)
         ft = Type::FlatType.new(loc(node), name)
         preloaded_types[name] = node
         raise error("type #{name} already defined", node) if @mod.type_defs[name]?
-        @mod.type_defs[name] = Mod::TypeDef.new(node, ft)
+        @mod.type_defs[name] = Mod::TypeDef.new(@mod, node, ft)
         typer.types_cache[name] = ft
       end
     end
@@ -572,7 +572,7 @@ class Myc::Mod::Loader
     raise error("missing TYPE for GLOBALDEF #{global_name}", node) unless global_type
 
     init_values ||= Array(Source::Token::Value).new
-    @mod.global_defs[global_name] = Mod::GlobalDef.new(node, global_name, global_type, initial_keyword, init_values, constant_flag, global_private)
+    @mod.global_defs[global_name] = Mod::GlobalDef.new(@mod, node, global_name, global_type, initial_keyword, init_values, constant_flag, global_private)
   end
 
   def find_type(name : String, node : Source::Node) : Type

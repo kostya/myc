@@ -10,6 +10,7 @@ class Myc::Cli
       Obj
       Dump
       Beautify
+      Merge
     end
 
     property mode = Mode::Undefined
@@ -65,6 +66,7 @@ class Myc::Cli
       when "obj", "o"                        then set_mod(:obj)
       when "dump", "d"                       then set_mod(:dump)
       when "beautify", "b"                   then set_mod(:beautify)
+      when "merge", "m"                      then set_mod(:merge)
       when "--version", "-v", "version", "v" then show_version
       when "--help", "-h", "help", "h"       then show_usage
       when Nil                               then break
@@ -171,6 +173,9 @@ Commands:
              ;   ./#{cli_name} b .
              ;   ./#{cli_name} b --annotate src/
              ;   ./#{cli_name} b file1#{ext} file2#{ext}
+
+  merge|m    ; merge multiple #{ext} files into one, output to stdout
+             ;   ./#{cli_name} m dir/*#{ext} > summary.myc
 
   version|v  ; display version information
              ;   ./#{cli_name} version

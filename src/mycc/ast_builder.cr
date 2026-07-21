@@ -30,7 +30,7 @@ class Myc::Mycc::ASTBuilder
           struct_type = Type::StructType.new(location(cursor), name)
           node = cursor_to_node(cursor)
           unless mod.type_defs[name]?
-            mod.type_defs[name] = Mod::TypeDef.new(node, struct_type)
+            mod.type_defs[name] = Mod::TypeDef.new(@mod, node, struct_type)
             typer.types_cache[name] = struct_type
           end
         end
@@ -40,7 +40,7 @@ class Myc::Mycc::ASTBuilder
           enum_type = Type::EnumType.new(location(cursor), name, typer.i32)
           node = cursor_to_node(cursor)
           unless mod.type_defs[name]?
-            mod.type_defs[name] = Mod::TypeDef.new(node, enum_type)
+            mod.type_defs[name] = Mod::TypeDef.new(@mod, node, enum_type)
             typer.types_cache[name] = enum_type
           end
         end
@@ -187,7 +187,7 @@ class Myc::Mycc::ASTBuilder
     unless struct_type.is_a?(Type::StructType)
       struct_type = Type::StructType.new(location(cursor), name)
       node = cursor_to_node(cursor)
-      mod.type_defs[name] = Mod::TypeDef.new(node, struct_type)
+      mod.type_defs[name] = Mod::TypeDef.new(@mod, node, struct_type)
       typer.types_cache[name] = struct_type
     end
 
@@ -248,7 +248,7 @@ class Myc::Mycc::ASTBuilder
     end
 
     node = cursor_to_node(cursor)
-    mod.type_defs[name] = Mod::TypeDef.new(node, enum_type)
+    mod.type_defs[name] = Mod::TypeDef.new(@mod, node, enum_type)
     typer.types_cache[name] = enum_type
     @unions[name] = fields
   end
@@ -328,7 +328,7 @@ class Myc::Mycc::ASTBuilder
             type_name = decl_child.spelling
             underlying_type = get_type(decl_child, decl_child.typedef_decl_underlying_type)
             unless mod.type_defs[type_name]?
-              mod.type_defs[type_name] = Mod::TypeDef.new(cursor_to_node(decl_child), underlying_type)
+              mod.type_defs[type_name] = Mod::TypeDef.new(@mod, cursor_to_node(decl_child), underlying_type)
               typer.types_cache[type_name] = underlying_type
             end
           else
