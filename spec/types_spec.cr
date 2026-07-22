@@ -57,7 +57,7 @@ describe "Typer" do
     point.data << mod.typer.i32
     node = Myc::Source::Node.new(Myc::Opcode::Code::TYPE)
     mod.type_defs["Point"] = Myc::Mod::TypeDef.new(mod, node, point)
-    typer.types_cache["Point"] = point
+    typer.map["Point"] = point
 
     t = mod.typer.find(" Point ", Myc::Location.new("/tmp/1", 0))
     t.to_s.should eq "Point"

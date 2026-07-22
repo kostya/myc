@@ -42,21 +42,26 @@ class Myc::Backend::Mycc::Backend < Myc::Backend::AbstractBackend
 
       puts "used #{name} backend" unless ENV["MYC_SPEC"]? == "1"
 
-      case name
-      when "LLVM"
-        Myc::Backend::Llvm::Backend.new(data)
-      when "C"
-        Myc::Backend::C::Backend.new(data)
-      when "QBE"
-        Myc::Backend::QBE::Backend.new(data)
-      else
-        raise "unknown backend #{name}"
-      end
+      backend = case name
+                when "LLVM"
+                  Myc::Backend::Llvm::Backend.new(data)
+                when "C"
+                  Myc::Backend::C::Backend.new(data)
+                when "QBE"
+                  Myc::Backend::QBE::Backend.new(data)
+                else
+                  raise "unknown backend #{name}"
+                end
+      backend.typer = @typer
+      backend
     end
   end
 
-  protected def validate(input : String) : Mod
-    return super(input) if input.ends_with?(".myc")
+  protected def resolve_input(input : String) : String
+    return input if input.ends_with?(".myc")
+
+    raise data.error("unexpected file extension `#{input}`, expected #{ext}") unless input.ends_with?(ext)
+
     raise data.error("input not found `#{input}`") unless File.exists?(input)
     raise data.error("input not file `#{input}`") unless File.file?(input)
 
@@ -95,6 +100,7 @@ class Myc::Backend::Mycc::Backend < Myc::Backend::AbstractBackend
       File.open(path, "w") { |f| IO.copy(io, f) }
     end
     data.files_to_cleanup << path
-    myc_backend.validate(path)
+
+    path
   end
 end

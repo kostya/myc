@@ -31,7 +31,7 @@ class Myc::Mycc::ASTBuilder
           node = cursor_to_node(cursor)
           unless mod.type_defs[name]?
             mod.type_defs[name] = Mod::TypeDef.new(@mod, node, struct_type)
-            typer.types_cache[name] = struct_type
+            typer.map[name] = struct_type
           end
         end
       elsif cursor.kind.union_decl?
@@ -41,7 +41,7 @@ class Myc::Mycc::ASTBuilder
           node = cursor_to_node(cursor)
           unless mod.type_defs[name]?
             mod.type_defs[name] = Mod::TypeDef.new(@mod, node, enum_type)
-            typer.types_cache[name] = enum_type
+            typer.map[name] = enum_type
           end
         end
       end
@@ -188,7 +188,7 @@ class Myc::Mycc::ASTBuilder
       struct_type = Type::StructType.new(location(cursor), name)
       node = cursor_to_node(cursor)
       mod.type_defs[name] = Mod::TypeDef.new(@mod, node, struct_type)
-      typer.types_cache[name] = struct_type
+      typer.map[name] = struct_type
     end
 
     fields = [] of {String, Type}
@@ -233,7 +233,7 @@ class Myc::Mycc::ASTBuilder
         variant.value_types << field_type
         variant.hidden = true
         enum_type.data[variant.id_name] = variant
-        typer.types_cache[variant.id_name] = variant
+        typer.map[variant.id_name] = variant
 
         ct = Type::StructType.new(location(cursor), variant.id_name + "::__value_type__")
         ct.hidden = true
@@ -249,7 +249,7 @@ class Myc::Mycc::ASTBuilder
 
     node = cursor_to_node(cursor)
     mod.type_defs[name] = Mod::TypeDef.new(@mod, node, enum_type)
-    typer.types_cache[name] = enum_type
+    typer.map[name] = enum_type
     @unions[name] = fields
   end
 
@@ -329,7 +329,7 @@ class Myc::Mycc::ASTBuilder
             underlying_type = get_type(decl_child, decl_child.typedef_decl_underlying_type)
             unless mod.type_defs[type_name]?
               mod.type_defs[type_name] = Mod::TypeDef.new(@mod, cursor_to_node(decl_child), underlying_type)
-              typer.types_cache[type_name] = underlying_type
+              typer.map[type_name] = underlying_type
             end
           else
             raise error("Unhandled child: #{child.kind}", decl_child)
@@ -1646,7 +1646,7 @@ class Myc::Mycc::ASTBuilder
         io << '>'
       end
       type_fn = Type::Fn.new(location(cursor), arg_types, ret, vaarg: vaarg)
-      typer.types_cache[id_name] ||= type_fn
+      typer.map[id_name] ||= type_fn
       type_fn
     when .function_no_proto?
       ret = get_type(cursor, canonical.result_type, count)

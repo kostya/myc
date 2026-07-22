@@ -1,5 +1,3 @@
-<<general.myc_include>>
-
 FUNC :show
   ARGS
     TYPE :EnumTest

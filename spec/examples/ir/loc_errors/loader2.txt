@@ -1,4 +1,3 @@
 FLAT :bla COUNT ENDFLAT
           ^
-          COUNT expected only 1 value
-          (at
+          expected int

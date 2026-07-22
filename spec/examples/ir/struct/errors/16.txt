@@ -1,1 +1,1 @@
-type Point already defined
+type `Point` already defined in this module

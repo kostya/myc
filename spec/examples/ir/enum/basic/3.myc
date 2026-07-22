@@ -1,5 +1,3 @@
-<<common.myc_include>>
-
 GLOBAL g 
   TYPE :SimpleEnum 
   INITIAL 

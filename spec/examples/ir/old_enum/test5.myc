@@ -1,5 +1,3 @@
-<<general.myc_include>>
-
 STRUCT :Bla
   TYPE :EnumTest
 ENDSTRUCT

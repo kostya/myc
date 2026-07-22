@@ -1,5 +1,3 @@
-<<common.myc_include>>
-
 FUNC :test_set_alloca
   BODY
     PUSH 13

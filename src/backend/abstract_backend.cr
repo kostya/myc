@@ -14,7 +14,7 @@ abstract class Myc::Backend::AbstractBackend
 
   getter data : Cli::Data
   getter common_options : CommonOptions
-  getter typer : Typer
+  property typer : Typer
 
   def initialize(@data)
     @common_options = parse_common_options
@@ -38,55 +38,89 @@ abstract class Myc::Backend::AbstractBackend
     exit(1)
   end
 
-  protected def run_obj(input : String, output : String)
-    ensure_dir(output)
-    obj(validate(input), output)
+  protected def resolve_inputs(files : Array(String)) : Array(String)
+    files.map { |f| resolve_input(f) }
   end
 
-  protected def run_dump(input : String, output : String)
-    ensure_dir(output)
-    dump(validate(input), output)
-  end
+  protected def resolve_input(input : String) : String
+    raise data.error("input not found `#{input}`") unless File.exists?(input)
+    raise data.error("input not file `#{input}`") unless File.file?(input)
 
-  protected def target_for_compile
-    if data.values.size == 0
-      raise data.error("nothing to compile")
+    unless filename_source?(input)
+      raise data.error("unexpected file `#{input}`")
     end
 
-    last = data.values.last
-    if filename_source?(last) || filename_object?(last)
-      if (data.values.size == 1) && data.stdin_filename.nil?
-        return File.basename(data.values.first, ext)
-      else
-        return "a.out"
+    input
+  end
+
+  protected def parse_files(files : Array(String)) : Array({Mod, Source::Dom})
+    files.map do |input|
+      Myc.measure("parse") do
+        src = File.read(input)
+        tokens = Source::Tokenizer.new(src, input).parse
+        parser = Source::Parser.new(input, tokens)
+        parser.parse
+        mod = Mod.new(File.basename(input, ext), input, typer)
+        {mod, parser.dom}
+      end
+    end
+  end
+
+  protected def run_phases(parsed : Array({Mod, Source::Dom})) : Array(Mod)
+    Myc.measure("collect_types") do
+      collector = Mod::TypeCollector.new(typer)
+      parsed.each { |mod, dom| collector.collect(mod, dom) }
+    end
+
+    Myc.measure("fill_types") do
+      parsed.each do |mod, dom|
+        filler = Mod::TypeFiller.new(typer, mod)
+        filler.fill(dom)
       end
     end
 
-    data.values.last
+    Myc.measure("load_mods") do
+      parsed.each do |mod, dom|
+        loader = Mod::Loader.new(dom, mod.filename, typer, mod)
+        loader.load
+      end
+    end
+
+    Myc.measure("validate") do
+      parsed.each { |mod, _| mod.validate! }
+    end
+
+    parsed.map(&.first)
+  end
+
+  protected def load_all(files : Array(String)) : Array(Mod)
+    myc_files = resolve_inputs(files)
+    parsed = parse_files(myc_files)
+    mods = run_phases(parsed)
+    inline_cross_module(mods) unless ENV["MYC_DISABLE_INLINER"]? == "1"
+    mods
+  end
+
+  protected def load_single(input : String) : Mod
+    load_all([input]).first
   end
 
   protected def _compile(target : String)
-    files = [] of String
+    source_files = data.values.select { |f| filename_source?(f) }
+    obj_files = data.values.select { |f| filename_object?(f) }
+
     objs = [] of String
-    data.values.each do |file|
-      if filename_source?(file)
-        files << file
-      elsif filename_object?(file)
-        objs << file
-      elsif file == target
-      else
-        raise data.error("unexpected file to compile #{file}")
+
+    if source_files.any?
+      load_all(source_files).each do |mod|
+        obj_file = object_for(mod.filename)
+        run_obj(mod, obj_file)
+        objs << obj_file
       end
     end
 
-    files.each do |file|
-      obj_file = object_for(file)
-
-      run_obj(file, obj_file)
-      objs << obj_file
-    end
-
-    raise data.error("nothing to compile") if files.empty? && objs.empty?
+    objs.concat(obj_files)
+    raise data.error("nothing to compile") if objs.empty?
 
     linker(objs, target)
     target
@@ -108,7 +142,7 @@ abstract class Myc::Backend::AbstractBackend
                       raise data.error("obj require 2 files input and output")
                     end
 
-    run_obj(input, output)
+    run_obj(load_single(input), output)
     puts "generated #{output}"
   end
 
@@ -116,13 +150,13 @@ abstract class Myc::Backend::AbstractBackend
     if data.values.size == 1
       input = data.values.first
       self.class.with_tempfile_path("myc", "dump") do |output|
-        run_dump(input, output)
+        run_dump(load_single(input), output)
         puts File.read(output)
       end
     elsif data.values.size == 2
       input = data.values[0]
       output = data.values[1]
-      run_dump(input, output)
+      run_dump(load_single(input), output)
       puts "dump generated to #{output}"
     else
       raise data.error("dump require 1 or 2 files input [and output]")
@@ -143,7 +177,7 @@ abstract class Myc::Backend::AbstractBackend
     files.each do |input|
       begin
         print "beautify #{input} "
-        mod = validate(input)
+        mod = load_single(input)
         s = if data.options["annotate"]?
               linter = Linter::Backend.new(data)
               builder = linter.build_mod(mod).as(Linter::Builder)
@@ -161,56 +195,70 @@ abstract class Myc::Backend::AbstractBackend
   end
 
   protected def _merge
-    files = [] of String
-    data.values.each do |file|
-      if filename_source?(file)
-        files << file
-      else
-        raise data.error("unexpected file to merge #{file}")
-      end
-    end
+    files = data.values.select { |f| filename_source?(f) }
+    raise data.error("nothing to merge") if files.empty?
 
-    mods = files.map do |input|
-      validate(input)
-    end
+    mods = load_all(files)
 
     mod = Mod.new("summary", "/tmp/summary", typer)
     Myc.measure("merge") do
       mods.each { |m| mod.merge!(m) }
     end
+
     Myc.measure("merge_clean") do
       mod.clean_unused_types_and_globals
     end
+
     Myc::Source::Serialize.new(Mod::Saver.new(mod).save, STDOUT).serialize
   end
 
-  protected def validate(input : String) : Mod
-    raise data.error("input not found `#{input}`") unless File.exists?(input)
-    raise data.error("input not file `#{input}`") unless File.file?(input)
-    Myc.measure("load_mod") do
-      src = File.read(input)
-      src = preprocess(src, input)
-      tokens = Source::Tokenizer.new(src, input).parse
-      parser = Source::Parser.new(input, tokens)
-      parser.parse
-      dom = parser.dom
-      l = Mod::Loader.new(dom, input, typer)
-      l.load
-      l.mod.validate!
-      unless ENV["MYC_DISABLE_INLINER"]? == "1"
-        Myc.measure("inliner") do
-          i = Myc::Mod::Inliner.new(l.mod)
-          i.calc_stats
-          i.inline!
-        end
+  protected def run_obj(mod : Mod, output : String)
+    ensure_dir(output)
+    obj(mod, output)
+  end
 
-        if save_result = ENV["MYC_SAVE_INLINER_RESULT"]?
-          s = Mod::Saver.new(l.mod)
-          dom = s.save
-          File.open(save_result, "w") { |f| Myc::Source::Serialize.new(dom, f).serialize }
+  protected def run_dump(mod : Mod, output : String)
+    ensure_dir(output)
+    dump(mod, output)
+  end
+
+  protected def target_for_compile
+    if data.values.size == 0
+      raise data.error("nothing to compile")
+    end
+
+    last = data.values.last
+    if filename_source?(last) || filename_object?(last)
+      if (data.values.size == 1) && data.stdin_filename.nil?
+        return File.basename(data.values.first, ext)
+      else
+        return "a.out"
+      end
+    end
+
+    data.values.last
+  end
+
+  protected def build_mod(mod : Mod) : AbstractBuilder
+    Myc.measure("build_mod") do
+      builder = new_builder
+      mod.finalize_enums(builder.layout)
+
+      mod.func_defs.each do |name, func_def|
+        builder.func_register(name, func_def)
+      end
+
+      mod.global_defs.each_value do |global|
+        builder.global_register(mod, global)
+      end
+
+      mod.func_defs.each do |_, func_def|
+        if func_def.body
+          builder.new_func(func_def).build
         end
       end
-      l.mod
+
+      builder
     end
   end
 
@@ -229,9 +277,9 @@ abstract class Myc::Backend::AbstractBackend
     error.print(STDOUT)
   end
 
-  protected def object_for(input, ext = "o")
+  protected def object_for(input, obj_ext = "o")
     base_name = File.basename(input, ext)
-    output = Path[input].parent / "#{base_name}.#{ext}"
+    output = Path[input].parent / "#{base_name}.#{obj_ext}"
     output.to_s
   end
 
@@ -239,8 +287,8 @@ abstract class Myc::Backend::AbstractBackend
     Dir.mkdir_p(File.dirname(file))
   end
 
-  def self.tempfile_path(prefix = "", ext = "")
-    File.join(Dir.tempdir, "#{prefix}_#{tmp_name}.#{ext}")
+  def self.tempfile_path(prefix = "", temp_ext = "")
+    File.join(Dir.tempdir, "#{prefix}_#{tmp_name}.#{temp_ext}")
   end
 
   def self.tmp_name
@@ -249,8 +297,8 @@ abstract class Myc::Backend::AbstractBackend
     bytes.hexstring
   end
 
-  def self.with_tempfile_path(prefix, ext, &)
-    path = tempfile_path(prefix, ext)
+  def self.with_tempfile_path(prefix, temp_ext, &)
+    path = tempfile_path(prefix, temp_ext)
     yield path
   ensure
     if path && ENV["MYC_KEEP_TEMP_FILES"]? != "1"
@@ -289,10 +337,6 @@ abstract class Myc::Backend::AbstractBackend
     raise Error::Cmd.new(ex.message, cmd, args)
   end
 
-  private def preprocess(str : String, filename : String) : String
-    str.gsub(/<<(.*?)>>/) { File.read(File.join(File.dirname(filename), $1.to_s)) }
-  end
-
   private def parse_common_options : CommonOptions
     target = if target_str = data.options["target"]?
                Target.from_triple(target_str)
@@ -327,29 +371,6 @@ abstract class Myc::Backend::AbstractBackend
     end
   end
 
-  protected def build_mod(mod : Mod) : AbstractBuilder
-    Myc.measure("build_mod") do
-      builder = new_builder
-      mod.finalize_enums(builder.layout)
-
-      mod.func_defs.each do |name, func_def|
-        builder.func_register(name, func_def)
-      end
-
-      mod.global_defs.each_value do |global|
-        builder.global_register(mod, global)
-      end
-
-      mod.func_defs.each do |_, func_def|
-        if func_def.body
-          builder.new_func(func_def).build
-        end
-      end
-
-      builder
-    end
-  end
-
   protected def ext
     EXT
   end
@@ -360,5 +381,36 @@ abstract class Myc::Backend::AbstractBackend
 
   protected def filename_object?(filename : String) : Bool
     filename.ends_with?(".o")
+  end
+
+  private def inline_cross_module(mods : Array(Mod))
+    Myc.measure("inliner") do
+      inline_lib = build_inline_library(mods)
+      return unless inline_lib
+
+      mods.each do |mod|
+        Myc::Mod::Inliner.new(mod, inline_lib).inline!
+      end
+
+      if save_result = ENV["MYC_SAVE_INLINER_RESULT"]?
+        s = Mod::Saver.new(mods.first)
+        dom = s.save
+        File.open(save_result, "w") { |f| Myc::Source::Serialize.new(dom, f).serialize }
+      end
+    end
+  end
+
+  private def build_inline_library(mods : Array(Mod)) : Mod?
+    lib1 = Mod.new("__inline_lib__", "/tmp/__inline_lib__", typer)
+
+    mods.each do |mod|
+      mod.func_defs.each do |name, func_def|
+        if func_def.body && func_def.inline_stats.can_inline
+          lib1.func_defs[name] = func_def
+        end
+      end
+    end
+
+    lib1.func_defs.empty? ? nil : lib1
   end
 end

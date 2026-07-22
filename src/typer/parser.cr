@@ -139,7 +139,7 @@ class Myc::Typer::Parser
     else
       t = Type::PtrType.new(@loc, id_name, inner_type)
       t.hidden = true
-      typer.types_cache[id_name] = t
+      typer.map[id_name] = t
       t
     end
   end
@@ -186,7 +186,7 @@ class Myc::Typer::Parser
       t.hidden = true
       t.target_type = inner_type
       t.elements_count = count.to_u64
-      typer.types_cache[id_name] = t
+      typer.map[id_name] = t
       t
     end
   end
@@ -230,7 +230,7 @@ class Myc::Typer::Parser
       t = Type::StructType.new(@loc, id_name)
       t.hidden = true
       t.data = inner_types
-      typer.types_cache[id_name] = t
+      typer.map[id_name] = t
       t
     end
   end
@@ -297,7 +297,7 @@ class Myc::Typer::Parser
       finded_t
     else
       t.hidden = true
-      typer.types_cache[t.id_name] = t
+      typer.map[t.id_name] = t
       t
     end
   end

@@ -1,22 +1,22 @@
 class Myc::Mod::Inliner
   getter mod : Mod
+  getter inline_lib : Mod?
 
-  def initialize(@mod)
-  end
-
-  def calc_stats
-    @mod.func_defs.each_value do |func_def|
-      if body = func_def.body
-        func_def.inline_stats.run(body)
-      end
-    end
+  def initialize(@mod, @inline_lib = nil)
   end
 
   def inline!
     inline_id = 0_u64
     inline_names = Set(String).new
+
     @mod.func_defs.each do |name, func_def|
       inline_names << name if func_def.inline_stats.can_inline
+    end
+
+    if lib1 = @inline_lib
+      lib1.func_defs.each do |name, func_def|
+        inline_names << name if func_def.inline_stats.can_inline
+      end
     end
 
     while true
@@ -26,10 +26,22 @@ class Myc::Mod::Inliner
         inline_stats = func_def.inline_stats
         inline_names.each do |inline_name|
           if inline_stats.calls[inline_name] > 0
-            any_inlined = true
-            r = Replacer.new(mod, func_def, mod.func_defs[inline_name], inline_id)
-            r.replace!
-            inline_id += 1
+            target = @mod.func_defs[inline_name]?
+            if target && target.body
+            else
+              target = nil
+            end
+
+            unless target
+              target = @inline_lib.try(&.func_defs[inline_name]?)
+            end
+
+            if target && target.body
+              any_inlined = true
+              r = Replacer.new(@mod, func_def, target, inline_id)
+              r.replace!
+              inline_id += 1
+            end
           end
         end
       end
@@ -39,7 +51,7 @@ class Myc::Mod::Inliner
   end
 
   class Stats
-    property can_inline = false
+    getter can_inline : Bool
     property calls = Hash(String, Int32).new(0)
     getter name : String
 
@@ -53,14 +65,7 @@ class Myc::Mod::Inliner
       @goto_count = 0
       @ret_count = 0
       @ret_last = false
-    end
-
-    def run(body)
-      check(body)
-      @can_inline = can_inline?
-      if body.list.size > 0 && body.list.last.is_a?(Opcode::Ret)
-        @ret_last = true
-      end
+      @can_inline = false
     end
 
     def can_inline? : Bool
@@ -72,49 +77,44 @@ class Myc::Mod::Inliner
       return false if @inst_count == 0
 
       return false if @ret_count > 5 || @goto_count > 3 || @if_count > 0
-
       return true if @inst_count <= 10 && @if_count == 0
-
       return true if @inst_count <= 15 && @if_count <= 1 && @goto_count == 0
-
       return true if @inst_count <= 20 && @if_count == 0 && @call_count <= 1
-
       return true if @inst_count <= 45 && @if_count <= 1 && @call_count == 0 && @goto_count == 0
 
       false
     end
 
-    private def check(seq : Opcode::Seq)
-      seq.list.each do |op|
-        @inst_count += 1
+    def update(op : Opcode)
+      @inst_count += 1
 
-        case op
-        when Opcode::If
-          @if_count += 1
-          check(op.then_seq)
-          check(op.else_seq)
-        when Opcode::Loop
-          @loop_count += 1
-          check(op.init_seq)
-          check(op.cond_seq)
-          check(op.body_seq)
-          check(op.step_seq)
-        when Opcode::Switch
-          @switch_count += 1
-          op.cases_seq.each { |seq| check(seq) }
-          check(op.else_seq)
-        when Opcode::Goto, Opcode::Next, Opcode::Break
-          @goto_count += 1
-        when Opcode::Call
-          @call_count += 1
-          if op.name == @name
-            @call_itself = true
-          end
-          @calls[op.name] += 1
-        when Opcode::Ret
-          @ret_count += 1
-        when Opcode::Stack, Opcode::Label, Opcode::Param, Opcode::Slot
-          @inst_count -= 1
+      case op
+      when Opcode::If
+        @if_count += 1
+      when Opcode::Loop
+        @loop_count += 1
+      when Opcode::Switch
+        @switch_count += 1
+      when Opcode::Goto, Opcode::Next, Opcode::Break
+        @goto_count += 1
+      when Opcode::Call
+        @call_count += 1
+        if op.name == @name
+          @call_itself = true
+        end
+        @calls[op.name] += 1
+      when Opcode::Ret
+        @ret_count += 1
+      when Opcode::Stack, Opcode::Label, Opcode::Param, Opcode::Slot
+        @inst_count -= 1
+      end
+    end
+
+    def finish(func_def : FuncDef)
+      @can_inline = can_inline?
+      if body = func_def.body
+        if body.list.size > 0 && body.list.last.is_a?(Opcode::Ret)
+          @ret_last = true
         end
       end
     end
@@ -125,11 +125,9 @@ class Myc::Mod::Inliner
     getter func_def : FuncDef
     getter inline_func_def : FuncDef
     getter inline_id : UInt64
-    getter verbose : Bool
 
     def initialize(@mod, @func_def, @inline_func_def, @inline_id)
       @inline_internal_id = 0_u64
-      @verbose = ENV["MYC_INLINER_VERBOSE"]? == "1"
     end
 
     def replace!
@@ -139,17 +137,16 @@ class Myc::Mod::Inliner
 
     def check(seq : Opcode::Seq)
       inline_name = inline_func_def.name
-      inline_stats = @func_def.inline_stats
       list = seq.list
-      pos = 0_u64
-      length = seq.list.size
-      while pos < length
-        op = seq.list[pos]
+      inline_stats = @func_def.inline_stats
+      pos = 0
+      while pos < list.size
+        op = list[pos]
         pos += 1
         case op
         when Opcode::Call
           if op.name == inline_name
-            if verbose
+            Myc.debug(:inliner) do
               puts "INLINE --------------- #{inline_name} into #{func_def.name} -----------------"
             end
 
@@ -167,9 +164,6 @@ class Myc::Mod::Inliner
 
             if @inline_func_def.inline_stats.@ret_count == 0
             elsif @inline_func_def.inline_stats.@ret_last && @inline_func_def.inline_stats.@ret_count == 1
-              if @inline_func_def.type_fn.ret.eq?(@mod.typer.void)
-              else
-              end
             else
               if @inline_func_def.type_fn.ret.eq?(@mod.typer.void)
                 new_list << Opcode::Label.new("#{inline_prefix}_end").with_position(op)
@@ -180,9 +174,7 @@ class Myc::Mod::Inliner
             end
 
             new_list += list[pos..-1]
-
-            list = new_list
-            seq.list = list
+            seq.list = new_list
             pos += new_seq.list.size + slots.size
             inline_stats.calls[inline_name] -= 1
             @inline_internal_id += 1
@@ -215,27 +207,27 @@ class Myc::Mod::Inliner
       seq.list.each do |op|
         case op
         when Opcode::Slot
-          if l = slot_map[op.name]?
-            new_list << Opcode::Slot.new(l).with_position(op)
-          else
-            new_name = "#{inline_prefix}_#{op.name}"
-            slot_map[op.name] = new_name
-            new_list << Opcode::Slot.new(new_name).with_position(op)
-          end
+          new_list << Opcode::Slot.new(
+            slot_map[op.name]? || begin
+              new_name = "#{inline_prefix}_#{op.name}"
+              slot_map[op.name] = new_name
+              new_name
+            end
+          ).with_position(op)
         when Opcode::Local
-          if l = local_map[op.name]?
-            new_list << Opcode::Local.new(l, op.type).with_position(op)
-          else
-            new_name = "#{inline_prefix}_#{op.name}"
-            local_map[op.name] = new_name
-            new_list << Opcode::Local.new(new_name, op.type).with_position(op)
-          end
+          new_list << Opcode::Local.new(
+            local_map[op.name]? || begin
+              new_name = "#{inline_prefix}_#{op.name}"
+              local_map[op.name] = new_name
+              new_name
+            end,
+            op.type
+          ).with_position(op)
         when Opcode::Ret
           if @inline_func_def.inline_stats.@ret_count == 0
             raise "unreachable"
           elsif @inline_func_def.inline_stats.@ret_last && @inline_func_def.inline_stats.@ret_count == 1
-            if @inline_func_def.type_fn.ret.eq?(@mod.typer.void)
-            else
+            unless @inline_func_def.type_fn.ret.eq?(@mod.typer.void)
             end
           else
             if @inline_func_def.type_fn.ret.eq?(@mod.typer.void)

@@ -180,7 +180,7 @@ class Myc::Backend::C::BB < Myc::Backend::AbstractBB
     when {Type::IntType, Type::IntType}
       if from_type.signed && !to_type.signed && to_type.bytes_count > from_type.bytes_count
         temp_unsigned = builder.new_temp
-        emit "#{c_type(from_type.to_unsigned)} #{temp_unsigned} = (unsigned)(#{val});"
+        emit "#{c_type(typer.to_unsigned(from_type))} #{temp_unsigned} = (unsigned)(#{val});"
         emit "#{c_to} #{temp} = (#{c_to})#{temp_unsigned};"
       else
         emit "#{c_to} #{temp} = (#{c_to})(#{val});"

@@ -39,6 +39,10 @@ abstract class Myc::Type
   def flat_elements_count : UInt64
     1_u64
   end
+
+  def finished!
+    self
+  end
 end
 
 require "./type/*"

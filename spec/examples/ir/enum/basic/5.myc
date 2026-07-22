@@ -1,5 +1,3 @@
-<<common.myc_include>>
-
 FUNC :test_param
   ARGS
     TYPE :SimpleEnum
