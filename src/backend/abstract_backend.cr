@@ -97,7 +97,8 @@ abstract class Myc::Backend::AbstractBackend
     myc_files = resolve_inputs(files)
     parsed = parse_files(myc_files)
     mods = run_phases(parsed)
-    inline_cross_module(mods) unless ENV["MYC_DISABLE_INLINER"]? == "1"
+    header_mod = build_header_module(mods)
+    inline_cross_module(mods, header_mod) unless ENV["MYC_DISABLE_INLINER"]? == "1"
     mods
   end
 
@@ -383,13 +384,16 @@ abstract class Myc::Backend::AbstractBackend
     filename.ends_with?(".o")
   end
 
-  private def inline_cross_module(mods : Array(Mod))
+  private def inline_cross_module(mods : Array(Mod), header_mod : Mod)
     Myc.measure("inliner") do
-      inline_lib = build_inline_library(mods)
-      return unless inline_lib
-
       mods.each do |mod|
-        Myc::Mod::Inliner.new(mod, inline_lib).inline!
+        Myc::Mod::Inliner.new(mod, header_mod).inline!
+      end
+
+      if save_result = ENV["MYC_SAVE_INLINER_HEADER"]?
+        s = Mod::Saver.new(header_mod)
+        dom = s.save
+        File.open(save_result, "w") { |f| Myc::Source::Serialize.new(dom, f).serialize }
       end
 
       if save_result = ENV["MYC_SAVE_INLINER_RESULT"]?
@@ -400,17 +404,32 @@ abstract class Myc::Backend::AbstractBackend
     end
   end
 
-  private def build_inline_library(mods : Array(Mod)) : Mod?
-    lib1 = Mod.new("__inline_lib__", "/tmp/__inline_lib__", typer)
+  private def build_header_module(mods : Array(Mod)) : Mod
+    raise data.error("no targets in build_header_module") if mods.size == 0
+    return mods[0] if mods.size == 1
 
-    mods.each do |mod|
-      mod.func_defs.each do |name, func_def|
-        if func_def.body && func_def.inline_stats.can_inline
-          lib1.func_defs[name] = func_def
+    Myc.measure("build_header_module") do
+      header = Mod.new("__header__", "/tmp/__header__", typer)
+      mods.each { |mod| header.merge!(mod) }
+
+      header.global_defs.each do |name, global_def|
+        if global_def.initial_keyword
+          decl = global_def.dup
+          decl.initial_keyword = false
+          decl.initial_values = [] of Source::Token::Value
+          header.global_defs[name] = decl
         end
       end
-    end
 
-    lib1.func_defs.empty? ? nil : lib1
+      header.func_defs.each do |name, func_def|
+        if func_def.body && !func_def.inline_stats.can_inline
+          decl = func_def.dup
+          decl.body = nil
+          header.func_defs[name] = decl
+        end
+      end
+
+      header
+    end
   end
 end

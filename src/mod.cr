@@ -60,7 +60,13 @@ class Myc::Mod
 
         case {!!f.body, !!func_def.body}
         when {true, true}
-          raise func_def.node.error("double func #{name} definition with BODY: #{f.mod.filename} and #{other.filename}", other.filename)
+          if f.inline_stats.can_inline && func_def.inline_stats.can_inline
+            unless f.body.not_nil!.list.size == func_def.body.not_nil!.list.size
+              raise func_def.node.error("double func #{name} definition with BODY: #{f.mod.filename} and #{other.filename}", other.filename)
+            end
+          else
+            raise func_def.node.error("double func #{name} definition with BODY: #{f.mod.filename} and #{other.filename}", other.filename)
+          end
         when {false, true}
           @func_defs[name] = func_def
         end

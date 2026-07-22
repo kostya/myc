@@ -225,11 +225,6 @@ class Examples
       end
     end
 
-    res = examples.select do |ex|
-      ex.dir.includes?("spec/examples/ir/old2")
-    end
-    p res
-
     puts "Found #{examples.size} examples in #{(Time.local - t).to_f.round(5)}s"
   end
 
