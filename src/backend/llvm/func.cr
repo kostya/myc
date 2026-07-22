@@ -5,7 +5,7 @@ class Myc::Backend::Llvm::Func < Myc::Backend::AbstractFunc
     @builder.as(Builder)
   end
 
-  def initialize(@builder, @func_def)
+  def initialize(@builder, @func_def, @header_mod)
     @link = builder.func_link(func_def.name, func_def.type_fn)
     func_def.attributes.try &.each do |attr|
       case attr
@@ -29,7 +29,7 @@ class Myc::Backend::Llvm::Func < Myc::Backend::AbstractFunc
   end
 
   def new_visitor : AbstractVisitor
-    Visitor.new(@builder, self, body_bb, func_def, func_def.mod, params)
+    Visitor.new(@builder, self, body_bb, func_def, func_def.mod, @header_mod, params)
   end
 
   def finish(v : AbstractVisitor)

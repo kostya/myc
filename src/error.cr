@@ -124,9 +124,9 @@ class Myc::Error::ErrorVisitor < Myc::Error
   def print(io : IO)
     linter = Backend::Linter::Backend.new(visitor.builder.backend.data)
     linter_builder = linter.new_builder
-    f = linter_builder.new_func(visitor.func_def)
+    f = linter_builder.new_func(visitor.func_def, visitor.header_mod)
     v = Myc::Backend::Linter::Visitor.new(linter_builder, f,
-      f.body_bb, visitor.func_def, visitor.mod, visitor.params)
+      f.body_bb, visitor.func_def, visitor.mod, visitor.header_mod, visitor.params)
     begin
       v.visit
     rescue

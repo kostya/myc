@@ -24,7 +24,7 @@ class Myc::Backend::Linter::Builder < Myc::Backend::AbstractBuilder
     @global_links[name]?
   end
 
-  def new_func(func_def : Mod::FuncDef) : AbstractFunc
-    Func.new(self, func_def)
+  def new_func(func_def : Mod::FuncDef, header_mod : Mod) : AbstractFunc
+    Func.new(self, func_def, header_mod)
   end
 end

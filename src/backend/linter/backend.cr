@@ -3,11 +3,11 @@ class Myc::Backend::Linter::Backend < Myc::Backend::AbstractBackend
     "Linter"
   end
 
-  def obj(mod : Mod, output : String)
+  def obj(mod : Mod, header_mod : Mod, output : String)
     raise "not used"
   end
 
-  def dump(mod : Mod, output : String)
+  def dump(mod : Mod, header_mod : Mod, output : String)
     raise "not used"
   end
 

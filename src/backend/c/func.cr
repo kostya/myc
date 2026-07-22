@@ -1,8 +1,8 @@
 class Myc::Backend::C::Func < Myc::Backend::AbstractFunc
   getter body_io : IO::Memory
 
-  def initialize(@builder, @func_def)
-    super(@builder, @func_def)
+  def initialize(@builder, @func_def, @header_mod)
+    super(@builder, @func_def, @header_mod)
     @blocks = Array(BB).new
     @body_io = IO::Memory.new
   end
@@ -16,7 +16,7 @@ class Myc::Backend::C::Func < Myc::Backend::AbstractFunc
   end
 
   def new_visitor : AbstractVisitor
-    Visitor.new(@builder, self, body_bb, func_def, func_def.mod, params)
+    Visitor.new(@builder, self, body_bb, func_def, func_def.mod, @header_mod, params)
   end
 
   def params : Array(Value)

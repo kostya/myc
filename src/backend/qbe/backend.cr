@@ -15,9 +15,9 @@ class Myc::Backend::QBE::Backend < Myc::Backend::AbstractBackend
     Builder.new(self, layout)
   end
 
-  def obj(mod : Mod, output : String)
+  def obj(mod : Mod, header_mod : Mod, output : String)
     self.class.with_tempfile_path("myc", "ssa") do |tmp|
-      build(mod, tmp)
+      build(mod, header_mod, tmp)
 
       self.class.with_tempfile_path("myc", "s") do |tmp2|
         Myc.measure("qbe_asm") do
@@ -30,14 +30,14 @@ class Myc::Backend::QBE::Backend < Myc::Backend::AbstractBackend
     end
   end
 
-  def dump(mod : Mod, output : String)
-    build(mod, output)
+  def dump(mod : Mod, header_mod : Mod, output : String)
+    build(mod, header_mod, output)
   end
 
-  def build(mod : Mod, output : String) : Builder
+  def build(mod : Mod, header_mod : Mod, output : String) : Builder
     puts "--final option for QBE is skipped".colorize(:yellow) if common_options.final
 
-    build_mod(mod).as(Builder).tap do |builder|
+    build_mod(mod, header_mod).as(Builder).tap do |builder|
       builder.save(output)
     end
   end

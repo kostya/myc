@@ -12,9 +12,9 @@ class Myc::Backend::C::Backend < Myc::Backend::AbstractBackend
     Builder.new(self, layout)
   end
 
-  def obj(mod : Mod, output : String)
+  def obj(mod : Mod, header_mod : Mod, output : String)
     self.class.with_tempfile_path("myc", "c") do |tmp|
-      build(mod, tmp)
+      build(mod, header_mod, tmp)
       args = ["-c",
               "-fno-strict-aliasing",
               "-Wno-main-return-type",
@@ -43,12 +43,12 @@ class Myc::Backend::C::Backend < Myc::Backend::AbstractBackend
     end
   end
 
-  def dump(mod : Mod, output : String)
-    build(mod, output)
+  def dump(mod : Mod, header_mod : Mod, output : String)
+    build(mod, header_mod, output)
   end
 
-  def build(mod : Mod, output : String) : Builder
-    build_mod(mod).as(Builder).tap do |builder|
+  def build(mod : Mod, header_mod : Mod, output : String) : Builder
+    build_mod(mod, header_mod).as(Builder).tap do |builder|
       builder.save(output)
     end
   end

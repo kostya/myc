@@ -2,8 +2,8 @@ abstract class Myc::Backend::AbstractBackend
   record CommonOptions, target : Target?, final : Bool
 
   abstract def name
-  abstract def dump(mod : Mod, output : String)
-  abstract def obj(mod : Mod, output : String)
+  abstract def dump(mod : Mod, header_mod : Mod, output : String)
+  abstract def obj(mod : Mod, header_mod : Mod, output : String)
   abstract def new_builder : AbstractBuilder
 
   def self.version_string
@@ -93,17 +93,18 @@ abstract class Myc::Backend::AbstractBackend
     parsed.map(&.first)
   end
 
-  protected def load_all(files : Array(String)) : Array(Mod)
+  protected def load_all(files : Array(String)) : Tuple(Array(Mod), Mod)
     myc_files = resolve_inputs(files)
     parsed = parse_files(myc_files)
     mods = run_phases(parsed)
     header_mod = build_header_module(mods)
     inline_cross_module(mods, header_mod) unless ENV["MYC_DISABLE_INLINER"]? == "1"
-    mods
+    {mods, header_mod}
   end
 
-  protected def load_single(input : String) : Mod
-    load_all([input]).first
+  protected def load_single(input : String) : Tuple(Mod, Mod)
+    mods, header = load_all([input])
+    {mods.first, header}
   end
 
   protected def _compile(target : String)
@@ -113,9 +114,10 @@ abstract class Myc::Backend::AbstractBackend
     objs = [] of String
 
     if source_files.any?
-      load_all(source_files).each do |mod|
+      mods, header = load_all(source_files)
+      mods.each do |mod|
         obj_file = object_for(mod.filename)
-        run_obj(mod, obj_file)
+        run_obj(mod, header, obj_file)
         objs << obj_file
       end
     end
@@ -143,7 +145,8 @@ abstract class Myc::Backend::AbstractBackend
                       raise data.error("obj require 2 files input and output")
                     end
 
-    run_obj(load_single(input), output)
+    mod, header = load_single(input)
+    run_obj(mod, header, output)
     puts "generated #{output}"
   end
 
@@ -151,13 +154,15 @@ abstract class Myc::Backend::AbstractBackend
     if data.values.size == 1
       input = data.values.first
       self.class.with_tempfile_path("myc", "dump") do |output|
-        run_dump(load_single(input), output)
+        mod, header = load_single(input)
+        run_dump(mod, header, output)
         puts File.read(output)
       end
     elsif data.values.size == 2
       input = data.values[0]
       output = data.values[1]
-      run_dump(load_single(input), output)
+      mod, header = load_single(input)
+      run_dump(mod, header, output)
       puts "dump generated to #{output}"
     else
       raise data.error("dump require 1 or 2 files input [and output]")
@@ -178,10 +183,10 @@ abstract class Myc::Backend::AbstractBackend
     files.each do |input|
       begin
         print "beautify #{input} "
-        mod = load_single(input)
+        mod, header = load_single(input)
         s = if data.options["annotate"]?
               linter = Linter::Backend.new(data)
-              builder = linter.build_mod(mod).as(Linter::Builder)
+              builder = linter.build_mod(mod, header).as(Linter::Builder)
               Mod::Saver.new(mod, builder.notes)
             else
               Mod::Saver.new(mod)
@@ -199,7 +204,7 @@ abstract class Myc::Backend::AbstractBackend
     files = data.values.select { |f| filename_source?(f) }
     raise data.error("nothing to merge") if files.empty?
 
-    mods = load_all(files)
+    mods, _ = load_all(files)
 
     mod = Mod.new("summary", "/tmp/summary", typer)
     Myc.measure("merge") do
@@ -213,14 +218,14 @@ abstract class Myc::Backend::AbstractBackend
     Myc::Source::Serialize.new(Mod::Saver.new(mod).save, STDOUT).serialize
   end
 
-  protected def run_obj(mod : Mod, output : String)
+  protected def run_obj(mod : Mod, header_mod : Mod, output : String)
     ensure_dir(output)
-    obj(mod, output)
+    obj(mod, header_mod, output)
   end
 
-  protected def run_dump(mod : Mod, output : String)
+  protected def run_dump(mod : Mod, header_mod : Mod, output : String)
     ensure_dir(output)
-    dump(mod, output)
+    dump(mod, header_mod, output)
   end
 
   protected def target_for_compile
@@ -240,7 +245,7 @@ abstract class Myc::Backend::AbstractBackend
     data.values.last
   end
 
-  protected def build_mod(mod : Mod) : AbstractBuilder
+  protected def build_mod(mod : Mod, header_mod : Mod) : AbstractBuilder
     Myc.measure("build_mod") do
       builder = new_builder
       mod.finalize_enums(builder.layout)
@@ -255,7 +260,7 @@ abstract class Myc::Backend::AbstractBackend
 
       mod.func_defs.each do |_, func_def|
         if func_def.body
-          builder.new_func(func_def).build
+          builder.new_func(func_def, header_mod).build
         end
       end
 

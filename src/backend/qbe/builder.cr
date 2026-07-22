@@ -159,8 +159,8 @@ class Myc::Backend::QBE::Builder < Myc::Backend::AbstractBuilder
     IO.copy(from, to)
   end
 
-  def new_func(func_def : Mod::FuncDef) : AbstractFunc
-    f = Func.new(self, func_def)
+  def new_func(func_def : Mod::FuncDef, header_mod : Mod) : AbstractFunc
+    f = Func.new(self, func_def, header_mod)
     @funcs << f
     f
   end

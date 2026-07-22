@@ -19,11 +19,11 @@ class Myc::Backend::Mycc::Backend < Myc::Backend::AbstractBackend
     raise "unreachable"
   end
 
-  def obj(mod : Mod, output : String)
-    myc_backend.obj(mod, output)
+  def obj(mod : Mod, header_mod : Mod, output : String)
+    myc_backend.obj(mod, header_mod, output)
   end
 
-  def dump(mod : Mod, output : String)
+  def dump(mod : Mod, header_mod : Mod, output : String)
     Myc.measure("mycc_dump") do
       saver = Mod::Saver.new(mod)
       dom = saver.save

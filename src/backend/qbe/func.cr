@@ -3,8 +3,8 @@ class Myc::Backend::QBE::Func < Myc::Backend::AbstractFunc
   getter blocks : Array(BB)
   getter body_io : IO::Memory
 
-  def initialize(@builder : Builder, @func_def : Mod::FuncDef)
-    super(@builder, @func_def)
+  def initialize(@builder : Builder, @func_def : Mod::FuncDef, @header_mod : Mod)
+    super(@builder, @func_def, @header_mod)
     @temp_counter = 0
     @blocks = Array(BB).new
     @body_io = IO::Memory.new
@@ -15,7 +15,7 @@ class Myc::Backend::QBE::Func < Myc::Backend::AbstractFunc
   end
 
   def new_visitor : AbstractVisitor
-    Visitor.new(@builder, self, body_bb, func_def, func_def.mod, params)
+    Visitor.new(@builder, self, body_bb, func_def, func_def.mod, @header_mod, params)
   end
 
   def builder

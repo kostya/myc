@@ -25,7 +25,7 @@ abstract class Myc::Backend::AbstractBuilder
 
   abstract def init_value(ival : InitValue) : Value
   abstract def find_global(name : String) : Value?
-  abstract def new_func(func_def : Mod::FuncDef) : AbstractFunc
+  abstract def new_func(func_def : Mod::FuncDef, header_mod : Mod) : AbstractFunc
   abstract def func_register(name : String, func_def : Mod::FuncDef)
 
   def self.escaped_string(s : String)

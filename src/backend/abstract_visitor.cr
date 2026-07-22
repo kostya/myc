@@ -5,6 +5,7 @@ abstract class Myc::Backend::AbstractVisitor
 
   getter func_def : Mod::FuncDef
   getter mod : Mod
+  getter header_mod : Mod
   getter builder : AbstractBuilder
   getter func : AbstractFunc
   property bb : AbstractBB
@@ -14,7 +15,7 @@ abstract class Myc::Backend::AbstractVisitor
   getter locals : Hash(String, Value)
   getter fake_bb : AbstractBB
 
-  def initialize(@builder, @func, @bb, @func_def, @mod, @params)
+  def initialize(@builder, @func, @bb, @func_def, @mod, @header_mod, @params)
     @stack = Deque(Value).new
     @loop_finish_stack = Deque(AbstractBB).new
     @loop_step_stack = Deque(AbstractBB).new
@@ -72,7 +73,10 @@ abstract class Myc::Backend::AbstractVisitor
   end
 
   private def find_func_type_fn(name : String) : Type::Fn?
-    @mod.func_defs[name]?.try(&.type_fn) || @builder.std_funcs[name]? || @builder.inspect_type_fns[name]?.try(&.type_fn)
+    @mod.func_defs[name]?.try(&.type_fn) ||
+      @header_mod.func_defs[name]?.try(&.type_fn) ||
+      @builder.std_funcs[name]? ||
+      @builder.inspect_type_fns[name]?.try(&.type_fn)
   end
 
   def visit(op : Opcode::Printf)
@@ -407,7 +411,7 @@ abstract class Myc::Backend::AbstractVisitor
     then_seq << Opcode::Printf.new(0)
     body << Opcode::If.new(then_seq, Opcode::Seq.new)
 
-    @builder.new_func(fdef).build
+    @builder.new_func(fdef, @header_mod).build
   end
 
   def visit(op : Opcode::Binary)

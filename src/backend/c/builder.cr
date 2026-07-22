@@ -155,8 +155,8 @@ class Myc::Backend::C::Builder < Myc::Backend::AbstractBuilder
     io << "void* memcpy(void* arg0, void* arg1, uint64_t arg2);\n"
   end
 
-  def new_func(func_def : Mod::FuncDef) : AbstractFunc
-    f = Func.new(self, func_def)
+  def new_func(func_def : Mod::FuncDef, header_mod : Mod) : AbstractFunc
+    f = Func.new(self, func_def, header_mod)
     @funcs << f
     f
   end
