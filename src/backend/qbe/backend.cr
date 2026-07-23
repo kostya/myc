@@ -7,7 +7,7 @@ class Myc::Backend::QBE::Backend < Myc::Backend::AbstractBackend
   end
 
   def self.version_string
-    "QBE e786f06"
+    "QBE fab6d40"
   end
 
   def new_builder : AbstractBuilder
@@ -35,7 +35,9 @@ class Myc::Backend::QBE::Backend < Myc::Backend::AbstractBackend
   end
 
   def build(mod : Mod, header_mod : Mod, output : String) : Builder
-    puts "--final option for QBE is skipped".colorize(:yellow) if common_options.final
+    if common_options.final && ENV["MYC_SPEC"]? != "1"
+      puts "--final option for QBE is skipped".colorize(:yellow)
+    end
 
     build_mod(mod, header_mod).as(Builder).tap do |builder|
       builder.save(output)
