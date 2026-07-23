@@ -249,6 +249,7 @@ abstract class Myc::Backend::AbstractBackend
     Myc.measure("build_mod") do
       builder = new_builder
       mod.finalize_enums(builder.layout)
+      header_mod.finalize_enums(builder.layout) if header_mod != mod
 
       mod.func_defs.each do |name, func_def|
         builder.func_register(name, func_def)
