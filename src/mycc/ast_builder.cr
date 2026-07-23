@@ -27,9 +27,9 @@ class Myc::Mycc::ASTBuilder
       if cursor.kind.struct_decl?
         name = cursor.spelling
         unless name.empty?
-          struct_type = Type::StructType.new(location(cursor), name)
-          node = cursor_to_node(cursor)
           unless mod.type_defs[name]?
+            struct_type = Type::StructType.new(location(cursor), name)
+            node = cursor_to_node(cursor)
             mod.type_defs[name] = Mod::TypeDef.new(@mod, node, struct_type)
             typer.map[name] = struct_type
           end
@@ -37,9 +37,9 @@ class Myc::Mycc::ASTBuilder
       elsif cursor.kind.union_decl?
         name = cursor.spelling
         unless name.empty?
-          enum_type = Type::EnumType.new(location(cursor), name, typer.i32)
-          node = cursor_to_node(cursor)
           unless mod.type_defs[name]?
+            enum_type = Type::EnumType.new(location(cursor), name, nil)
+            node = cursor_to_node(cursor)
             mod.type_defs[name] = Mod::TypeDef.new(@mod, node, enum_type)
             typer.map[name] = enum_type
           end
@@ -191,6 +191,8 @@ class Myc::Mycc::ASTBuilder
       typer.map[name] = struct_type
     end
 
+    return unless struct_type.data.empty?
+
     fields = [] of {String, Type}
     children(cursor).each do |child|
       if child.kind.field_decl?
@@ -214,7 +216,16 @@ class Myc::Mycc::ASTBuilder
     name ||= cursor.spelling
     return if name.empty? || name.includes?("unnamed")
 
-    enum_type = Type::EnumType.new(location(cursor), name, typer.i32)
+    enum_type = mod.type_defs[name]?.try(&.type)
+    unless enum_type.is_a?(Type::EnumType)
+      enum_type = Type::EnumType.new(location(cursor), name, nil)
+      node = cursor_to_node(cursor)
+      mod.type_defs[name] = Mod::TypeDef.new(@mod, node, enum_type)
+      typer.map[name] = enum_type
+    end
+
+    return unless enum_type.data.empty?
+
     fields = [] of {String, Type}
 
     children(cursor).each do |child|
@@ -247,9 +258,6 @@ class Myc::Mycc::ASTBuilder
       end
     end
 
-    node = cursor_to_node(cursor)
-    mod.type_defs[name] = Mod::TypeDef.new(@mod, node, enum_type)
-    typer.map[name] = enum_type
     @unions[name] = fields
   end
 
@@ -589,7 +597,7 @@ class Myc::Mycc::ASTBuilder
     end
 
     if is_static
-      func_name = @current_function_name.presence || "global"
+      func_name = @current_function_name.presence || "static_#{source.name}"
       unique_name = "#{func_name}_#{name}"
       var = TypedAST::VarDecl.new(unique_name, var_type, init, location(cursor), is_static: true, is_vla: is_vla, original_name: name)
       unless @globals.any? { |g| g.name == unique_name }
@@ -1631,23 +1639,14 @@ class Myc::Mycc::ASTBuilder
       ret = get_type(cursor, canonical.result_type, count)
       arg_types = canonical.arguments.map { |t| get_type(cursor, t, count) }
       vaarg = canonical.variadic?
-      id_name = String.build do |io|
-        io << "fn<"
-        arg_types.each_with_index do |t, i|
-          io << ", " if i > 0
-          io << t.id_name
-        end
-        if vaarg
-          io << ", " if arg_types.size > 0
-          io << "..."
-        end
-        io << ", " if arg_types.size > 0 || vaarg
-        io << ret.id_name
-        io << '>'
-      end
+
       type_fn = Type::Fn.new(location(cursor), arg_types, ret, vaarg: vaarg)
-      typer.map[id_name] ||= type_fn
-      type_fn
+      if existing = @typer.find_in_caches(type_fn.id_name)
+        existing
+      else
+        @typer.map[type_fn.id_name] = type_fn
+        type_fn
+      end
     when .function_no_proto?
       ret = get_type(cursor, canonical.result_type, count)
       id_name = "fn<#{ret.id_name}>"

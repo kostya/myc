@@ -1,0 +1,11 @@
+STRUCT :Bla
+  TYPE :i32
+ENDSTRUCT
+
+FUNC :main
+  BODY
+    PUSH 42
+    CREATE :Bla
+    INSPECT
+ENDFUNC
+

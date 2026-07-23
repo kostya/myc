@@ -1,0 +1,5 @@
+STRUCT :Bla
+  TYPE :i32
+  TYPE :f64
+ENDSTRUCT
+

@@ -1,0 +1,5 @@
+ENUM :Bla
+  VARIANT :y
+    TYPE :i32
+ENDENUM
+

@@ -1,10 +1,12 @@
 class Myc::Mycc::Source
   getter filename : String
   getter content : String
+  getter name : String
 
   def initialize(@filename)
     raise Exception.new("file not found `#{filename}`") unless File.exists?(filename)
     @content = File.read(filename)
+    @name = File.basename(filename).gsub(/[^a-zA-Z0-9_]/, "_")
   end
 
   def clang_parse : Clang::TranslationUnit

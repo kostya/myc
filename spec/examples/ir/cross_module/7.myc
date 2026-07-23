@@ -1,0 +1,21 @@
+STRUCT :Bla
+  TYPE :i32
+ENDSTRUCT
+
+FUNC :external
+  ARGS
+    TYPE :i32
+  RETURN
+    TYPE :Bla
+ENDFUNC
+
+FUNC :main
+  BODY
+    PUSH 42
+    CREATE :Bla
+    INSPECT
+    PUSH 43
+    CALL :external
+    INSPECT
+ENDFUNC
+

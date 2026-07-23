@@ -1,4 +1,6 @@
 class Myc::Mod::TypeCollector
+  getter duplicates = [] of Tuple(String, Mod, Type)
+
   def initialize(@typer : Typer)
   end
 
@@ -7,38 +9,29 @@ class Myc::Mod::TypeCollector
       case section.code
       when Opcode::Code::STRUCT
         name = get_name(section)
-        check_duplicate(name, section, mod)
-        type = Type::StructType.new(loc(section, mod.filename), name)
-        register_type(mod, name, type, section)
+        collect_type(name, section, mod, Type::StructType.new(loc(section, mod.filename), name))
       when Opcode::Code::ENUM
         name = get_name(section)
-        check_duplicate(name, section, mod)
-        type = Type::EnumType.new(loc(section, mod.filename), name, nil)
-        register_type(mod, name, type, section)
+        collect_type(name, section, mod, Type::EnumType.new(loc(section, mod.filename), name, nil))
       when Opcode::Code::FLAT
         name = get_name(section)
-        check_duplicate(name, section, mod)
-        type = Type::FlatType.new(loc(section, mod.filename), name)
-        register_type(mod, name, type, section)
+        collect_type(name, section, mod, Type::FlatType.new(loc(section, mod.filename), name))
       end
     end
   end
 
-  private def check_duplicate(name : String, node : Source::Node, mod : Mod)
+  private def collect_type(name : String, node : Source::Node, mod : Mod, type : Type)
     if mod.type_defs[name]?
       raise node.error("type `#{name}` already defined in this module", mod.filename)
     end
 
-    if existing = @typer.find_in_caches(name)
-      unless existing.hidden
-        raise node.error("type `#{name}` already defined in another module", mod.filename)
-      end
-    end
-  end
-
-  private def register_type(mod : Mod, name : String, type : Type, node : Source::Node)
-    @typer.map[name] = type
     mod.type_defs[name] = Mod::TypeDef.new(mod, node, type)
+
+    if @typer.map[name]?
+      duplicates << {name, mod, type}
+    else
+      @typer.map[name] = type
+    end
   end
 
   private def get_name(node : Source::Node) : String

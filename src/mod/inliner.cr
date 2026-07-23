@@ -65,6 +65,7 @@ class Myc::Mod::Inliner
       @goto_count = 0
       @ret_count = 0
       @ret_last = false
+      @private_calls = false
       @can_inline = false
     end
 
@@ -72,6 +73,7 @@ class Myc::Mod::Inliner
       return false if @call_itself
       return false if @loop_count > 0
       return false if @switch_count > 0
+      return false if @private_calls
 
       return false if @inst_count > 50
       return false if @inst_count == 0
@@ -85,7 +87,7 @@ class Myc::Mod::Inliner
       false
     end
 
-    def update(op : Opcode)
+    def update(op : Opcode, mod : Mod)
       @inst_count += 1
 
       case op
@@ -105,12 +107,22 @@ class Myc::Mod::Inliner
         @calls[op.name] += 1
       when Opcode::Ret
         @ret_count += 1
+      when Opcode::Global
+        if g = mod.global_defs[op.name]?
+          if g.private_flag
+            @private_calls = true
+          end
+        end
       when Opcode::Stack, Opcode::Label, Opcode::Param, Opcode::Slot
         @inst_count -= 1
       end
     end
 
     def finish(func_def : FuncDef)
+      if func_def.type_fn.vaarg
+        @can_inline = false
+        return
+      end
       @can_inline = can_inline?
       if body = func_def.body
         if body.list.size > 0 && body.list.last.is_a?(Opcode::Ret)

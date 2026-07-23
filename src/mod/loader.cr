@@ -136,7 +136,7 @@ class Myc::Mod::Loader
 
   private def load_opcode(node : Source::Node, func_def : FuncDef) : Opcode
     op = _load_opcode(node, func_def)
-    func_def.inline_stats.update(op)
+    func_def.inline_stats.update(op, @mod)
     op
   end
 

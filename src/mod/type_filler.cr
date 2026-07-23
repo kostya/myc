@@ -103,7 +103,7 @@ class Myc::Mod::TypeFiller
 
         raise error("VARIANT `#{variant_name}` already defined", section) if type.data[variant.id_name]?
         type.data[variant.id_name] = variant
-        @typer.map[variant.id_name] = variant
+        @typer.map[variant.id_name] ||= variant
 
         ct = Type::StructType.new(loc(section, mod.filename), variant.id_name + "::__value_type__")
         ct.hidden = true

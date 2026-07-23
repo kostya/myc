@@ -1,0 +1,6 @@
+FUNC :xxx
+  ARGS
+    TYPE :f64
+  BODY
+ENDFUNC
+

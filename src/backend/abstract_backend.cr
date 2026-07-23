@@ -67,8 +67,8 @@ abstract class Myc::Backend::AbstractBackend
   end
 
   protected def run_phases(parsed : Array({Mod, Source::Dom})) : Array(Mod)
+    collector = Mod::TypeCollector.new(typer)
     Myc.measure("collect_types") do
-      collector = Mod::TypeCollector.new(typer)
       parsed.each { |mod, dom| collector.collect(mod, dom) }
     end
 
@@ -76,6 +76,18 @@ abstract class Myc::Backend::AbstractBackend
       parsed.each do |mod, dom|
         filler = Mod::TypeFiller.new(typer, mod)
         filler.fill(dom)
+      end
+    end
+
+    Myc.measure("check_type_dublicates") do
+      collector.duplicates.each do |(name, dup_mod, dup_type)|
+        first_type = @typer.map[name]
+        unless first_type.structural_eq?(dup_type)
+          raise Error::ErrorLoc.new("type `#{name}` defined differently across modules (#{first_type.loc.filename}, #{dup_type.loc.filename})", dup_type.loc)
+        else
+          td = dup_mod.type_defs[name]
+          td.type = first_type
+        end
       end
     end
 

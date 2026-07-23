@@ -1,0 +1,4 @@
+GLOBAL :bla
+  TYPE :f64
+ENDGLOBAL
+
