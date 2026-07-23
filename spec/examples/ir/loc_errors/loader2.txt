@@ -1,3 +1,4 @@
-FLAT :bla COUNT ENDFLAT
-          ^
-          expected int
+FLAT :bla
+  COUNT
+  ^
+  expected int
