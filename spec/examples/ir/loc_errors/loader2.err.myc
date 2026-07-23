@@ -1,1 +1,4 @@
-FLAT :bla COUNT ENDFLAT
+FLAT :bla
+  COUNT
+ENDFLAT
+

@@ -9,7 +9,7 @@ class Myc::Cli
       Run
       Obj
       Dump
-      Beautify
+      Format
       Merge
     end
 
@@ -65,7 +65,7 @@ class Myc::Cli
       when "run", "r"                        then set_mod(:run)
       when "obj", "o"                        then set_mod(:obj)
       when "dump", "d"                       then set_mod(:dump)
-      when "beautify", "b"                   then set_mod(:beautify)
+      when "format", "f"                     then set_mod(:format)
       when "merge", "m"                      then set_mod(:merge)
       when "--version", "-v", "version", "v" then show_version
       when "--help", "-h", "help", "h"       then show_usage
@@ -169,10 +169,8 @@ Commands:
              ;   ./#{cli_name} d file#{ext}
              ;   cat file#{ext} | ./#{cli_name} d
 
-  beautify|b ; format, validate, and add auto-comments to #{ext} files (--annotate adds stack state comments)
-             ;   ./#{cli_name} b .
-             ;   ./#{cli_name} b --annotate src/
-             ;   ./#{cli_name} b file1#{ext} file2#{ext}
+  format|f   ; formatter
+             ;   ./#{cli_name} f .
 
   merge|m    ; merge multiple #{ext} files into one, output to stdout
              ;   ./#{cli_name} m dir/*#{ext} > summary.myc

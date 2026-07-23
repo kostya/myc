@@ -1,4 +1,8 @@
 ## 0.9.0-dev
+* cross module load (not need to define methods, types, and globals in every file)
+* cross module inlining
+* CLI: rename beautify command to format
+* CLI: add merge command
 
 ## 0.8.0 (18.07.2026)
 * added SLOT opcode

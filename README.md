@@ -308,10 +308,11 @@ Commands:
              ;   ./myc-llvm d file.myc
              ;   cat file.myc | ./myc-llvm d
 
-  beautify|b ; format, validate, and add auto-comments to .myc files (--annotate adds stack state comments)
-             ;   ./myc-llvm b .
-             ;   ./myc-llvm b --annotate src/
-             ;   ./myc-llvm b file1.myc file2.myc
+  format|f   ; formatter
+             ;   ./myc-llvm f .
+
+  merge|m    ; merge multiple .myc files into one, output to stdout
+             ;   ./myc-llvm m dir/*.myc > summary.myc
 
   version|v  ; display version information
              ;   ./myc-llvm version

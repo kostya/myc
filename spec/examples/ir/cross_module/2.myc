@@ -1,0 +1,16 @@
+FUNC :bla
+  ARGS
+  RETURN
+    TYPE :Bla
+  BODY
+    PUSH 33
+    CREATE :Bla
+    RET
+ENDFUNC
+
+FUNC :main
+  BODY
+    CALL :bla
+    INSPECT
+ENDFUNC
+

@@ -1,2 +1,8 @@
-STRUCT :Recursive TYPE :Recursive ENDSTRUCT
-FUNC :main BODY ENDFUNC
+STRUCT :Recursive
+  TYPE :Recursive
+ENDSTRUCT
+
+FUNC :main
+  BODY
+ENDFUNC
+

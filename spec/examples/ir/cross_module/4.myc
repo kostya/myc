@@ -1,5 +1,6 @@
 FUNC :main
   BODY
-    CREATE :NoSuchType
+    CALL :bla
+    INSPECT
 ENDFUNC
 

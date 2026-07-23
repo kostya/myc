@@ -1,0 +1,8 @@
+FUNC :bla
+  RETURN
+    TYPE :i32
+  BODY
+    PUSH 45
+    RET
+ENDFUNC
+

@@ -896,7 +896,7 @@ abstract class Myc::Backend::AbstractVisitor
 
   def visit(op : Opcode::Addr)
     if fn = op.func_name
-      if func_def = mod.func_defs[fn]?
+      if (func_def = mod.func_defs[fn]?) || (func_def = @header_mod.func_defs[fn]?)
         self << @bb.fn_addr(fn, func_def.type_fn)
       else
         raise error("`#{fn}` not found")

@@ -1,1 +1,5 @@
-FUNC :main BODY LOCAL ENDFUNC
+FUNC :main
+  BODY
+    LOCAL
+ENDFUNC
+

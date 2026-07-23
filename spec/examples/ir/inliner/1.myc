@@ -19,6 +19,8 @@ FUNC :test_inline
     INSPECT
 ENDFUNC
 
-FUNC :main BODY
-  CALL :test_inline
+FUNC :main
+  BODY
+    CALL :test_inline
 ENDFUNC
+

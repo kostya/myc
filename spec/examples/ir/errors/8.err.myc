@@ -1,1 +1,7 @@
-FUNC main ARGS TYPE i32 TYPE undefined_type BODY ENDFUNC
+FUNC :main
+  ARGS
+    TYPE :i32
+    TYPE :undefined_type
+  BODY
+ENDFUNC
+

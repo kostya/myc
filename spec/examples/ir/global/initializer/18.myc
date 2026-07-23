@@ -5,7 +5,7 @@ ENDSTRUCT
 
 GLOBAL :pair
   TYPE :Pair
-  INITIAL 5 "hello"
+  INITIAL 5 :hello
   CONSTANT
 ENDGLOBAL
 
@@ -32,3 +32,4 @@ FUNC :main
     PUSH 0
     RET
 ENDFUNC
+

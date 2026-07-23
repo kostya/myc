@@ -1,1 +1,5 @@
-FUNC main ARGS TYPE "crab" ENDFUNC
+FUNC :main
+  ARGS
+    TYPE :crab
+ENDFUNC
+

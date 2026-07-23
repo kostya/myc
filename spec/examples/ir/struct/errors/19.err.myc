@@ -1,2 +1,7 @@
-ENUM :Empty ENDENUM
-FUNC :main BODY ENDFUNC
+ENUM :Empty
+ENDENUM
+
+FUNC :main
+  BODY
+ENDFUNC
+

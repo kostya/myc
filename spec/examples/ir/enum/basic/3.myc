@@ -1,6 +1,6 @@
-GLOBAL g 
-  TYPE :SimpleEnum 
-  INITIAL 
+GLOBAL :g
+  TYPE :SimpleEnum
+  INITIAL
 ENDGLOBAL
 
 FUNC :main

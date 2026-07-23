@@ -1,0 +1,4 @@
+STRUCT :Bla
+  TYPE :i32
+ENDSTRUCT
+

@@ -29,7 +29,7 @@ abstract class Myc::Backend::AbstractBackend
     in .run?       then _run
     in .obj?       then _obj
     in .dump?      then _dump
-    in .beautify?  then _beautify
+    in .format?    then _format
     in .merge?     then _merge
     in .undefined? then raise data.error("unknown mode #{data.mode}")
     end
@@ -169,7 +169,7 @@ abstract class Myc::Backend::AbstractBackend
     end
   end
 
-  protected def _beautify
+  protected def _format
     files = data.values.flat_map do |path|
       if File.directory?(path)
         Dir.glob("#{path}/**/*#{ext}")
@@ -182,16 +182,12 @@ abstract class Myc::Backend::AbstractBackend
 
     files.each do |input|
       begin
-        print "beautify #{input} "
-        mod, header = load_single(input)
-        s = if data.options["annotate"]?
-              linter = Linter::Backend.new(data)
-              builder = linter.build_mod(mod, header).as(Linter::Builder)
-              Mod::Saver.new(mod, builder.notes)
-            else
-              Mod::Saver.new(mod)
-            end
-        dom = s.save
+        print "format #{input} "
+
+        myc_files = resolve_inputs([input])
+        parsed = parse_files(myc_files)
+        _, dom = parsed.first
+
         File.open(input, "w") { |f| Myc::Source::Serialize.new(dom, f).serialize }
         puts "ok!".colorize(:green)
       rescue ex : Error
@@ -257,6 +253,12 @@ abstract class Myc::Backend::AbstractBackend
 
       mod.global_defs.each_value do |global|
         builder.global_register(mod, global)
+      end
+
+      header_mod.global_defs.each_value do |global|
+        unless mod.global_defs.has_key?(global.name)
+          builder.global_register(header_mod, global)
+        end
       end
 
       mod.func_defs.each do |_, func_def|

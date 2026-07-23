@@ -1,24 +1,35 @@
-FUNC :check ARGS TYPE :bool BODY
-  PUSH 42
-  SLOT :tmp
-  PARAM 0
-  IF
-    THEN
-      PUSH true IF THEN 
-        SLOT :tmp
-        PUSH "left slot = %d\n"
-        PRINTF 1
-      ENDIF
-    ELSE
-      PUSH true IF THEN 
-        SLOT :tmp
-        PUSH "right slot = %d\n"
-        PRINTF 1
-      ENDIF
-  ENDIF
+FUNC :check
+  ARGS
+    TYPE :bool
+  BODY
+    PUSH 42
+    SLOT :tmp
+    PARAM 0
+    IF
+      THEN
+        PUSH true
+        IF
+          THEN
+            SLOT :tmp
+            PUSH "left slot = %d\n"
+            PRINTF 1
+        ENDIF
+      ELSE
+        PUSH true
+        IF
+          THEN
+            SLOT :tmp
+            PUSH "right slot = %d\n"
+            PRINTF 1
+        ENDIF
+    ENDIF
 ENDFUNC
 
-FUNC :main BODY
-  PUSH true CALL :check
-  PUSH false CALL :check
+FUNC :main
+  BODY
+    PUSH true
+    CALL :check
+    PUSH false
+    CALL :check
 ENDFUNC
+
