@@ -39,7 +39,7 @@ class Myc::Backend::C::Backend < Myc::Backend::AbstractBackend
     end
 
     Myc.measure("backend:c2obj") do
-      self.class.run_cmd(CC, args)
+      run_cmd(CC, args)
     end
   end
 

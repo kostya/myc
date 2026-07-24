@@ -148,7 +148,7 @@ abstract class Myc::Backend::AbstractBackend
   protected def _run
     output = new_tmp_path("myc", "run")
     _compile(output)
-    self.class.run_cmd(output, data.unparsed_argv, check_status: false, catch_stdout: ENV["MYC_SPEC"]? == "1")
+    run_cmd(output, data.unparsed_argv, check_status: false, catch_stdout: ENV["MYC_SPEC"]? == "1")
   end
 
   protected def _obj
@@ -283,7 +283,7 @@ abstract class Myc::Backend::AbstractBackend
         objs += link_flags.split(" ")
       end
 
-      self.class.run_cmd(CC, objs + ["-lm", "-o", output])
+      run_cmd(CC, objs + ["-lm", "-o", output])
     end
   end
 
@@ -314,7 +314,7 @@ abstract class Myc::Backend::AbstractBackend
     path
   end
 
-  def self.run_cmd(cmd : String, args : Array(String), check_status = true, catch_stdout = false) : String?
+  def run_cmd(cmd : String, args : Array(String), check_status = true, catch_stdout = false) : String?
     if ENV["MYC_VERBOSE"]? == "1"
       puts "--- '#{cmd} #{args.join(" ")}' ---"
     end
