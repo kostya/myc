@@ -58,7 +58,7 @@ class Myc::Backend::QBE::Builder < Myc::Backend::AbstractBuilder
       @data_io << ' '
       @data_io << val_s
     end
-    @data_io << "}\n"
+    @data_io << " }\n"
   end
 
   def qbe_flatten_init(res : Array(Tuple(String, String)), init : InitValue)

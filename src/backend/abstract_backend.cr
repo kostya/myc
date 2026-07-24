@@ -198,7 +198,10 @@ abstract class Myc::Backend::AbstractBackend
         parsed = parse_files(myc_files)
         _, dom = parsed.first
 
-        File.open(input, "w") { |f| Myc::Source::Serialize.new(dom, f).serialize }
+        io = IO::Memory.new
+        Myc::Source::Serialize.new(dom, io).serialize
+        io.rewind
+        File.open(input, "w") { |f| IO.copy(io, f) }
         puts "ok!".colorize(:green)
       rescue ex : Error
         puts "error! (#{ex.message})".colorize(:red)
