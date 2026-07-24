@@ -48,8 +48,8 @@ class Myc::Cli
   def parse
     unless STDIN.tty?
       content = STDIN.gets_to_end
-      path = Backend::AbstractBackend.tempfile_path("stdin", "myc")
       unless content.blank?
+        path = Backend::AbstractBackend.new_tmp_path("stdin", "myc")
         File.open(path, "w") { |f| f.puts content }
         data.values << path
         data.stdin_filename = path
@@ -65,7 +65,7 @@ class Myc::Cli
       when "run", "r"                        then set_mod(:run)
       when "obj", "o"                        then set_mod(:obj)
       when "dump", "d"                       then set_mod(:dump)
-      when "format", "f"                     then set_mod(:format)
+      when "format", "f", "fmt"              then set_mod(:format)
       when "merge", "m"                      then set_mod(:merge)
       when "--version", "-v", "version", "v" then show_version
       when "--help", "-h", "help", "h"       then show_usage

@@ -16,7 +16,7 @@ class Myc::Backend::Llvm::Builder < Myc::Backend::AbstractBuilder
     @target_machine = create_target_machine(@layout.target.triple)
     @type_translator = TypeTranslator.new(@context, @layout)
 
-    @llvm_mod = @context.new_module(AbstractBackend.tmp_name)
+    @llvm_mod = @context.new_module("main")
     @llvm_mod.target = @target_machine.triple
     @llvm_mod.data_layout = @target_machine.data_layout
   end

@@ -142,10 +142,9 @@ abstract class Myc::Backend::AbstractBackend
   end
 
   protected def _run
-    self.class.with_tempfile_path("myc", "run") do |output|
-      _compile(output)
-      self.class.run_cmd(output, data.unparsed_argv, check_status: false, catch_stdout: ENV["MYC_SPEC"]? == "1")
-    end
+    output = new_tmp_path("myc", "run")
+    _compile(output)
+    self.class.run_cmd(output, data.unparsed_argv, check_status: false, catch_stdout: ENV["MYC_SPEC"]? == "1")
   end
 
   protected def _obj
@@ -165,11 +164,10 @@ abstract class Myc::Backend::AbstractBackend
   protected def _dump
     if data.values.size == 1
       input = data.values.first
-      self.class.with_tempfile_path("myc", "dump") do |output|
-        mod, header = load_single(input)
-        run_dump(mod, header, output)
-        puts File.read(output)
-      end
+      output = new_tmp_path("myc", "dump")
+      mod, header = load_single(input)
+      run_dump(mod, header, output)
+      puts File.read(output)
     elsif data.values.size == 2
       input = data.values[0]
       output = data.values[1]
@@ -317,23 +315,17 @@ abstract class Myc::Backend::AbstractBackend
     Dir.mkdir_p(File.dirname(file))
   end
 
-  def self.tempfile_path(prefix = "", temp_ext = "")
+  def self.new_tmp_path(prefix = "", temp_ext = "")
+    bytes = Bytes.new(10)
+    Random::Secure.random_bytes(bytes)
+    tmp_name = bytes.hexstring
     File.join(Dir.tempdir, "#{prefix}_#{tmp_name}.#{temp_ext}")
   end
 
-  def self.tmp_name
-    bytes = Bytes.new(10)
-    Random::Secure.random_bytes(bytes)
-    bytes.hexstring
-  end
-
-  def self.with_tempfile_path(prefix, temp_ext, &)
-    path = tempfile_path(prefix, temp_ext)
-    yield path
-  ensure
-    if path && ENV["MYC_KEEP_TEMP_FILES"]? != "1"
-      File.delete(path) rescue nil
-    end
+  def new_tmp_path(prefix = "", temp_ext = "", add_to_cleanup = true)
+    path = self.class.new_tmp_path(prefix, temp_ext)
+    data.files_to_cleanup << path if add_to_cleanup
+    path
   end
 
   def self.run_cmd(cmd : String, args : Array(String), check_status = true, catch_stdout = false) : String?

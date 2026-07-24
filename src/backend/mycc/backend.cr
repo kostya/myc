@@ -98,11 +98,10 @@ class Myc::Backend::Mycc::Backend < Myc::Backend::AbstractBackend
       puts "-------------------------------------------------------------"
     end
 
-    path = AbstractBackend.tempfile_path("mycc", "myc")
+    path = new_tmp_path("mycc", "myc")
     Myc.measure("mycc:store") do
       File.open(path, "w") { |f| IO.copy(io, f) }
     end
-    data.files_to_cleanup << path
 
     path
   end
