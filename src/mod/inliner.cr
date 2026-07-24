@@ -274,7 +274,7 @@ class Myc::Mod::Inliner
         when Opcode::Loop
           new_list << Opcode::Loop.new(
             _get_dup_seq(op.init_seq, local_map, slot_map),
-            _get_dup_seq(op.cond_seq, local_map, slot_map),
+            _get_dup_seq(op.cond_seq, local_map, slot_map).with_stack_balance(1),
             _get_dup_seq(op.body_seq, local_map, slot_map),
             _get_dup_seq(op.step_seq, local_map, slot_map),
           ).with_position(op)

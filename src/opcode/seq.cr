@@ -33,4 +33,9 @@ class Myc::Opcode::Seq < Myc::Opcode
       end
     end
   end
+
+  def with_stack_balance(sb)
+    @stack_balance = sb
+    self
+  end
 end
