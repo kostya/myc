@@ -18,6 +18,7 @@ class Myc::Mycc::ASTBuilder
     @called_functions = Set(String).new
     @unnamed_counter = 0_u64
     @unnamed_types = Hash(String, Type).new
+    @static_func_names_map = Hash(String, String).new
   end
 
   def build : TypedAST::Program
@@ -173,6 +174,11 @@ class Myc::Mycc::ASTBuilder
 
     vaarg = func_type.is_a?(Type::Fn) ? func_type.vaarg : false
     is_static = cursor.storage_class.static?
+    if is_static
+      name2 = "static_fn_#{source.name}_#{name}"
+      @static_func_names_map[name] = name2
+      name = name2
+    end
     TypedAST::Function.new(name, @current_function_params.dup, return_type, body, location(cursor), vaarg, is_static)
   ensure
     @current_return_type = nil

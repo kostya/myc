@@ -467,6 +467,9 @@ class Myc::Mycc::CodeGenerator
     elsif g = @globals[name]?
       emit("GLOBAL :#{g.name}")
     elsif expr.type.is_a?(Type::Fn)
+      if name2 = @builder.@static_func_names_map[name]?
+        name = name2
+      end
       emit("ADDR :#{name}")
     end
   end
@@ -614,8 +617,12 @@ class Myc::Mycc::CodeGenerator
         return
       end
 
+      fname = expr.func_name
+      if fname2 = @builder.@static_func_names_map[fname]?
+        fname = fname2
+      end
       expr.args.reverse.each { |arg| generate_expr(arg) }
-      emit("CALL :#{expr.func_name}#{expr.vaargs_count > 0 ? " #{expr.vaargs_count}" : ""}")
+      emit("CALL :#{fname}#{expr.vaargs_count > 0 ? " #{expr.vaargs_count}" : ""}")
     end
   end
 

@@ -105,6 +105,17 @@ class Myc::Mod::Inliner
           @call_itself = true
         end
         @calls[op.name] += 1
+        if f = mod.func_defs[op.name]?
+          if f.attrs.includes?(Mod::FuncDef::Attr::Private)
+            @private_calls = true
+          end
+        end
+      when Opcode::Addr
+        if (func_name = op.func_name) && (f = mod.func_defs[func_name]?)
+          if f.attrs.includes?(Mod::FuncDef::Attr::Private)
+            @private_calls = true
+          end
+        end
       when Opcode::Ret
         @ret_count += 1
       when Opcode::Global
@@ -119,7 +130,10 @@ class Myc::Mod::Inliner
     end
 
     def finish(func_def : FuncDef)
-      if func_def.type_fn.vaarg
+      if func_def.attrs.includes?(Mod::FuncDef::Attr::Private)
+        @private_calls = true
+      end
+      if func_def.type_fn.vaarg || func_def.name == "main"
         @can_inline = false
         return
       end

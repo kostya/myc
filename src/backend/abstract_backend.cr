@@ -223,7 +223,13 @@ abstract class Myc::Backend::AbstractBackend
       mod.clean_unused_types_and_globals
     end
 
-    Myc::Source::Serialize.new(Mod::Saver.new(mod).save, STDOUT).serialize
+    dom = Myc.measure("merge:save") do
+      Mod::Saver.new(mod).save
+    end
+
+    Myc.measure("merge:serialize") do
+      Myc::Source::Serialize.new(dom, STDOUT).serialize
+    end
   end
 
   protected def run_obj(mod : Mod, header_mod : Mod, output : String)
