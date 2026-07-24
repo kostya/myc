@@ -24,7 +24,7 @@ class Myc::Mod
     end
   end
 
-  def merge!(other : Mod)
+  def merge!(other : Mod, header : Bool)
     other.type_defs.each do |name, type_def|
       if t = @type_defs[name]?
         unless t.type.eq?(type_def.type)
@@ -36,6 +36,8 @@ class Myc::Mod
     end
 
     other.global_defs.each do |name, global_def|
+      next if header && global_def.private_flag
+
       if g = @global_defs[name]?
         unless g.type.eq?(global_def.type)
           raise global_def.node.error("different global types with same name #{g.name}:#{g.type} vs #{name}:#{global_def.type}", other.filename)
@@ -53,6 +55,8 @@ class Myc::Mod
     end
 
     other.func_defs.each do |name, func_def|
+      next if header && func_def.attrs.includes?(Mod::FuncDef::Attr::Private)
+
       if f = @func_defs[name]?
         unless f.type_fn.eq?(func_def.type_fn)
           raise func_def.node.error("different funcs with same name #{f.name}:#{f.type_fn} vs #{name}:#{func_def.type_fn}", other.filename)

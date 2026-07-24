@@ -110,6 +110,10 @@ abstract class Myc::Backend::AbstractBackend
     parsed = parse_files(myc_files)
     mods = run_phases(parsed)
     header_mod = build_header_module(mods)
+    if save_result = ENV["MYC_SAVE_HEADER_MOD"]?
+      File.open(save_result, "w") { |f| IO.copy(Mod::Saver.new(header_mod).save.serialize, f) }
+    end
+
     inline_cross_module(mods, header_mod) unless ENV["MYC_DISABLE_INLINER"]? == "1"
     {mods, header_mod}
   end
@@ -209,7 +213,7 @@ abstract class Myc::Backend::AbstractBackend
     raise data.error("nothing to merge") if files.empty?
     mods, _ = load_all(files)
     mod = Mod.new("summary", "/tmp/summary", typer)
-    Myc.measure("merge:collect") { mods.each { |m| mod.merge!(m) } }
+    Myc.measure("merge:collect") { mods.each { |m| mod.merge!(m, false) } }
     Myc.measure("merge:clean") { mod.clean_unused_types_and_globals }
     dom = Myc.measure("merge:save") { Mod::Saver.new(mod).save }
     Myc.measure("merge:serialize") { IO.copy(dom.serialize, STDOUT) }
@@ -393,16 +397,8 @@ abstract class Myc::Backend::AbstractBackend
         Myc::Mod::Inliner.new(mod, header_mod).inline!
       end
 
-      if save_result = ENV["MYC_SAVE_INLINER_HEADER"]?
-        s = Mod::Saver.new(header_mod)
-        dom = s.save
-        File.open(save_result, "w") { |f| IO.copy(dom.serialize, f) }
-      end
-
       if save_result = ENV["MYC_SAVE_INLINER_RESULT"]?
-        s = Mod::Saver.new(mods.first)
-        dom = s.save
-        File.open(save_result, "w") { |f| IO.copy(dom.serialize, f) }
+        File.open(save_result, "w") { |f| IO.copy(Mod::Saver.new(mods.first).save.serialize, f) }
       end
     end
   end
@@ -413,7 +409,7 @@ abstract class Myc::Backend::AbstractBackend
 
     Myc.measure("mod:header") do
       header = Mod.new("__header__", "/tmp/__header__", typer)
-      mods.each { |mod| header.merge!(mod) }
+      mods.each { |mod| header.merge!(mod, true) }
 
       header.global_defs.each do |name, global_def|
         if global_def.initial_keyword
