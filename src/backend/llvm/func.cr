@@ -7,15 +7,12 @@ class Myc::Backend::Llvm::Func < Myc::Backend::AbstractFunc
 
   def initialize(@builder, @func_def, @header_mod)
     @link = builder.func_link(func_def.name, func_def.type_fn)
-    func_def.attributes.try &.each do |attr|
+    func_def.attrs.each do |attr|
       case attr
-      when "noinline"
+      when Mod::FuncDef::Attr::Noinline
         @link.llvm_function.add_attribute LLVM::Attribute::NoInline
-      when "vaarg"
-      when "private"
+      when Mod::FuncDef::Attr::Private
         @link.llvm_function.linkage = LLVM::Linkage::Private
-      else
-        raise Error::ErrorLoc.new("unknown attr #{attr}", Location.new(func_def.mod.filename, func_def.node.offset))
       end
     end
     unless builder.backend.common_options.final

@@ -32,15 +32,12 @@ class Myc::Backend::C::Func < Myc::Backend::AbstractFunc
   def build
     attrs = ""
     is_static = false
-    @func_def.attributes.try &.each do |attr|
+    @func_def.attrs.each do |attr|
       case attr
-      when "noinline"
+      when Mod::FuncDef::Attr::Noinline
         attrs += "__attribute__((noinline)) "
-      when "vaarg"
-      when "private"
+      when Mod::FuncDef::Attr::Private
         is_static = true
-      else
-        raise Error::ErrorLoc.new("unknown attr #{attr}", Location.new(func_def.mod.filename, func_def.node.offset))
       end
     end
     unless builder.backend.common_options.final

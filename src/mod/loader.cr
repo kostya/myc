@@ -87,7 +87,7 @@ class Myc::Mod::Loader
     ret_type = nil
     arg_types = [] of Type
     body_node = nil
-    attributes = nil
+    attrs = nil
 
     node.sections.each do |section|
       case section.code
@@ -103,20 +103,22 @@ class Myc::Mod::Loader
         raise error("body already defined", section) if body_node
         body_node = section.as(Source::Node::Sequence)
       when Opcode::Code::ATTRIBUTES
-        raise error("ATTRIBUTES already defined", section) if attributes
-        attributes = extract_attributes_list(section.as(Source::Node::Sequence))
+        raise error("ATTRIBUTES already defined", section) if attrs
+        attrs = extract_attributes_list(section.as(Source::Node::Sequence))
       else
         raise error("unexpected section #{section.code}", section)
       end
     end
 
-    type_fn = Type::Fn.new(loc(node), arg_types, ret_type || @mod.typer.void, !!attributes.try(&.includes?("vaarg")))
+    attrs ||= Mod::FuncDef::Attr.new(0)
+
+    type_fn = Type::Fn.new(loc(node), arg_types, ret_type || @mod.typer.void, attrs.includes?(Mod::FuncDef::Attr::Vaarg))
     if t = @mod.typer.map[type_fn.id_name]?
       type_fn = t.as(Type::Fn)
     else
       @mod.typer.map[type_fn.id_name] = type_fn
     end
-    func = Mod::FuncDef.new(node, @mod, func_name, type_fn, attributes)
+    func = Mod::FuncDef.new(node, @mod, func_name, type_fn, attrs)
 
     if body = body_node
       func.body = load_seq(body, func)
@@ -378,15 +380,20 @@ class Myc::Mod::Loader
     end
   end
 
-  private def extract_attributes_list(node : Source::Node::Sequence) : Array(String)
+  private def extract_attributes_list(node : Source::Node::Sequence) : Mod::FuncDef::Attr
+    attrs = Mod::FuncDef::Attr.new(0)
     node.list.map do |op|
       case op.code
       when Opcode::Code::ATTR
-        get_only_one_string_value(op)
+        val = get_only_one_string_value(op)
+        attr = Mod::FuncDef::Attr.parse?(val) || raise error("unknown attr `#{val}`", op)
+        attrs |= attr
       else
         raise error("expected type", op)
       end
     end
+
+    attrs
   end
 
   private def load_global(node : Source::Node::Sequence)

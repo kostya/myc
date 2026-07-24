@@ -36,7 +36,7 @@ class Myc::Backend::C::Builder < Myc::Backend::AbstractBuilder
   end
 
   def func_register(name : String, func_def : Mod::FuncDef)
-    @data_io << func_head_str(name, func_def.type_fn, func_def.attributes.try(&.includes?("private"))) << "; \n"
+    @data_io << func_head_str(name, func_def.type_fn, func_def.attrs.includes?(Mod::FuncDef::Attr::Private)) << "; \n"
     @func_links[name] = func_def.type_fn
   end
 

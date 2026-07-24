@@ -34,14 +34,10 @@ class Myc::Backend::QBE::Func < Myc::Backend::AbstractFunc
 
   def build
     visibility = "export "
-    @func_def.attributes.try &.each do |attr|
+    @func_def.attrs.each do |attr|
       case attr
-      when "noinline"
-      when "vaarg"
-      when "private"
+      when Mod::FuncDef::Attr::Private
         visibility = ""
-      else
-        raise Error::ErrorLoc.new("unknown attr #{attr}", Location.new(func_def.mod.filename, func_def.node.offset))
       end
     end
 

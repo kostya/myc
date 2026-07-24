@@ -220,7 +220,7 @@ abstract class Myc::Backend::AbstractVisitor
     type_fn = Type::Fn.new(Location.new(@mod.filename, op.offset), [mod.typer.voidp, mod.typer.i32], mod.typer.void)
     fdef = Mod::FuncDef.new(@func_def.node, @mod, func_name, type_fn)
     @builder.inspect_type_fns[func_name] = fdef
-    fdef.attributes = %w{noinline private}
+    fdef.attrs = Mod::FuncDef::Attr::Noinline | Mod::FuncDef::Attr::Private
     fdef.body = Opcode::Seq.new
     body = fdef.body.not_nil!
 

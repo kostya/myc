@@ -1,4 +1,5 @@
 FUNC :main
-^
-unknown attr bla
-(at
+  ATTRIBUTES
+    ATTR :bla
+    ^
+    unknown attr `bla`
