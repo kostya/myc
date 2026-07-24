@@ -228,7 +228,10 @@ abstract class Myc::Backend::AbstractBackend
     end
 
     Myc.measure("merge:serialize") do
-      Myc::Source::Serialize.new(dom, STDOUT).serialize
+      io = IO::Memory.new
+      Myc::Source::Serialize.new(dom, io).serialize
+      io.rewind
+      IO.copy(io, STDOUT)
     end
   end
 

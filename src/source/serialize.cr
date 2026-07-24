@@ -25,26 +25,31 @@ class Myc::Source::Serialize
   end
 
   protected def serialize_node_header(node : Node, indent : Int32)
-    line = String.build do |s|
-      s << "  " * indent
-      s << node.code.to_s
-
-      node.values.try &.each_with_index do |value, index|
-        s << " "
-        format_value(value, s)
-      end
-    end
-
-    io << line
-
     if c = node.comment
-      padding = ANNOTATION_COLUMN - line.size
-      padding = 1 if padding < 1
-      io << " " * padding
+      line = String.build do |s|
+        _serialize_node_header(s, node, indent)
+      end
+      io << line
+
+      pad = ANNOTATION_COLUMN - line.size - indent * 2
+      pad = 1 if pad < 1
+      padding(pad)
       io << c
+    else
+      _serialize_node_header(io, node, indent)
     end
 
     io << "\n"
+  end
+
+  protected def _serialize_node_header(io : IO, node : Node, indent : Int32)
+    padding(indent * 2)
+    node.code.to_s(io)
+
+    node.values.try &.each_with_index do |value, index|
+      io << ' '
+      format_value(value, io)
+    end
   end
 
   protected def serialize_node_body(node : Node::Container, indent : Int32)
@@ -63,8 +68,13 @@ class Myc::Source::Serialize
 
   protected def serialize_node_footer(node : Node, indent : Int32)
     if close_code = CLOSE_OPCODES[node.code]?
-      io << "  " * indent << close_code.to_s << "\n"
+      padding(indent * 2)
+      io << close_code.to_s << "\n"
     end
+  end
+
+  private def padding(pad)
+    pad.times { io << ' ' }
   end
 
   private def format_value(v : Token::Value, io : IO)
