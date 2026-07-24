@@ -193,15 +193,10 @@ abstract class Myc::Backend::AbstractBackend
     files.each do |input|
       begin
         print "format #{input} "
-
         myc_files = resolve_inputs([input])
         parsed = parse_files(myc_files)
         _, dom = parsed.first
-
-        io = IO::Memory.new
-        Myc::Source::Serialize.new(dom, io).serialize
-        io.rewind
-        File.open(input, "w") { |f| IO.copy(io, f) }
+        File.open(input, "w") { |f| IO.copy(dom.serialize, f) }
         puts "ok!".colorize(:green)
       rescue ex : Error
         puts "error! (#{ex.message})".colorize(:red)
@@ -212,28 +207,12 @@ abstract class Myc::Backend::AbstractBackend
   protected def _merge
     files = data.values.select { |f| filename_source?(f) }
     raise data.error("nothing to merge") if files.empty?
-
     mods, _ = load_all(files)
-
     mod = Mod.new("summary", "/tmp/summary", typer)
-    Myc.measure("merge:collect") do
-      mods.each { |m| mod.merge!(m) }
-    end
-
-    Myc.measure("merge:clean") do
-      mod.clean_unused_types_and_globals
-    end
-
-    dom = Myc.measure("merge:save") do
-      Mod::Saver.new(mod).save
-    end
-
-    Myc.measure("merge:serialize") do
-      io = IO::Memory.new
-      Myc::Source::Serialize.new(dom, io).serialize
-      io.rewind
-      IO.copy(io, STDOUT)
-    end
+    Myc.measure("merge:collect") { mods.each { |m| mod.merge!(m) } }
+    Myc.measure("merge:clean") { mod.clean_unused_types_and_globals }
+    dom = Myc.measure("merge:save") { Mod::Saver.new(mod).save }
+    Myc.measure("merge:serialize") { IO.copy(dom.serialize, STDOUT) }
   end
 
   protected def run_obj(mod : Mod, header_mod : Mod, output : String)
@@ -417,13 +396,13 @@ abstract class Myc::Backend::AbstractBackend
       if save_result = ENV["MYC_SAVE_INLINER_HEADER"]?
         s = Mod::Saver.new(header_mod)
         dom = s.save
-        File.open(save_result, "w") { |f| Myc::Source::Serialize.new(dom, f).serialize }
+        File.open(save_result, "w") { |f| IO.copy(dom.serialize, f) }
       end
 
       if save_result = ENV["MYC_SAVE_INLINER_RESULT"]?
         s = Mod::Saver.new(mods.first)
         dom = s.save
-        File.open(save_result, "w") { |f| Myc::Source::Serialize.new(dom, f).serialize }
+        File.open(save_result, "w") { |f| IO.copy(dom.serialize, f) }
       end
     end
   end

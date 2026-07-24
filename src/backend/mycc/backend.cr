@@ -27,10 +27,7 @@ class Myc::Backend::Mycc::Backend < Myc::Backend::AbstractBackend
     Myc.measure("mycc:dump") do
       saver = Mod::Saver.new(mod)
       dom = saver.save
-      io = IO::Memory.new
-      Myc::Source::Serialize.new(dom, io).serialize
-      io.rewind
-      File.open(output, "w") { |f| IO.copy(io, f) }
+      File.open(output, "w") { |f| IO.copy(dom.serialize, f) }
     end
   end
 
