@@ -55,7 +55,7 @@ abstract class Myc::Backend::AbstractBackend
 
   protected def parse_files(files : Array(String)) : Array({Mod, Source::Dom})
     files.map do |input|
-      Myc.measure("parse") do
+      Myc.measure("load:parse") do
         src = File.read(input)
         tokens = Source::Tokenizer.new(src, input).parse
         parser = Source::Parser.new(input, tokens)
@@ -68,18 +68,18 @@ abstract class Myc::Backend::AbstractBackend
 
   protected def run_phases(parsed : Array({Mod, Source::Dom})) : Array(Mod)
     collector = Mod::TypeCollector.new(typer)
-    Myc.measure("collect_types") do
+    Myc.measure("load:collect_types") do
       parsed.each { |mod, dom| collector.collect(mod, dom) }
     end
 
-    Myc.measure("fill_types") do
+    Myc.measure("load:fill_types") do
       parsed.each do |mod, dom|
         filler = Mod::TypeFiller.new(typer, mod)
         filler.fill(dom)
       end
     end
 
-    Myc.measure("check_type_dublicates") do
+    Myc.measure("load:check_types") do
       collector.duplicates.each do |(name, dup_mod, dup_type)|
         first_type = @typer.map[name]
         unless first_type.structural_eq?(dup_type)
@@ -91,14 +91,14 @@ abstract class Myc::Backend::AbstractBackend
       end
     end
 
-    Myc.measure("load_mods") do
+    Myc.measure("load:load_mods") do
       parsed.each do |mod, dom|
         loader = Mod::Loader.new(dom, mod.filename, typer, mod)
         loader.load
       end
     end
 
-    Myc.measure("validate") do
+    Myc.measure("load:validate") do
       parsed.each { |mod, _| mod.validate! }
     end
 
@@ -215,11 +215,11 @@ abstract class Myc::Backend::AbstractBackend
     mods, _ = load_all(files)
 
     mod = Mod.new("summary", "/tmp/summary", typer)
-    Myc.measure("merge") do
+    Myc.measure("merge:collect") do
       mods.each { |m| mod.merge!(m) }
     end
 
-    Myc.measure("merge_clean") do
+    Myc.measure("merge:clean") do
       mod.clean_unused_types_and_globals
     end
 
@@ -254,7 +254,7 @@ abstract class Myc::Backend::AbstractBackend
   end
 
   protected def build_mod(mod : Mod, header_mod : Mod) : AbstractBuilder
-    Myc.measure("build_mod") do
+    Myc.measure("mod:build") do
       builder = new_builder
       mod.finalize_enums(builder.layout)
       header_mod.finalize_enums(builder.layout) if header_mod != mod
@@ -405,7 +405,7 @@ abstract class Myc::Backend::AbstractBackend
   end
 
   private def inline_cross_module(mods : Array(Mod), header_mod : Mod)
-    Myc.measure("inliner") do
+    Myc.measure("mod:inliner") do
       mods.each do |mod|
         Myc::Mod::Inliner.new(mod, header_mod).inline!
       end
@@ -428,7 +428,7 @@ abstract class Myc::Backend::AbstractBackend
     raise data.error("no targets in build_header_module") if mods.size == 0
     return mods[0] if mods.size == 1
 
-    Myc.measure("build_header_module") do
+    Myc.measure("mod:header") do
       header = Mod.new("__header__", "/tmp/__header__", typer)
       mods.each { |mod| header.merge!(mod) }
 

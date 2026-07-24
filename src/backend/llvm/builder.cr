@@ -46,7 +46,7 @@ class Myc::Backend::Llvm::Builder < Myc::Backend::AbstractBuilder
   end
 
   def verify
-    Myc.measure(:verify) do
+    Myc.measure("backend:llvmver") do
       @llvm_mod.verify
     end
   end

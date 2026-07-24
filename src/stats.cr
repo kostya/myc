@@ -30,7 +30,7 @@ module Myc::Stats
         STDERR << ", " if i != 0
         STDERR << "\"#{k}\": %.7f" % {v}
       end
-      STDERR << "}"
+      STDERR << "}\n"
     end
   end
 end

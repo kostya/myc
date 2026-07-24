@@ -15,7 +15,7 @@ class Myc::Backend::Llvm::Backend < Myc::Backend::AbstractBackend
   def obj(mod : Mod, header_mod : Mod, output : String)
     b = build(mod, header_mod)
 
-    Myc.measure("llvm_generate_obj") do
+    Myc.measure("backend:llvmobj") do
       b.generate_obj(output)
     end
   end
@@ -23,7 +23,7 @@ class Myc::Backend::Llvm::Backend < Myc::Backend::AbstractBackend
   def dump(mod : Mod, header_mod : Mod, output : String)
     b = build(mod, header_mod)
 
-    Myc.measure("llvm_generate_ll") do
+    Myc.measure("backend:llvmll") do
       b.generate_ll(output)
     end
   end
@@ -32,7 +32,7 @@ class Myc::Backend::Llvm::Backend < Myc::Backend::AbstractBackend
     build_mod(mod, header_mod).as(Builder).tap do |builder|
       builder.verify unless ENV["MYC_VERIFY"]? == "0"
 
-      Myc.measure("llvm_optimizer") do
+      Myc.measure("backend:llvmopt") do
         mode = if common_options.final
                  "default<O3>"
                else

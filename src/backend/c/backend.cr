@@ -37,7 +37,7 @@ class Myc::Backend::C::Backend < Myc::Backend::AbstractBackend
         args += c_flgs.split(",")
       end
 
-      Myc.measure("c_obj") do
+      Myc.measure("backend:c2obj") do
         self.class.run_cmd(CC, args)
       end
     end
