@@ -67,6 +67,8 @@ crystal build src/cli/c.cr --release -o myc-c
 crystal build src/cli/llvm.cr --release -o myc-llvm 
 
 # compile Myc IR Qbe backend
+# uses `qbe` from PATH, or the one given by the QBE env variable,
+# otherwise build it locally as shown below
 git clone https://github.com/kostya/qbe.git plugins/qbe
 cd plugins/qbe; make; cd -
 crystal build src/cli/qbe.cr --release -o myc-qbe
