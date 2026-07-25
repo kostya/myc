@@ -3,7 +3,7 @@ class Myc::Type::Fn < Myc::Type
   getter ret : Type
   getter vaarg : Bool
 
-  def initialize(@args, @ret, @vaarg = false)
+  def initialize(@loc, @args, @ret, @vaarg = false)
     @id_name = String.build do |io|
       io << "fn<"
       @args.each_with_index do |type, index|

@@ -1,0 +1,6 @@
+FUNC :xxx
+  ARGS
+    TYPE :i32
+  BODY
+ENDFUNC
+

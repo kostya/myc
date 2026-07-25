@@ -1,4 +1,5 @@
-FUNC :main BODY LOCAL ENDFUNC
-                ^
-                LOCAL should have at least 1 value
-                (at
+FUNC :main
+  BODY
+    LOCAL
+    ^
+    LOCAL should have at least 1 value

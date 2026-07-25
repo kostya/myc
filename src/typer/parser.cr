@@ -1,4 +1,4 @@
-class Myc::Mod::Typer::Parser
+class Myc::Typer::Parser
   abstract struct Tkn; end
 
   record Tkn::Name < Tkn, name : String
@@ -137,9 +137,9 @@ class Myc::Mod::Typer::Parser
     if t = typer.find_in_caches(id_name)
       t
     else
-      t = Type::PtrType.new(id_name, inner_type)
+      t = Type::PtrType.new(@loc, id_name, inner_type)
       t.hidden = true
-      typer.types_cache[id_name] = t
+      typer.map[id_name] = t
       t
     end
   end
@@ -182,11 +182,11 @@ class Myc::Mod::Typer::Parser
     if t = @typer.find_in_caches(id_name)
       t
     else
-      t = Type::FlatType.new(id_name)
+      t = Type::FlatType.new(@loc, id_name)
       t.hidden = true
       t.target_type = inner_type
       t.elements_count = count.to_u64
-      typer.types_cache[id_name] = t
+      typer.map[id_name] = t
       t
     end
   end
@@ -227,10 +227,10 @@ class Myc::Mod::Typer::Parser
     if t = @typer.find_in_caches(id_name)
       t
     else
-      t = Type::StructType.new(id_name)
+      t = Type::StructType.new(@loc, id_name)
       t.hidden = true
       t.data = inner_types
-      typer.types_cache[id_name] = t
+      typer.map[id_name] = t
       t
     end
   end
@@ -292,12 +292,12 @@ class Myc::Mod::Typer::Parser
       raise error("expected `>` for fn, got #{ct.inspect}")
     end
 
-    t = Type::Fn.new(inner_types, ret_type, vaarg)
+    t = Type::Fn.new(@loc, inner_types, ret_type, vaarg)
     if finded_t = @typer.find_in_caches(t.id_name)
       finded_t
     else
       t.hidden = true
-      typer.types_cache[t.id_name] = t
+      typer.map[t.id_name] = t
       t
     end
   end

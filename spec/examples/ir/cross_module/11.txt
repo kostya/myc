@@ -1,0 +1,1 @@
+different funcs with same name xxx:fn<i32, void> vs xxx:fn<f64, void>

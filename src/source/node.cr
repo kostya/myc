@@ -21,6 +21,13 @@ class Myc::Source::Dom < Myc::Source::Node::Container
   def initialize
     @code = Myc::Opcode::Code::MOD
   end
+
+  def serialize : IO
+    io = IO::Memory.new
+    Myc::Source::Serialize.new(self, io).serialize
+    io.rewind
+    io
+  end
 end
 
 class Myc::Source::Node::Sequence < Myc::Source::Node

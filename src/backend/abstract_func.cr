@@ -1,13 +1,14 @@
 abstract class Myc::Backend::AbstractFunc
   getter builder : AbstractBuilder
   getter func_def : Mod::FuncDef
+  getter header_mod : Mod
 
   getter! alloca_bb : AbstractBB?
   getter! body_bb : AbstractBB?
   getter! ret_bb : AbstractBB?
   getter result : Value?
 
-  def initialize(@builder, @func_def)
+  def initialize(@builder, @func_def, @header_mod)
     @alloca_bb = new_bb("alloca")
     @body_bb = new_bb("body")
     @ret_bb = new_bb("ret")

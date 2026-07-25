@@ -3,8 +3,8 @@ class Myc::Backend::QBE::Func < Myc::Backend::AbstractFunc
   getter blocks : Array(BB)
   getter body_io : IO::Memory
 
-  def initialize(@builder : Builder, @func_def : Mod::FuncDef)
-    super(@builder, @func_def)
+  def initialize(@builder : Builder, @func_def : Mod::FuncDef, @header_mod : Mod)
+    super(@builder, @func_def, @header_mod)
     @temp_counter = 0
     @blocks = Array(BB).new
     @body_io = IO::Memory.new
@@ -15,7 +15,7 @@ class Myc::Backend::QBE::Func < Myc::Backend::AbstractFunc
   end
 
   def new_visitor : AbstractVisitor
-    Visitor.new(@builder, self, body_bb, func_def, func_def.mod, params)
+    Visitor.new(@builder, self, body_bb, func_def, func_def.mod, @header_mod, params)
   end
 
   def builder
@@ -34,14 +34,10 @@ class Myc::Backend::QBE::Func < Myc::Backend::AbstractFunc
 
   def build
     visibility = "export "
-    @func_def.attributes.try &.each do |attr|
+    @func_def.attrs.each do |attr|
       case attr
-      when "noinline"
-      when "vaarg"
-      when "private"
+      when Mod::FuncDef::Attr::Private
         visibility = ""
-      else
-        raise Error::ErrorLoc.new("unknown attr #{attr}", Location.new(func_def.mod.filename, func_def.node.offset))
       end
     end
 

@@ -1,1 +1,4 @@
-STRUCT :bla TYPE :bla ENDSTRUCT
+STRUCT :bla
+  TYPE :bla
+ENDSTRUCT
+

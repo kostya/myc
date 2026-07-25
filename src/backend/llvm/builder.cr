@@ -16,7 +16,7 @@ class Myc::Backend::Llvm::Builder < Myc::Backend::AbstractBuilder
     @target_machine = create_target_machine(@layout.target.triple)
     @type_translator = TypeTranslator.new(@context, @layout)
 
-    @llvm_mod = @context.new_module(AbstractBackend.tmp_name)
+    @llvm_mod = @context.new_module("main")
     @llvm_mod.target = @target_machine.triple
     @llvm_mod.data_layout = @target_machine.data_layout
   end
@@ -46,7 +46,7 @@ class Myc::Backend::Llvm::Builder < Myc::Backend::AbstractBuilder
   end
 
   def verify
-    Myc.measure(:verify) do
+    Myc.measure("backend:llvmver") do
       @llvm_mod.verify
     end
   end
@@ -165,7 +165,7 @@ class Myc::Backend::Llvm::Builder < Myc::Backend::AbstractBuilder
     global_links[name]?
   end
 
-  def new_func(func_def : Mod::FuncDef) : AbstractFunc
-    Func.new(self, func_def)
+  def new_func(func_def : Mod::FuncDef, header_mod : Mod) : AbstractFunc
+    Func.new(self, func_def, header_mod)
   end
 end

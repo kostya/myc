@@ -1,1 +1,6 @@
-FUNC main RETURN TYPE bla BODY ENDFUNC
+FUNC :main
+  RETURN
+    TYPE :bla
+  BODY
+ENDFUNC
+

@@ -1,11 +1,15 @@
 ENUM :bla
-  TAG SKIP
-  VARIANT :x TYPE :i64
+  TAG
+    SKIP
+  VARIANT :x
+    TYPE :i64
 ENDENUM
 
-FUNC :main BODY
-  PUSH 20_000_000_000
-  CREATE :bla::x
-  AS :bla
-  INSPECT
+FUNC :main
+  BODY
+    PUSH 20000000000
+    CREATE :bla::x
+    AS :bla
+    INSPECT
 ENDFUNC
+

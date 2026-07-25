@@ -2,4 +2,8 @@ ENUM :Bad
   VARIANT :a
   VARIANT :a
 ENDENUM
-FUNC :main BODY ENDFUNC
+
+FUNC :main
+  BODY
+ENDFUNC
+

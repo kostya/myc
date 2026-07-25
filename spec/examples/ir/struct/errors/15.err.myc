@@ -1,2 +1,8 @@
-STRUCT :Bad TYPE :UnknownType ENDSTRUCT
-FUNC :main BODY ENDFUNC
+STRUCT :Bad
+  TYPE :UnknownType
+ENDSTRUCT
+
+FUNC :main
+  BODY
+ENDFUNC
+

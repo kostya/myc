@@ -7,7 +7,7 @@ class Myc::Backend::QBE::Backend < Myc::Backend::AbstractBackend
   end
 
   def self.version_string
-    "QBE e786f06"
+    "QBE fab6d40"
   end
 
   def new_builder : AbstractBuilder
@@ -15,27 +15,29 @@ class Myc::Backend::QBE::Backend < Myc::Backend::AbstractBackend
     Builder.new(self, layout)
   end
 
-  def obj(mod : Mod, output : String)
-    self.class.with_tempfile_path("myc", "ssa") do |tmp|
-      build(mod, tmp)
+  def obj(mod : Mod, header_mod : Mod, output : String)
+    tmp = new_tmp_path("myc", "ssa")
+    build(mod, header_mod, tmp)
+    tmp2 = new_tmp_path("myc", "s")
 
-      self.class.with_tempfile_path("myc", "s") do |tmp2|
-        Myc.measure("qbe_asm") do
-          self.class.run_cmd(QBE, ["-o", tmp2, tmp])
-        end
-        Myc.measure("asm_obj") do
-          self.class.run_cmd(AS, ["-c", tmp2, "-o", output])
-        end
-      end
+    Myc.measure("backend:qbe2asm") do
+      run_cmd(QBE, ["-o", tmp2, tmp])
+    end
+    Myc.measure("backend:asm2obj") do
+      run_cmd(AS, ["-c", tmp2, "-o", output])
     end
   end
 
-  def dump(mod : Mod, output : String)
-    build(mod, output)
+  def dump(mod : Mod, header_mod : Mod, output : String)
+    build(mod, header_mod, output)
   end
 
-  def build(mod : Mod, output : String) : Builder
-    build_mod(mod).as(Builder).tap do |builder|
+  def build(mod : Mod, header_mod : Mod, output : String) : Builder
+    if common_options.final && ENV["MYC_SPEC"]? != "1"
+      puts "--final option for QBE is skipped".colorize(:yellow)
+    end
+
+    build_mod(mod, header_mod).as(Builder).tap do |builder|
       builder.save(output)
     end
   end

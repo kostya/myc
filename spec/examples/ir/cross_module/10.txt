@@ -1,0 +1,1 @@
+different global types with same name bla:i32 vs bla:f64

@@ -19,15 +19,15 @@ class Myc::Backend::Mycc::Backend < Myc::Backend::AbstractBackend
     raise "unreachable"
   end
 
-  def obj(mod : Mod, output : String)
-    myc_backend.obj(mod, output)
+  def obj(mod : Mod, header_mod : Mod, output : String)
+    myc_backend.obj(mod, header_mod, output)
   end
 
-  def dump(mod : Mod, output : String)
-    Myc.measure("mycc_dump") do
+  def dump(mod : Mod, header_mod : Mod, output : String)
+    Myc.measure("mycc:dump") do
       saver = Mod::Saver.new(mod)
       dom = saver.save
-      File.open(output, "w") { |f| Myc::Source::Serialize.new(dom, f).serialize }
+      File.open(output, "w") { |f| IO.copy(dom.serialize, f) }
     end
   end
 
@@ -42,21 +42,26 @@ class Myc::Backend::Mycc::Backend < Myc::Backend::AbstractBackend
 
       puts "used #{name} backend" unless ENV["MYC_SPEC"]? == "1"
 
-      case name
-      when "LLVM"
-        Myc::Backend::Llvm::Backend.new(data)
-      when "C"
-        Myc::Backend::C::Backend.new(data)
-      when "QBE"
-        Myc::Backend::QBE::Backend.new(data)
-      else
-        raise "unknown backend #{name}"
-      end
+      backend = case name
+                when "LLVM"
+                  Myc::Backend::Llvm::Backend.new(data)
+                when "C"
+                  Myc::Backend::C::Backend.new(data)
+                when "QBE"
+                  Myc::Backend::QBE::Backend.new(data)
+                else
+                  raise "unknown backend #{name}"
+                end
+      backend.typer = @typer
+      backend
     end
   end
 
-  protected def validate(input : String) : Mod
-    return super(input) if input.ends_with?(".myc")
+  protected def resolve_input(input : String) : String
+    return input if input.ends_with?(".myc")
+
+    raise data.error("unexpected file extension `#{input}`, expected #{ext}") unless input.ends_with?(ext)
+
     raise data.error("input not found `#{input}`") unless File.exists?(input)
     raise data.error("input not file `#{input}`") unless File.file?(input)
 
@@ -65,23 +70,23 @@ class Myc::Backend::Mycc::Backend < Myc::Backend::AbstractBackend
       puts File.read(input)
     end
 
-    source = Myc.measure("mycc_new_source") { ::Myc::Mycc::Source.new(input) }
-    tu = Myc.measure("mycc_clang_parse") { source.clang_parse }
+    source = Myc.measure("mycc:new_source") { ::Myc::Mycc::Source.new(input) }
+    tu = Myc.measure("mycc:clang_parse") { source.clang_parse }
 
     Myc.debug(:mycc) do
       puts "---------------------------- ClangAST ---------------------------------"
       source.debug_ast(tu.cursor)
     end
 
-    builder = Myc.measure("mycc_new_astb") { ::Myc::Mycc::ASTBuilder.new(source, tu) }
-    ast = Myc.measure("mycc_build") { builder.build }
+    builder = Myc.measure("mycc:new_astb") { ::Myc::Mycc::ASTBuilder.new(source, tu, typer) }
+    ast = Myc.measure("mycc:astb_build") { builder.build }
 
     Myc.debug(:mycc) do
       puts "---------------------------- TypedAST ---------------------------------"
       p ast
     end
 
-    io = Myc.measure("mycc_codegen") do
+    io = Myc.measure("mycc:codegen") do
       c = ::Myc::Mycc::CodeGenerator.new(builder.mod.typer, builder)
       c.generate(ast)
     end
@@ -90,11 +95,11 @@ class Myc::Backend::Mycc::Backend < Myc::Backend::AbstractBackend
       puts "-------------------------------------------------------------"
     end
 
-    path = AbstractBackend.tempfile_path("mycc", "myc")
-    Myc.measure("mycc_store_myc") do
+    path = new_tmp_path("mycc", "myc")
+    Myc.measure("mycc:store") do
       File.open(path, "w") { |f| IO.copy(io, f) }
     end
-    data.files_to_cleanup << path
-    super(path)
+
+    path
   end
 end

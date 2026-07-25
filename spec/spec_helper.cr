@@ -31,20 +31,29 @@ def validate(src)
   parser.parse
 
   dom = parser.dom
+  typer = spec_typer
 
-  l = Myc::Mod::Loader.new(dom, "/tmp/1")
-  l.mod.validate!
-  l.load
+  mod = Myc::Mod.new("tmp", "/tmp/1", typer)
 
-  s = Myc::Mod::Saver.new(l.mod)
+  collector = Myc::Mod::TypeCollector.new(typer)
+  collector.collect(mod, dom)
+
+  filler = Myc::Mod::TypeFiller.new(typer, mod)
+  filler.fill(dom)
+
+  loader = Myc::Mod::Loader.new(dom, "/tmp/1", typer, mod)
+  loader.load
+
+  mod.validate!
+
+  s = Myc::Mod::Saver.new(mod)
   dom2 = s.save
 
   String.build { |s| Myc::Source::Serialize.new(dom2, s).serialize }.strip
 end
 
 def spec_typer
-  mod = Myc::Mod.new("1", "/tmp/1")
-  mod.typer
+  Myc::Typer.new
 end
 
 def spec_find_type(name : String) : Myc::Type
@@ -83,6 +92,7 @@ class Examples
     error : Bool,
     pending : Bool,
     expect : String,
+    dir : String,
     categories : Array(String),
     multi_modules : Array(String) do
     def register(backend : String, final : Bool)
@@ -159,6 +169,8 @@ class Examples
     all_files = Dir.glob(File.join(basedir, "**", "*.{myc,c}"))
     main_files = all_files.reject { |f| f =~ /\.\d+\.(err\.)?(myc|c)$/ }
 
+    shared = [] of Example
+
     main_files.each do |f|
       if keywords
         next unless keywords.any? { |k| f.includes?(k) }
@@ -186,16 +198,31 @@ class Examples
 
       multi_modules = find_part_files(f)
 
-      examples << Example.new(
+      ex = Example.new(
         f,
         "spec/examples/" + f.sub(basedir + "/", ""),
         kind,
         error,
         pend,
         content.strip,
+        dir,
         categories,
         multi_modules
       )
+
+      if basename == "shared.myc"
+        shared << ex
+      else
+        examples << ex
+      end
+    end
+
+    shared.each do |sh|
+      examples.each do |ex|
+        if ex.dir == sh.dir
+          ex.multi_modules << sh.filename
+        end
+      end
     end
 
     puts "Found #{examples.size} examples in #{(Time.local - t).to_f.round(5)}s"
@@ -210,7 +237,7 @@ class Examples
       pattern = "#{base}.*.{myc,c}"
     end
 
-    Dir.glob(pattern).select { |pf| pf =~ /\.\d+\.(err\.)?(myc|c)$/ }.sort
+    Dir.glob(pattern).select { |pf| pf =~ /\.\d+\.(err\.)?(myc|c)$/ }
   end
 
   def run

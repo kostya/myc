@@ -1,0 +1,12 @@
+ENUM :Bla
+  VARIANT :x
+    TYPE :i32
+ENDENUM
+
+FUNC :main
+  BODY
+    PUSH 42
+    CREATE :Bla
+    INSPECT
+ENDFUNC
+

@@ -12,32 +12,20 @@ abstract class Myc::Backend::AbstractBuilder
   end
 
   def add_std_funcs
-    void = Mod::Typer::STD_TYPES["void"]
-    i32 = Mod::Typer::STD_TYPES["i32"]
-    u32 = Mod::Typer::STD_TYPES["u32"]
-
-    u64 = Mod::Typer::STD_TYPES["u64"]
-
-    u8p = Mod::Typer::STD_TYPES["ptr<u8>"]
-    voidp = Mod::Typer::STD_TYPES["ptr<void>"]
-
-    f32 = Mod::Typer::STD_TYPES["f32"]
-    f64 = Mod::Typer::STD_TYPES["f64"]
-
+    typer = backend.typer
     h = Hash(String, Type::Fn).new
-
-    h["printf"] = Type::Fn.new([u8p], i32, vaarg: true)
-    h["malloc"] = Type::Fn.new([u64], voidp)
-    h["calloc"] = Type::Fn.new([u64, u64], voidp)
-    h["memset"] = Type::Fn.new([voidp, i32, u64], voidp)
-    h["free"] = Type::Fn.new([voidp], void)
-
+    loc = Location.new("std", 0)
+    h["printf"] = Type::Fn.new(loc, [typer.u8p], typer.i32, vaarg: true)
+    h["malloc"] = Type::Fn.new(loc, [typer.u64], typer.voidp)
+    h["calloc"] = Type::Fn.new(loc, [typer.u64, typer.u64], typer.voidp)
+    h["memset"] = Type::Fn.new(loc, [typer.voidp, typer.i32, typer.u64], typer.voidp)
+    h["free"] = Type::Fn.new(loc, [typer.voidp], typer.void)
     h
   end
 
   abstract def init_value(ival : InitValue) : Value
   abstract def find_global(name : String) : Value?
-  abstract def new_func(func_def : Mod::FuncDef) : AbstractFunc
+  abstract def new_func(func_def : Mod::FuncDef, header_mod : Mod) : AbstractFunc
   abstract def func_register(name : String, func_def : Mod::FuncDef)
 
   def self.escaped_string(s : String)

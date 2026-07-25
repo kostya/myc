@@ -10,7 +10,7 @@
 * Whole IR spec fits in 30 minutes of reading. 
 * Compiles to native code via LLVM, QBE, or C. 
 * Fast compilation, "zero" overhead (I hope). 
-* ~7000 lines in Crystal.
+* ~7800 lines in Crystal.
 * Includes mycc as POC: a C subset compiler using myc as backend and libclang for parsing.
 
 ### Why?
@@ -24,7 +24,7 @@
 
 ### Current status
 
-Alpha. But already powerful. All 3 backends work smoothly. 4100 tests pass. mycc can compile [LangArena](https://github.com/kostya/LangArena) benchmark (230kb non-trivial C code). I wasn't able to beat gcc and clang in both compile time and runtime speed at the same time. So instead, I'm focusing on two compromise modes: default(fast compilation with decent runtime performance (like golang)), and final(slow compilation with maximum performance, for when you need every last bit of speed (this mode adds ~5-15% performance)).
+Alpha. But already powerful. All 3 backends work smoothly. 4300 tests pass. mycc can compile [LangArena](https://github.com/kostya/LangArena) benchmark (230kb non-trivial C code). I wasn't able to beat gcc and clang in both compile time and runtime speed at the same time. So instead, I'm focusing on two compromise modes: default(fast compilation with decent runtime performance (like golang)), and final(slow compilation with maximum performance, for when you need every last bit of speed (this mode adds ~5-15% performance)).
 
 
 ## Benchmark: 
@@ -33,18 +33,16 @@ Mandelbrot renderer from mandel.bf (by Erik Bosman). All IRs represent the same 
 
 | IR | Compiler | IR size, Kb | Compile time | Run time |
 |:---------:|:---------:|:---------:|:---------:|:---------:|
-| llvm-ll | clang(-O3) | 1529 | 1525ms | 618ms |
-| myc | myc-llvm(default) | 486 | **255ms** | 683ms |
-| myc | myc-llvm(final) | 486 | 1546ms | 637ms |
-| qbe-ssa | qbe + clang(as+linker) | 345 | 205ms + 63ms | 810ms |
-| myc | myc-qbe(default) | 486 | 1039ms | 833ms |
-| c | clang(-O3) | 128 | 1588ms | 635ms |
-| myc | myc-c(default) | 486 | 1515ms | 635ms |
-| myc | myc-c(final) | 486 | 1822ms | 636ms |
+| llvm-ll | clang(-O3) | 1529 | 1535ms | 621ms |
+| myc | myc-llvm(default) | 486 | **257ms** | 681ms |
+| myc | myc-llvm(final) | 486 | 1550ms | 631ms |
+| qbe-ssa | qbe + clang(as+linker) | 345 | 83ms + 64ms | 807ms |
+| myc | myc-qbe(default) | 486 | 460ms | 832ms |
+| c | clang(-O3) | 128 | 1581ms | 636ms |
+| myc | myc-c(default) | 486 | 1511ms | 634ms |
+| myc | myc-c(final) | 486 | 1807ms | 637ms |
 
-Default mode: faster compilation, ~10% slower runtime vs Clang -O3. Final mode: matches Clang -O3. 
-Clang can probably match default mode with the right flags, but Myc gives you this out of the box without tuning. 
-myc-qbe needs improvement.
+Default mode: faster compilation, ~10% slower runtime vs Clang -O3. Final mode: matches Clang -O3.
 
 ## Install
 
@@ -59,8 +57,7 @@ echo 'FUNC main BODY PUSH "Hello myc\n" PRINTF 0 ENDFUNC' | crystal src/cli/llvm
 ### Build
 
 ```sh
-git clone https://github.com/kostya/myc
-cd myc
+git clone https://github.com/kostya/myc && cd myc
 
 # compile Myc IR C backend
 crystal build src/cli/c.cr --release -o myc-c
@@ -308,10 +305,11 @@ Commands:
              ;   ./myc-llvm d file.myc
              ;   cat file.myc | ./myc-llvm d
 
-  beautify|b ; format, validate, and add auto-comments to .myc files (--annotate adds stack state comments)
-             ;   ./myc-llvm b .
-             ;   ./myc-llvm b --annotate src/
-             ;   ./myc-llvm b file1.myc file2.myc
+  format|f   ; formatter
+             ;   ./myc-llvm f .
+
+  merge|m    ; merge multiple .myc files into one, output to stdout
+             ;   ./myc-llvm m dir/*.myc > summary.myc
 
   version|v  ; display version information
              ;   ./myc-llvm version
@@ -327,7 +325,7 @@ OPTIONS:
 
 # mycc - an alternative C compiler, implemented as a POC for fun.
 
-As a proof of concept, over the course of 3 weeks and 2800 lines of code, I implemented mycc: a compiler for a subset of the C language (roughly close to the C99 standard) built on top of myc. Mycc already successfully compiles and runs [LangArena](https://github.com/kostya/LangArena) - a benchmark suite consisting of 50 tests and 9,000 lines of non-trivial C code (json, base64, multithreaded matmul, neural net, compression, maze A*, bf interpreter, and others) with heavy macros like uthash. For the parser, I used libclang - it's an overhead, but it's the simplest solution for a POC.
+As a proof of concept, over the course of 3 weeks and 2900 lines of code, I implemented mycc: a compiler for a subset of the C language (roughly close to the C99 standard) built on top of myc. Mycc already successfully compiles and runs [LangArena](https://github.com/kostya/LangArena) - a benchmark suite consisting of 50 tests and 9,000 lines of non-trivial C code (json, base64, multithreaded matmul, neural net, compression, maze A*, bf interpreter, and others) with heavy macros like uthash. For the parser, I used libclang - it's an overhead, but it's the simplest solution for a POC.
 
 ## How it works:
 
@@ -364,17 +362,19 @@ Results for linux64, gcc 13.3, clang 20.1.
 
 | Compiler | Build time | Build rss | Bench Runtime |
 |:-------|-------------:|-----:|----:|
-| clang(-O3) | 3093ms | 105Mb | 52.1s |
-| gcc(-O3) | 3512ms | 34Mb | 52.2s |
-| cproc | 922ms | 12Mb | 73.0s |
-| mycc(llvm) | 3251ms | 98Mb | 59.6s |
-| mycc(qbe) | 2851ms | 86Mb | 68.1s |
-| mycc(c, clang) | 4582ms | 101Mb | 58.2s |
-| mycc(c, gcc) | 3783ms | 86Mb | 60.1s |
-| mycc(llvm, final) | 4199ms | 101Mb | 53.2s |
-| mycc(qbe, final) | 2855ms | 86Mb | 68.3s |
-| mycc(c, final, clang) | 5026ms | 102Mb | 52.4s |
-| mycc(c, final, gcc) | 5049ms | 86Mb | 53.6s |
+| clang(-O3) | 3113ms | 105Mb | 52.2s |
+| clang(-O1) | 2790ms | 104Mb | 54.5s |
+| clang(-O0) | 1674ms | 98Mb | 141.0s |
+| gcc(-O3) | 3489ms | 34Mb | 52.5s |
+| cproc | 761ms | 12Mb | 72.8s |
+| mycc(llvm) | 3386ms | 99Mb | 60.0s |
+| mycc(qbe) | 2872ms | 87Mb | 67.9s |
+| mycc(c, clang) | 4728ms | 102Mb | 57.5s |
+| mycc(c, gcc) | 3900ms | 87Mb | 60.2s |
+| mycc(llvm, final) | 4317ms | 102Mb | 53.2s |
+| mycc(qbe, final) | 2858ms | 87Mb | 68.0s |
+| mycc(c, final, clang) | 5166ms | 103Mb | 52.2s |
+| mycc(c, final, gcc) | 5178ms | 87Mb | 53.5s |
 
 Currently, mycc is slower at compile time in the benchmarks. Run time for final is close, for default is 5-15% slower as expected. This is due to several suboptimal stages:
 - libclang adds parsing overhead of about 30-60ms per file (which is huge).
@@ -425,21 +425,22 @@ A week after the mycc release, I added an optimization pass - inlining. Here are
 ### LangArena benchmark without mycc overhead:
 
 | Compiler | Build time | Runtime |
-|:-------|-------------:|----:|
-| clang(-O3) | 3093ms | 52.1s |
-| clang(-O1) | 2753ms | 54.5s |
-| clang(-O0) | 1649ms | 141.2s |
-| gcc(-O3) | 3512ms | 52.2s |
-| cproc | 922ms | 73.0s |
-| **myc-llvm(default)** | **858ms** | **59.3s** |
-| myc-llvm(final) | 1778ms | 53.3s |
-| **myc-qbe(default)** | **482ms** | **68.5s** |
-| myc-c(default, clang) | 1863ms | 60.0s |
-| myc-c(final, clang) | 3139ms | 53.7s |
+|:-------|-------------:|-----:|
+| clang(-O3) | 3113ms | 52.2s |
+| clang(-O1) | 2790ms | 54.5s |
+| clang(-O0) | 1674ms | 141.0s |
+| gcc(-O3) | 3489ms | 52.5s |
+| cproc | 761ms | 72.8s |
+| myc-llvm(default) | **903ms** | **59.7s** |
+| myc-llvm(final) | 1843ms | 53.6s |
+| myc-qbe(default) | **469ms** | **68.1s** |
+| myc-c(default, clang) | 2000ms | 60.6s |
+| myc-c(final, clang) | 3351ms | 53.1s |
 
-To get clean measurements, I saved all IR files generated by mycc: `mycc file.c d > file.myc` into the [LangArena/myc](https://github.com/kostya/LangArena/tree/myc/myc) directory. This removes libclang overhead and double IR conversion (current mycc pain points) from the measurements. Essentially, this is pure Myc IR -> binary compilation time, without the C parser for LangArena benchmark. You could argue that comparing without C parsing isn't fair. And you'd be right. But let's be honest - mycc's C parsing is very rough and add big overhead (POC, 3 weeks, libclang). If I write a proper fast parser for C like cproc did, it would add an estimated ~400ms to the compilation time (based on cproc minus myc-qbe results). But I don't want to invest time in the C frontend right now - mycc is a POC, a tool to generate IR for testing Myc.
 
-Did I beat clang and gcc like I originally wanted? On runtime alone - no. But on compile time vs runtime ratio - I think I did. At least this result satisfy me. Just keep in mind you'd need to add C parsing time (~400ms est.) to build time.
+To get clean measurements, I saved all IR files generated by mycc: `mycc file.c d > file.myc` into the [LangArena/myc](https://github.com/kostya/LangArena/tree/myc/myc) directory. This removes libclang overhead and double IR conversion (current mycc pain points) from the measurements. Essentially, this is pure Myc IR -> binary compilation time, without the C parser for LangArena benchmark. You could argue that comparing without C parsing isn't fair. And you'd be right. But let's be honest - mycc's C parsing is very rough and add big overhead (libclang adds up to 60ms per file). If I write a proper fast parser for C like cproc did, it would add an estimated ~300ms to the compilation time (based on cproc minus myc-qbe results). But I don't want to invest time in the C frontend right now - mycc is a POC, a tool to generate IR for testing Myc.
+
+Did I beat clang and gcc like I originally wanted? On runtime alone - no. But on compile time vs runtime ratio - I think I did. At least this result satisfy me. Just keep in mind you'd need to add C parsing time (~300ms est.) to build time.
 
 
 Steps to reproduce (work on linux64, failed to link on macos arm64):

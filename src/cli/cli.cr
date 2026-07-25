@@ -9,7 +9,8 @@ class Myc::Cli
       Run
       Obj
       Dump
-      Beautify
+      Format
+      Merge
     end
 
     property mode = Mode::Undefined
@@ -47,8 +48,8 @@ class Myc::Cli
   def parse
     unless STDIN.tty?
       content = STDIN.gets_to_end
-      path = Backend::AbstractBackend.tempfile_path("stdin", "myc")
       unless content.blank?
+        path = Backend::AbstractBackend.new_tmp_path("stdin", "myc")
         File.open(path, "w") { |f| f.puts content }
         data.values << path
         data.stdin_filename = path
@@ -64,7 +65,8 @@ class Myc::Cli
       when "run", "r"                        then set_mod(:run)
       when "obj", "o"                        then set_mod(:obj)
       when "dump", "d"                       then set_mod(:dump)
-      when "beautify", "b"                   then set_mod(:beautify)
+      when "format", "f", "fmt"              then set_mod(:format)
+      when "merge", "m"                      then set_mod(:merge)
       when "--version", "-v", "version", "v" then show_version
       when "--help", "-h", "help", "h"       then show_usage
       when Nil                               then break
@@ -106,10 +108,8 @@ class Myc::Cli
 
   private def option_require_argument?(arg : String)
     case arg
-    when "final", "annotate"
+    when "final"
       false
-    when "release"
-      raise Error::Cli.new("--release option was deleted, default build already performant")
     else
       true
     end
@@ -167,10 +167,11 @@ Commands:
              ;   ./#{cli_name} d file#{ext}
              ;   cat file#{ext} | ./#{cli_name} d
 
-  beautify|b ; format, validate, and add auto-comments to #{ext} files (--annotate adds stack state comments)
-             ;   ./#{cli_name} b .
-             ;   ./#{cli_name} b --annotate src/
-             ;   ./#{cli_name} b file1#{ext} file2#{ext}
+  format|f   ; formatter
+             ;   ./#{cli_name} f .
+
+  merge|m    ; merge multiple #{ext} files into one, output to stdout
+             ;   ./#{cli_name} m dir/*#{ext} > summary.myc
 
   version|v  ; display version information
              ;   ./#{cli_name} version

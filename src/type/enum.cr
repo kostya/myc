@@ -4,7 +4,7 @@ class Myc::Type::EnumType < Myc::Type
   property payload_type : FlatType?
   property explicit_alignment : UInt64?
 
-  def initialize(@id_name, @index_type)
+  def initialize(@loc, @id_name, @index_type)
     @backend_name = normalize_name(id_name)
   end
 
@@ -23,7 +23,7 @@ class Myc::Type::EnumType < Myc::Type
 
   def generate_payload_type(mod : Mod, layout : Backend::Layout)
     elements_count = layout.enum_payload_count(self)
-    t = Type::FlatType.new("flat<i32, #{elements_count}>")
+    t = Type::FlatType.new(loc, "flat<i32, #{elements_count}>")
     t.target_type = mod.typer.i32
     t.elements_count = elements_count
     t.hidden = true
@@ -49,7 +49,7 @@ class Myc::Type::EnumVariantType < Myc::Type
   property value_types = Array(Type).new
   property composite_value_type : Type?
 
-  def initialize(@id_name, @original_name, @parent_type, @position)
+  def initialize(@loc, @id_name, @original_name, @parent_type, @position)
     @backend_name = normalize_name(id_name)
   end
 

@@ -1,0 +1,6 @@
+FUNC :main
+  BODY
+    CALL :jo
+    INSPECT
+ENDFUNC
+

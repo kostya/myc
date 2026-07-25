@@ -178,9 +178,9 @@ class Myc::Mod::Saver
       node.sections << ret_node
     end
 
-    if attrs = func_def.attributes
+    if func_def.attrs.value != 0
       attrs_node = sequence(Opcode::Code::ATTRIBUTES)
-      attrs.each { |attr| attrs_node.list << opcode(Opcode::Code::ATTR, attr) }
+      func_def.attrs.each { |attr| attrs_node.list << opcode(Opcode::Code::ATTR, attr.to_s.downcase) }
       node.sections << attrs_node
     end
 

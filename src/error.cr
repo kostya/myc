@@ -18,7 +18,7 @@ class Myc::Error::Cmd < Myc::Error
     io << @message.colorize(:red)
     io << "\n"
 
-    if ENV["BACKTRACE"]? == "1"
+    if ENV["MYC_BACKTRACE"]? == "1"
       pp backtrace
     end
   end
@@ -45,7 +45,7 @@ class Myc::Error::ErrorLoc < Myc::Error
     io << (loc.filename + ":" + (line_number + 1).to_s + ":" + (line_position + 1).to_s + ")").colorize(:yellow)
     io << "\n\n"
 
-    if ENV["BACKTRACE"]? == "1"
+    if ENV["MYC_BACKTRACE"]? == "1"
       pp backtrace
     end
   end
@@ -124,9 +124,9 @@ class Myc::Error::ErrorVisitor < Myc::Error
   def print(io : IO)
     linter = Backend::Linter::Backend.new(visitor.builder.backend.data)
     linter_builder = linter.new_builder
-    f = linter_builder.new_func(visitor.func_def)
+    f = linter_builder.new_func(visitor.func_def, visitor.header_mod)
     v = Myc::Backend::Linter::Visitor.new(linter_builder, f,
-      f.body_bb, visitor.func_def, visitor.mod, visitor.params)
+      f.body_bb, visitor.func_def, visitor.mod, visitor.header_mod, visitor.params)
     begin
       v.visit
     rescue
@@ -156,7 +156,7 @@ class Myc::Error::ErrorVisitor < Myc::Error
 
     io << s
 
-    if ENV["BACKTRACE"]? == "1"
+    if ENV["MYC_BACKTRACE"]? == "1"
       pp backtrace
     end
   end

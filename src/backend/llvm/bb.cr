@@ -410,7 +410,7 @@ class Myc::Backend::Llvm::BB < Myc::Backend::AbstractBB
     wrap_val(llvm, type, pp)
   end
 
-  private def typer : Mod::Typer
+  private def typer : Typer
     @func_def.mod.typer
   end
 

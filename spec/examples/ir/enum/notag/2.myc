@@ -1,12 +1,17 @@
 ENUM :bla
-  TAG SKIP
-  VARIANT :x TYPE :i32
-  VARIANT :y TYPE :u8
+  TAG
+    SKIP
+  VARIANT :x
+    TYPE :i32
+  VARIANT :y
+    TYPE :u8
 ENDENUM
 
-FUNC :main BODY
-  PUSH 1
-  CREATE :bla::x
-  AS :bla
-  INSPECT
+FUNC :main
+  BODY
+    PUSH 1
+    CREATE :bla::x
+    AS :bla
+    INSPECT
 ENDFUNC
+

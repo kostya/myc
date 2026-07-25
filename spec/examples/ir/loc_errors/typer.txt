@@ -1,4 +1,5 @@
-FUNC main ARGS TYPE "crab" ENDFUNC
-               ^
-               type not found `crab`
-               (at
+FUNC :main
+  ARGS
+    TYPE :crab
+    ^
+    type not found `crab`

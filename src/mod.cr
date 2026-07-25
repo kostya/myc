@@ -1,19 +1,14 @@
 class Myc::Mod
   getter name : String
   getter filename : String
+  getter typer : Typer
 
   getter type_defs = Hash(String, TypeDef).new
   getter global_defs = Hash(String, GlobalDef).new
   getter func_defs = Hash(String, FuncDef).new
 
-  def initialize(@name, @filename)
+  def initialize(@name, @filename, @typer)
     @name = @name.gsub(/[^a-zA-Z0-9_]/, "_")
-  end
-
-  @typer : Typer?
-
-  def typer
-    @typer ||= Typer.new(self)
   end
 
   def validate!

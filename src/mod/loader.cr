@@ -1,49 +1,8 @@
 class Myc::Mod::Loader
-  getter mod : Mod
-
-  def initialize(@dom : Source::Dom, @filename : String)
-    @mod = Mod.new(File.basename(@filename, EXT), @filename)
+  def initialize(@dom : Source::Dom, @filename : String, @typer : Typer, @mod : Mod)
   end
 
   def load
-    preloaded_types = Hash(String, Source::Node).new
-    @dom.sections.each do |node|
-      case node.code
-      when Opcode::Code::STRUCT
-        name = get_only_one_string_value(node)
-        struct_type = Type::StructType.new(name)
-        preloaded_types[name] = node
-        raise error("type #{name} already defined", node) if @mod.type_defs[name]?
-        @mod.type_defs[name] = Mod::TypeDef.new(node, struct_type)
-      when Opcode::Code::ENUM
-        name = get_only_one_string_value(node)
-        enum_type = Type::EnumType.new(name, nil)
-        preloaded_types[name] = node
-        raise error("type #{name} already defined", node) if @mod.type_defs[name]?
-        @mod.type_defs[name] = Mod::TypeDef.new(node, enum_type)
-      when Opcode::Code::FLAT
-        name = get_only_one_string_value(node)
-        ft = Type::FlatType.new(name)
-        preloaded_types[name] = node
-        raise error("type #{name} already defined", node) if @mod.type_defs[name]?
-        @mod.type_defs[name] = Mod::TypeDef.new(node, ft)
-      end
-    end
-
-    preloaded_types.each do |name, node|
-      type = @mod.type_defs[name].type
-      case type
-      when Type::StructType
-        load_struct(type, node.as(Source::Node::Sequence))
-      when Type::EnumType
-        load_enum(type, node.as(Source::Node::Container))
-      when Type::FlatType
-        load_flat(type, node.as(Source::Node::Sequence))
-      else
-        raise error("unknown type #{type}", node)
-      end
-    end
-
     @dom.sections.each do |section|
       case section.code
       when Opcode::Code::FUNC
@@ -128,7 +87,7 @@ class Myc::Mod::Loader
     ret_type = nil
     arg_types = [] of Type
     body_node = nil
-    attributes = nil
+    attrs = nil
 
     node.sections.each do |section|
       case section.code
@@ -144,37 +103,46 @@ class Myc::Mod::Loader
         raise error("body already defined", section) if body_node
         body_node = section.as(Source::Node::Sequence)
       when Opcode::Code::ATTRIBUTES
-        raise error("ATTRIBUTES already defined", section) if attributes
-        attributes = extract_attributes_list(section.as(Source::Node::Sequence))
+        raise error("ATTRIBUTES already defined", section) if attrs
+        attrs = extract_attributes_list(section.as(Source::Node::Sequence))
       else
         raise error("unexpected section #{section.code}", section)
       end
     end
 
-    type_fn = Type::Fn.new(arg_types, ret_type || @mod.typer.void, !!attributes.try(&.includes?("vaarg")))
-    if t = mod.typer.types_cache[type_fn.id_name]?
+    attrs ||= Mod::FuncDef::Attr.new(0)
+
+    type_fn = Type::Fn.new(loc(node), arg_types, ret_type || @mod.typer.void, attrs.includes?(Mod::FuncDef::Attr::Vaarg))
+    if t = @mod.typer.map[type_fn.id_name]?
       type_fn = t.as(Type::Fn)
     else
-      mod.typer.types_cache[type_fn.id_name] = type_fn
+      @mod.typer.map[type_fn.id_name] = type_fn
     end
-    func = Mod::FuncDef.new(node, mod, func_name, type_fn, attributes)
+    func = Mod::FuncDef.new(node, @mod, func_name, type_fn, attrs)
 
     if body = body_node
-      func.body = load_seq(body)
+      func.body = load_seq(body, func)
+      func.inline_stats.finish(func)
     end
 
     func
   end
 
-  private def load_seq(node : Source::Node::Sequence) : Opcode::Seq
+  private def load_seq(node : Source::Node::Sequence, func_def : Mod::FuncDef) : Opcode::Seq
     seq = Opcode::Seq.new.with_position(node)
     node.list.each do |op_node|
-      seq.list << load_opcode(op_node)
+      seq.list << load_opcode(op_node, func_def)
     end
     seq
   end
 
-  private def load_opcode(node : Source::Node) : Opcode
+  private def load_opcode(node : Source::Node, func_def : FuncDef) : Opcode
+    op = _load_opcode(node, func_def)
+    func_def.inline_stats.update(op, @mod)
+    op
+  end
+
+  private def _load_opcode(node : Source::Node, func_def : FuncDef) : Opcode
     case node.code
     when Opcode::Code::AS
       Opcode::As.new(find_type(get_only_one_string_value(node), node)).with_position(node)
@@ -207,7 +175,7 @@ class Myc::Mod::Loader
     when Opcode::Code::GLOBAL
       Opcode::Global.new(get_only_one_string_value(node)).with_position(node)
     when Opcode::Code::IF
-      load_if(node)
+      load_if(node, func_def)
     when Opcode::Code::INSPECT
       expect_zero_values(node)
       Opcode::Inspect.new.with_position(node)
@@ -223,7 +191,7 @@ class Myc::Mod::Loader
         raise error("#{node.code} expected 1 or 2 values", node)
       end
     when Opcode::Code::LOOP
-      load_loop(node)
+      load_loop(node, func_def)
     when Opcode::Code::ALLOCA
       Opcode::Alloca.new(find_type(get_only_one_string_value(node), node)).with_position(node)
     when Opcode::Code::MALLOC
@@ -262,7 +230,7 @@ class Myc::Mod::Loader
       expect_zero_values(node)
       Opcode::Store.new.with_position(node)
     when Opcode::Code::SWITCH
-      load_switch(node)
+      load_switch(node, func_def)
     when Opcode::Code::UNARY
       op_name = get_only_one_string_value(node)
       op = Opcode::Unary::Op.parse?(op_name) || raise error("unknown op #{op_name}", node)
@@ -307,7 +275,7 @@ class Myc::Mod::Loader
     end
   end
 
-  private def load_if(node) : Opcode::If
+  private def load_if(node, func_def : FuncDef) : Opcode::If
     expect_zero_values(node)
     then_seq = nil
     else_seq = nil
@@ -316,10 +284,10 @@ class Myc::Mod::Loader
       case section.code
       when Opcode::Code::THEN
         raise error("then already defined", section) if then_seq
-        then_seq = load_seq(section.as(Source::Node::Sequence))
+        then_seq = load_seq(section.as(Source::Node::Sequence), func_def)
       when Opcode::Code::ELSE
         raise error("else already defined", section) if else_seq
-        else_seq = load_seq(section.as(Source::Node::Sequence))
+        else_seq = load_seq(section.as(Source::Node::Sequence), func_def)
       else
         raise error("unknown section #{section.code}", section)
       end
@@ -332,7 +300,7 @@ class Myc::Mod::Loader
     end
   end
 
-  private def load_loop(node) : Opcode::Loop
+  private def load_loop(node, func_def : FuncDef) : Opcode::Loop
     expect_zero_values(node)
 
     init_seq = nil
@@ -344,16 +312,16 @@ class Myc::Mod::Loader
       case section.code
       when Opcode::Code::INIT
         raise error("INIT already defined", section) if init_seq
-        init_seq = load_seq(section.as(Source::Node::Sequence))
+        init_seq = load_seq(section.as(Source::Node::Sequence), func_def)
       when Opcode::Code::COND
         raise error("COND already defined", section) if cond_seq
-        cond_seq = load_seq(section.as(Source::Node::Sequence))
+        cond_seq = load_seq(section.as(Source::Node::Sequence), func_def)
       when Opcode::Code::BODY
         raise error("BODY already defined", section) if body_seq
-        body_seq = load_seq(section.as(Source::Node::Sequence))
+        body_seq = load_seq(section.as(Source::Node::Sequence), func_def)
       when Opcode::Code::STEP
         raise error("STEP already defined", section) if step_seq
-        step_seq = load_seq(section.as(Source::Node::Sequence))
+        step_seq = load_seq(section.as(Source::Node::Sequence), func_def)
       else
         raise error("unknown section #{section.code}", section)
       end
@@ -370,7 +338,7 @@ class Myc::Mod::Loader
     end
   end
 
-  private def load_switch(node) : Opcode::Switch
+  private def load_switch(node, func_def : FuncDef) : Opcode::Switch
     expect_zero_values(node)
 
     cases_seq = Array(Opcode::Seq).new
@@ -381,10 +349,10 @@ class Myc::Mod::Loader
       case section.code
       when Opcode::Code::CASE
         values << get_only_one_int_value(section)
-        cases_seq << load_seq(section.as(Source::Node::Sequence))
+        cases_seq << load_seq(section.as(Source::Node::Sequence), func_def)
       when Opcode::Code::ELSE
         raise error("ELSE already defined", section) if else_seq
-        else_seq = load_seq(section.as(Source::Node::Sequence))
+        else_seq = load_seq(section.as(Source::Node::Sequence), func_def)
       else
         raise error("unknown section #{section.code}", section)
       end
@@ -412,125 +380,20 @@ class Myc::Mod::Loader
     end
   end
 
-  private def extract_attributes_list(node : Source::Node::Sequence) : Array(String)
+  private def extract_attributes_list(node : Source::Node::Sequence) : Mod::FuncDef::Attr
+    attrs = Mod::FuncDef::Attr.new(0)
     node.list.map do |op|
       case op.code
       when Opcode::Code::ATTR
-        get_only_one_string_value(op)
+        val = get_only_one_string_value(op)
+        attr = Mod::FuncDef::Attr.parse?(val) || raise error("unknown attr `#{val}`", op)
+        attrs |= attr
       else
         raise error("expected type", op)
       end
     end
-  end
 
-  private def load_struct(type : Type::StructType, node : Source::Node::Sequence)
-    node.list.each do |opcode|
-      case opcode.code
-      when Opcode::Code::TYPE
-        type.data << find_type(get_only_one_string_value(opcode), opcode)
-      when Opcode::Code::ALIGN
-        raise error("ALIGN already defined", opcode) if type.explicit_alignment
-        type.explicit_alignment = get_only_one_int_value(opcode).to_u64
-      else
-        raise error("unexpected opcode #{opcode.code} in STRUCT", opcode)
-      end
-    end
-  end
-
-  private def load_flat(type : Type::FlatType, node : Source::Node::Sequence)
-    target_type = nil
-    count = nil
-
-    node.list.each do |opcode|
-      case opcode.code
-      when Opcode::Code::TYPE
-        if target_type
-          raise error("TYPE already defined", opcode)
-        else
-          target_type = find_type(get_only_one_string_value(opcode), opcode)
-        end
-      when Opcode::Code::COUNT
-        if count
-          raise error("COUNT already defined", opcode)
-        else
-          count = get_only_one_int_value(opcode)
-        end
-      when Opcode::Code::ALIGN
-        raise error("ALIGN already defined", opcode) if type.explicit_alignment
-        type.explicit_alignment = get_only_one_int_value(opcode).to_u64
-      else
-        raise error("unexpected opcode #{opcode.code} in FLAT", opcode)
-      end
-    end
-
-    raise error("missing TYPE", node) unless target_type
-    raise error("missing COUNT", node) unless count
-
-    type.target_type = target_type
-    type.elements_count = count.to_u64
-  end
-
-  private def load_enum(type : Type::EnumType, node : Source::Node::Container)
-    tag_type = nil
-    tag_skip = false
-
-    node.sections.each do |section|
-      case section.code
-      when Opcode::Code::ALIGN
-        raise error("ALIGN already defined", section) if type.explicit_alignment
-        type.explicit_alignment = get_only_one_int_value(section).to_u64
-      when Opcode::Code::TAG
-        section.as(Source::Node::Sequence).list.each do |op|
-          case op.code
-          when Opcode::Code::TYPE
-            raise error("TAG alread have TYPE", section) if tag_type
-            tag_type = find_type(get_only_one_string_value(op), op)
-          when Opcode::Code::SKIP
-            raise error("TAG alread skipped", section) if tag_skip
-            tag_skip = true
-          else
-            raise error("VARIANT should have only TYPE opcodes", section)
-          end
-        end
-      when Opcode::Code::VARIANT
-        variant_name = get_only_one_string_value(section)
-        eet = Type::EnumVariantType.new(type.id_name + "::" + variant_name, variant_name, type, type.data.size)
-        eet.hidden = true
-
-        section.as(Source::Node::Sequence).list.each do |op|
-          case op.code
-          when Opcode::Code::TYPE
-            t = find_type(get_only_one_string_value(op), op)
-            eet.value_types << t
-          else
-            raise error("VARIANT should have only TYPE opcodes", section)
-          end
-        end
-
-        raise error("VARIANT #{variant_name} alread defined", section) if type.data[eet.id_name]?
-        type.data[eet.id_name] = eet
-        mod.typer.types_cache[eet.id_name] = eet
-
-        ct = Type::StructType.new(eet.id_name + "::__value_type__")
-        ct.hidden = true
-        ct.data = eet.value_types
-        eet.composite_value_type = ct
-      else
-        raise error("unexpected section #{section.code} in ENUM", section)
-      end
-    end
-
-    if tag_type && tag_skip
-      raise error("conflict TAG TYPE and SKIP", node)
-    end
-
-    if !tag_type && !tag_skip
-      tag_type = @mod.typer.i32
-    end
-
-    type.index_type = tag_type
-
-    raise error("ENUM must have at least one VARIANT", node) if type.data.empty?
+    attrs
   end
 
   private def load_global(node : Source::Node::Sequence)
@@ -566,10 +429,14 @@ class Myc::Mod::Loader
     raise error("missing TYPE for GLOBALDEF #{global_name}", node) unless global_type
 
     init_values ||= Array(Source::Token::Value).new
-    @mod.global_defs[global_name] = Mod::GlobalDef.new(node, global_name, global_type, initial_keyword, init_values, constant_flag, global_private)
+    @mod.global_defs[global_name] = Mod::GlobalDef.new(@mod, node, global_name, global_type, initial_keyword, init_values, constant_flag, global_private)
   end
 
-  def find_type(name : String, node : Source::Node) : Type
+  private def find_type(name : String, node : Source::Node) : Type
     @mod.typer.find(name, Location.new(@mod.filename, node.offset))
+  end
+
+  private def loc(node : Source::Node) : Location
+    Location.new(@mod.filename, node.offset)
   end
 end

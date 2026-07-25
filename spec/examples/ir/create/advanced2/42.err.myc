@@ -2,3 +2,4 @@ FUNC :main
   BODY
     CREATE :NoSuchType
 ENDFUNC
+

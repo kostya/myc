@@ -1,0 +1,6 @@
+FUNC :main
+  BODY
+    GLOBAL :bla
+    INSPECT
+ENDFUNC
+

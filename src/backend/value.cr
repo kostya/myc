@@ -104,7 +104,7 @@ class Myc::Backend::Value
 
     case @mm
     in .ref?
-      ptr_type = visitor.mod.typer.to_ptr(@type, visitor.current_op.offset)
+      ptr_type = visitor.mod.typer.to_ptr(@type, visitor.loc)
       visitor.bb.addr(self, ptr_type)
     in .val?
       raise visitor.error("Cannot take address of val, store it to LOCAL before")

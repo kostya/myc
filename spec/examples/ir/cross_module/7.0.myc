@@ -1,0 +1,17 @@
+STRUCT :Bla
+  TYPE :i32
+ENDSTRUCT
+
+FUNC :external
+  ARGS
+    TYPE :i32
+  RETURN
+    TYPE :Bla
+  BODY
+    PARAM 0
+    PUSH 1
+    BINARY :add
+    CREATE :Bla
+    RET
+ENDFUNC
+

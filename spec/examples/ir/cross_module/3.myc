@@ -1,0 +1,10 @@
+FUNC :main
+  BODY
+    PUSH 44
+    LOCAL :x :Bla
+    FIELD 0
+    STORE
+    LOCAL :x
+    INSPECT
+ENDFUNC
+
