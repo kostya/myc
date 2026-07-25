@@ -438,10 +438,13 @@ abstract class Myc::Backend::AbstractBackend
       end
 
       header.func_defs.each do |name, func_def|
-        if func_def.body && !func_def.inline_stats.can_inline
-          decl = func_def.dup
-          decl.body = nil
-          header.func_defs[name] = decl
+        if func_def.body
+          if func_def.inline_stats.can_inline && !func_def.inline_stats.private_dependency
+          else
+            decl = func_def.dup
+            decl.body = nil
+            header.func_defs[name] = decl
+          end
         end
       end
 

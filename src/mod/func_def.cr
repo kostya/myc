@@ -27,4 +27,8 @@ class Myc::Mod::FuncDef
   def deep_walk(&block : Opcode ->)
     body.try &.deep_walk(&block)
   end
+
+  def private?
+    @attrs.includes?(Attr::Private)
+  end
 end

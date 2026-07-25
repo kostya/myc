@@ -1,0 +1,18 @@
+FUNC :bla
+  RETURN
+    TYPE :i32
+  BODY
+    PUSH 42
+    RET
+  ATTRIBUTES
+    ATTR :private
+ENDFUNC
+
+FUNC :jo
+  RETURN
+    TYPE :i32
+  BODY
+    CALL :bla
+    RET
+ENDFUNC
+

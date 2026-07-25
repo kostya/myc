@@ -52,6 +52,7 @@ class Myc::Mod::Inliner
 
   class Stats
     getter can_inline : Bool
+    getter private_dependency : Bool
     property calls = Hash(String, Int32).new(0)
     getter name : String
 
@@ -65,7 +66,7 @@ class Myc::Mod::Inliner
       @goto_count = 0
       @ret_count = 0
       @ret_last = false
-      @private_calls = false
+      @private_dependency = false
       @can_inline = false
     end
 
@@ -73,7 +74,6 @@ class Myc::Mod::Inliner
       return false if @call_itself
       return false if @loop_count > 0
       return false if @switch_count > 0
-      return false if @private_calls
 
       return false if @inst_count > 50
       return false if @inst_count == 0
@@ -105,34 +105,19 @@ class Myc::Mod::Inliner
           @call_itself = true
         end
         @calls[op.name] += 1
-        if f = mod.func_defs[op.name]?
-          if f.attrs.includes?(Mod::FuncDef::Attr::Private)
-            @private_calls = true
-          end
-        end
+        @private_dependency = true if (f = mod.func_defs[op.name]?) && f.private?
       when Opcode::Addr
-        if (func_name = op.func_name) && (f = mod.func_defs[func_name]?)
-          if f.attrs.includes?(Mod::FuncDef::Attr::Private)
-            @private_calls = true
-          end
-        end
+        @private_dependency = true if (func_name = op.func_name) && (f = mod.func_defs[func_name]?) && f.private?
       when Opcode::Ret
         @ret_count += 1
       when Opcode::Global
-        if g = mod.global_defs[op.name]?
-          if g.private_flag
-            @private_calls = true
-          end
-        end
+        @private_dependency = true if (g = mod.global_defs[op.name]?) && g.private_flag
       when Opcode::Stack, Opcode::Label, Opcode::Param, Opcode::Slot
         @inst_count -= 1
       end
     end
 
     def finish(func_def : FuncDef)
-      if func_def.attrs.includes?(Mod::FuncDef::Attr::Private)
-        @private_calls = true
-      end
       if func_def.type_fn.vaarg || func_def.name == "main"
         @can_inline = false
         return
@@ -151,9 +136,11 @@ class Myc::Mod::Inliner
     getter func_def : FuncDef
     getter inline_func_def : FuncDef
     getter inline_id : UInt64
+    getter verbose : Bool
 
     def initialize(@mod, @func_def, @inline_func_def, @inline_id)
       @inline_internal_id = 0_u64
+      @verbose = ENV["MYC_INLINE_VERBOSE"]? == "1"
     end
 
     def replace!
@@ -172,9 +159,7 @@ class Myc::Mod::Inliner
         case op
         when Opcode::Call
           if op.name == inline_name
-            Myc.debug(:inliner) do
-              puts "INLINE --------------- #{inline_name} into #{func_def.name} -----------------"
-            end
+            puts "inline(#{inline_name} -> #{func_def.name})" if @verbose
 
             new_seq = get_dup_seq
             slots = [] of Opcode
