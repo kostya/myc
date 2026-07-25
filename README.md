@@ -447,7 +447,7 @@ Steps to reproduce (work on linux64, failed to link on macos arm64):
 git clone https://github.com/kostya/LangArena.git plugins/LangArena
 
 # need precompile dependencies for linking (yyjson.o, libbase64.o):
-cd plugins/LangArena/c; make prod; cd ../../../
+cd plugins/LangArena/c; git checkout myc; make prod; cd ../../../
 
 # ------ LLVM -------
 time MYC_LINKER_FLAGS='-lpcre2-8 plugins/LangArena/c/target/deps/prod/libbase64.o plugins/LangArena/c/target/deps/prod/yyjson.o' ./myc-llvm plugins/LangArena/myc/*.myc c bin_langarena_mycc_llvm
