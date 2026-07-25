@@ -1,5 +1,5 @@
 class Myc::Backend::QBE::Backend < Myc::Backend::AbstractBackend
-  QBE = ENV["QBE"]? || File.join(File.dirname(__FILE__), "..", "..", "..", "plugins", "qbe", "qbe")
+  QBE = ENV["QBE"]? || Process.find_executable("qbe") || File.join(File.dirname(__FILE__), "..", "..", "..", "plugins", "qbe", "qbe")
   AS  = ENV["AS"]? || "as"
 
   def name
