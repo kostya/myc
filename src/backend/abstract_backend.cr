@@ -172,14 +172,25 @@ abstract class Myc::Backend::AbstractBackend
       mod, header = load_single(input)
       run_dump(mod, header, output)
       puts File.read(output)
-    elsif data.values.size == 2
-      input = data.values[0]
-      output = data.values[1]
-      mod, header = load_single(input)
-      run_dump(mod, header, output)
-      puts "dump generated to #{output}"
+    elsif data.values.size > 1
+      mods, header = load_all(data.values)
+
+      puts "-" * 50 + " dump for auto-generated header.myc " + "-" * 50
+      output = new_tmp_path("myc", "dump")
+      run_dump(header, header, output)
+      puts File.read(output)
+      puts
+
+      mods.each_with_index do |mod, index|
+        output = new_tmp_path("myc", "dump")
+        run_dump(mod, header, output)
+        puts "-" * 50 + " dump for #{mod.filename} " + "-" * 50
+
+        puts File.read(output)
+        puts
+      end
     else
-      raise data.error("dump require 1 or 2 files input [and output]")
+      raise data.error("dump empty")
     end
   end
 
