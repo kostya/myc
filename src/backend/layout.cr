@@ -171,16 +171,14 @@ class Myc::Backend::Layout
   def int_format(type : Type::IntType) : String
     if type.signed
       case type.bytes_count
-      when 8
-        target.arch.arm64? ? "%lli" : "%li"
+      when 8 then "%lli"
       when 4 then "%d"
       when 2 then "%hi"
       else        "%hhi"
       end
     else
       case type.bytes_count
-      when 8
-        target.arch.arm64? ? "%llu" : "%lu"
+      when 8 then "%llu"
       when 4 then "%u"
       when 2 then "%hu"
       else        "%hhu"
@@ -190,8 +188,7 @@ class Myc::Backend::Layout
 
   def int_hex_format(type : Type::IntType) : String
     case type.bytes_count
-    when 8
-      target.arch.arm64? ? "0x%llx" : "0x%lx"
+    when 8 then "0x%llx"
     when 4 then "0x%x"
     when 2 then "0x%hx"
     else        "0x%hhx"
