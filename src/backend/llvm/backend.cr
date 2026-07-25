@@ -4,7 +4,7 @@ class Myc::Backend::Llvm::Backend < Myc::Backend::AbstractBackend
   end
 
   def self.version_string
-    "LLVM: #{LibLLVM::VERSION}"
+    "LLVM #{LibLLVM::VERSION}"
   end
 
   def new_builder : AbstractBuilder

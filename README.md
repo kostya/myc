@@ -10,7 +10,7 @@
 * Whole IR spec fits in 30 minutes of reading. 
 * Compiles to native code via LLVM, QBE, or C. 
 * Fast compilation, "zero" overhead (I hope). 
-* ~7000 lines in Crystal.
+* ~7800 lines in Crystal.
 * Includes mycc as POC: a C subset compiler using myc as backend and libclang for parsing.
 
 ### Why?
@@ -59,8 +59,7 @@ echo 'FUNC main BODY PUSH "Hello myc\n" PRINTF 0 ENDFUNC' | crystal src/cli/llvm
 ### Build
 
 ```sh
-git clone https://github.com/kostya/myc
-cd myc
+git clone https://github.com/kostya/myc && cd myc
 
 # compile Myc IR C backend
 crystal build src/cli/c.cr --release -o myc-c
@@ -328,7 +327,7 @@ OPTIONS:
 
 # mycc - an alternative C compiler, implemented as a POC for fun.
 
-As a proof of concept, over the course of 3 weeks and 2800 lines of code, I implemented mycc: a compiler for a subset of the C language (roughly close to the C99 standard) built on top of myc. Mycc already successfully compiles and runs [LangArena](https://github.com/kostya/LangArena) - a benchmark suite consisting of 50 tests and 9,000 lines of non-trivial C code (json, base64, multithreaded matmul, neural net, compression, maze A*, bf interpreter, and others) with heavy macros like uthash. For the parser, I used libclang - it's an overhead, but it's the simplest solution for a POC.
+As a proof of concept, over the course of 3 weeks and 2900 lines of code, I implemented mycc: a compiler for a subset of the C language (roughly close to the C99 standard) built on top of myc. Mycc already successfully compiles and runs [LangArena](https://github.com/kostya/LangArena) - a benchmark suite consisting of 50 tests and 9,000 lines of non-trivial C code (json, base64, multithreaded matmul, neural net, compression, maze A*, bf interpreter, and others) with heavy macros like uthash. For the parser, I used libclang - it's an overhead, but it's the simplest solution for a POC.
 
 ## How it works:
 
