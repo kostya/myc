@@ -108,10 +108,8 @@ class Myc::Cli
 
   private def option_require_argument?(arg : String)
     case arg
-    when "final", "annotate"
+    when "final"
       false
-    when "release"
-      raise Error::Cli.new("--release option was deleted, default build already performant")
     else
       true
     end
