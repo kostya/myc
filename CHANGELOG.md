@@ -1,8 +1,9 @@
 ## 0.9.0-dev
-* cross module load (not need to define methods, types, and globals in every file)
-* cross module inlining
-* CLI: rename beautify command to format
-* CLI: add merge command
+* cross-module loading: no need to declare types, functions, and globals in every file. Enabled when compiling multiple files: `myc-llvm dir/*.myc c`
+* cross-module inlining via WPA (Whole Program Analysis) for better runtime performance
+* CLI: renamed `beautify` to `fmt`: `myc-llvm fmt dir/`
+* CLI: added `merge` command: `myc-llvm dir/*.myc m > summary.myc`, useful for creating packages and reducing cross-module dependencies
+* QBE: compile QBE itself with -O2 by default (was disabled), improving compile time further
 
 ## 0.8.0 (18.07.2026)
 * added SLOT opcode
