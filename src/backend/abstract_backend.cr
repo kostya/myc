@@ -267,6 +267,12 @@ abstract class Myc::Backend::AbstractBackend
         builder.func_register(name, func_def)
       end
 
+      header_mod.func_defs.each do |name, func_def|
+        unless mod.func_defs.has_key?(name)
+          builder.func_register(name, func_def)
+        end
+      end
+
       mod.global_defs.each_value do |global|
         builder.global_register(mod, global)
       end
