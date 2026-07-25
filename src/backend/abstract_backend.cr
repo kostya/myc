@@ -297,7 +297,7 @@ abstract class Myc::Backend::AbstractBackend
     ensure_dir(output)
     Myc.measure("linker") do
       if link_flags = ENV["MYC_LINKER_FLAGS"]?
-        objs += link_flags.split(" ")
+        objs += link_flags.split(" ").reject(&.blank?)
       end
 
       run_cmd(CC, objs + ["-lm", "-o", output])
