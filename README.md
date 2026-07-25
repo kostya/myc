@@ -24,7 +24,7 @@
 
 ### Current status
 
-Alpha. But already powerful. All 3 backends work smoothly. 4100 tests pass. mycc can compile [LangArena](https://github.com/kostya/LangArena) benchmark (230kb non-trivial C code). I wasn't able to beat gcc and clang in both compile time and runtime speed at the same time. So instead, I'm focusing on two compromise modes: default(fast compilation with decent runtime performance (like golang)), and final(slow compilation with maximum performance, for when you need every last bit of speed (this mode adds ~5-15% performance)).
+Alpha. But already powerful. All 3 backends work smoothly. 4300 tests pass. mycc can compile [LangArena](https://github.com/kostya/LangArena) benchmark (230kb non-trivial C code). I wasn't able to beat gcc and clang in both compile time and runtime speed at the same time. So instead, I'm focusing on two compromise modes: default(fast compilation with decent runtime performance (like golang)), and final(slow compilation with maximum performance, for when you need every last bit of speed (this mode adds ~5-15% performance)).
 
 
 ## Benchmark: 
