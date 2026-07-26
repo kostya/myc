@@ -18,7 +18,13 @@ class Myc::Backend::C::BB < Myc::Backend::AbstractBB
   end
 
   def load_ref(value : Value) : Value
-    wrap_val(c_val(value), value.type, value.pp)
+    if value.type.is_a?(Type::FlatType)
+      wrap_val(c_val(value), value.type, value.pp)
+    else
+      temp = builder.new_temp
+      emit "#{c_type(value.type)} #{temp} = #{c_val(value)};"
+      wrap_val(temp, value.type, value.pp)
+    end
   end
 
   def jmp(other : AbstractBB)

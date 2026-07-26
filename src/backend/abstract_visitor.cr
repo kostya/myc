@@ -1012,7 +1012,7 @@ abstract class Myc::Backend::AbstractVisitor
 
     raise error("using slot #{op.name} out of it scope") if @all_slots.has_key?(op.name)
 
-    value = pop
+    value = pop_rhs
     @slots.last[op.name] = value
     @all_slots[op.name] = value
   end

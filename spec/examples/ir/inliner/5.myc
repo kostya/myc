@@ -1,0 +1,60 @@
+STRUCT :Node
+  TYPE :i32
+ENDSTRUCT
+
+GLOBAL :G
+  TYPE :Node
+  INITIAL 7
+ENDGLOBAL
+
+FUNC :value
+  ARGS
+    TYPE :ptr<Node>
+  RETURN
+    TYPE :i32
+  BODY
+    PARAM 0
+    DEREF
+    FIELD 0
+    RET
+ENDFUNC
+
+FUNC :wipe
+  ARGS
+    TYPE :ptr<Node>
+  BODY
+    PUSH 999
+    PARAM 0
+    DEREF
+    FIELD 0
+    STORE
+ENDFUNC
+
+FUNC :take
+  ARGS
+    TYPE :ptr<Node>
+  RETURN
+    TYPE :i32
+  BODY
+    PARAM 0
+    CALL :value
+    PARAM 0
+    CALL :wipe
+    RET
+ENDFUNC
+
+FUNC :main
+  RETURN
+    TYPE :i32
+  BODY
+    GLOBAL :G
+    ADDR
+    LOCAL :n :ptr<Node>
+    STORE
+    LOCAL :n
+    CALL :take
+    INSPECT
+    PUSH 0
+    RET
+ENDFUNC
+
