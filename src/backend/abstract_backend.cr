@@ -257,9 +257,8 @@ abstract class Myc::Backend::AbstractBackend
     data.values.last
   end
 
-  protected def build_mod(mod : Mod, header_mod : Mod) : AbstractBuilder
+  protected def build_mod(mod : Mod, header_mod : Mod, builder : AbstractBuilder) : AbstractBuilder
     Myc.measure("mod:build") do
-      builder = new_builder
       mod.finalize_enums(builder.layout)
       header_mod.finalize_enums(builder.layout) if header_mod != mod
 

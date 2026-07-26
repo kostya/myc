@@ -48,7 +48,7 @@ class Myc::Backend::C::Backend < Myc::Backend::AbstractBackend
   end
 
   def build(mod : Mod, header_mod : Mod, output : String) : Builder
-    build_mod(mod, header_mod).as(Builder).tap do |builder|
+    build_mod(mod, header_mod, new_builder).as(Builder).tap do |builder|
       builder.save(output)
     end
   end

@@ -37,7 +37,7 @@ class Myc::Backend::QBE::Backend < Myc::Backend::AbstractBackend
       puts "--final option for QBE is skipped".colorize(:yellow)
     end
 
-    build_mod(mod, header_mod).as(Builder).tap do |builder|
+    build_mod(mod, header_mod, new_builder).as(Builder).tap do |builder|
       builder.save(output)
     end
   end

@@ -29,7 +29,7 @@ class Myc::Backend::Llvm::Backend < Myc::Backend::AbstractBackend
   end
 
   def build(mod : Mod, header_mod : Mod) : Builder
-    build_mod(mod, header_mod).as(Builder).tap do |builder|
+    build_mod(mod, header_mod, new_builder).as(Builder).tap do |builder|
       builder.verify unless ENV["MYC_VERIFY"]? == "0"
 
       Myc.measure("backend:llvmopt") do

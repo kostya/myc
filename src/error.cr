@@ -123,13 +123,13 @@ class Myc::Error::ErrorVisitor < Myc::Error
 
   def print(io : IO)
     linter = Backend::Linter::Backend.new(visitor.builder.backend.data)
+    linter.typer = visitor.builder.backend.typer
     linter_builder = linter.new_builder
-    f = linter_builder.new_func(visitor.func_def, visitor.header_mod)
-    v = Myc::Backend::Linter::Visitor.new(linter_builder, f,
-      f.body_bb, visitor.func_def, visitor.mod, visitor.header_mod, visitor.params)
     begin
-      v.visit
-    rescue
+      linter.build_mod(visitor.mod, visitor.header_mod, linter_builder)
+    rescue ex : ErrorVisitor
+    rescue ex
+      puts "Warning linter crash with `#{ex.message}`".colorize(:red)
     end
     saver = ErrorSaver.new(visitor.mod, linter_builder.notes)
     saver.finish_opcode = visitor.current_op
