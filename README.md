@@ -313,6 +313,9 @@ Commands:
   merge|m    ; merge multiple .myc files into one, output to stdout
              ;   ./myc-llvm m dir/*.myc > summary.myc
 
+  explain|e  ; show stack debug and inline results for multiple *.myc files
+             ;   ./myc-llvm e file.myc
+
   version|v  ; display version information
              ;   ./myc-llvm version
 
