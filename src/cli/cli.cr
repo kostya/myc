@@ -11,6 +11,7 @@ class Myc::Cli
       Dump
       Format
       Merge
+      Explain
     end
 
     property mode = Mode::Undefined
@@ -37,7 +38,7 @@ class Myc::Cli
 
   getter data = Data.new
 
-  private def set_mod(new_mode : Data::Mode)
+  private def set_mode(new_mode : Data::Mode)
     if @data.mode.undefined?
       @data.mode = new_mode
     else
@@ -61,12 +62,13 @@ class Myc::Cli
 
     while true
       case arg = argv.shift?
-      when "compile", "c"                    then set_mod(:compile)
-      when "run", "r"                        then set_mod(:run)
-      when "obj", "o"                        then set_mod(:obj)
-      when "dump", "d"                       then set_mod(:dump)
-      when "format", "f", "fmt"              then set_mod(:format)
-      when "merge", "m"                      then set_mod(:merge)
+      when "compile", "c"                    then set_mode(:compile)
+      when "run", "r"                        then set_mode(:run)
+      when "obj", "o"                        then set_mode(:obj)
+      when "dump", "d"                       then set_mode(:dump)
+      when "format", "f", "fmt"              then set_mode(:format)
+      when "merge", "m"                      then set_mode(:merge)
+      when "explain", "e"                    then set_mode(:explain)
       when "--version", "-v", "version", "v" then show_version
       when "--help", "-h", "help", "h"       then show_usage
       when Nil                               then break
@@ -172,6 +174,9 @@ Commands:
 
   merge|m    ; merge multiple #{ext} files into one, output to stdout
              ;   ./#{cli_name} m dir/*#{ext} > summary.myc
+
+  explain|e  ; show stack debug and inline results for multiple *#{ext} files
+             ;   ./#{cli_name} e file#{ext}
 
   version|v  ; display version information
              ;   ./#{cli_name} version

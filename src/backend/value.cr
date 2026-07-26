@@ -22,6 +22,7 @@ class Myc::Backend::Value
       in PP::Local              then "Lo"
       in PP::CallResult         then "Ca"
       in PP::FnAddress          then "Fa"
+      in PP::Vla                then "Vl"
       in PP::Unknown, PP        then "??"
       end
     end

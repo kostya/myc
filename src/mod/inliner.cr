@@ -272,7 +272,7 @@ class Myc::Mod::Inliner
             _get_dup_seq(op.else_seq, local_map, slot_map),
           ).with_position(op)
         else
-          new_list << op
+          new_list << op.dup
         end
       end
       new_seq = Opcode::Seq.new

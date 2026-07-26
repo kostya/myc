@@ -28,6 +28,7 @@ abstract class Myc::Backend::AbstractVisitor
     @fake_bb = @bb.class.new("__myc_fake_bb__", @builder, @func, @func_def)
     @slots = Deque(Hash(String, Value)).new
     @all_slots = Hash(String, Value).new
+    @instruction_id = 0_u32
   end
 
   def visit
@@ -141,6 +142,7 @@ abstract class Myc::Backend::AbstractVisitor
 
   protected def visit_child(child : Opcode)
     Myc.debug(:visitor) { "visit #{child.inspect}" }
+    @instruction_id += 1
     @current_op = child
     visit(child)
   end
@@ -1023,6 +1025,9 @@ abstract class Myc::Backend::AbstractVisitor
 
   private def debug_stack : String
     String.build do |s|
+      s << '('
+      s << @instruction_id
+      s << ") ["
       index = 0
       @stack.reverse_each do |value|
         s << ", " if index != 0
@@ -1039,6 +1044,8 @@ abstract class Myc::Backend::AbstractVisitor
           break
         end
       end
+
+      s << ']'
     end
   end
 

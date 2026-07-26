@@ -240,7 +240,7 @@ class Myc::Mod::Saver
            end
 
     if note = @notes[op]?
-      node.comment = "; [#{note}]"
+      node.comment = "; #{note}"
     end
 
     node

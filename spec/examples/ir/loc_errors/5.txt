@@ -1,5 +1,4 @@
 FUNC :main
   BODY
-    PUSH 1          ; [val(i32:Co)]
-    IF              < IF expect bool value on stack, but got i32
-                    (at
+    PUSH 1                    ; (1) [val(i32:Co)]
+    IF                        < IF expect bool value on stack, but got i32

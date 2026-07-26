@@ -1,5 +1,5 @@
 class Myc::Source::Serialize
-  ANNOTATION_COLUMN = 20
+  ANNOTATION_COLUMN = 30
 
   getter root : Node
   getter io : IO

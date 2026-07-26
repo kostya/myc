@@ -4,6 +4,7 @@
 * CLI: renamed `beautify` to `fmt`: `myc-llvm fmt dir/`
 * CLI: added `merge` command: `myc-llvm dir/*.myc m > summary.myc`, useful for creating packages and reducing cross-module dependencies
 * QBE: compile QBE itself with -O2 by default (was disabled), improving compile time further
+* CLI: added `explain` command to debug stack state and inliner
 
 ## 0.8.1 (20.07.2026)
 * Fix inliner

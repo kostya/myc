@@ -31,6 +31,7 @@ abstract class Myc::Backend::AbstractBackend
     in .dump?      then _dump
     in .format?    then _format
     in .merge?     then _merge
+    in .explain?   then _explain
     in .undefined? then raise data.error("unknown mode #{data.mode}")
     end
   rescue ex : Error
@@ -228,6 +229,35 @@ abstract class Myc::Backend::AbstractBackend
     Myc.measure("merge:clean") { mod.clean_unused_types_and_globals }
     dom = Myc.measure("merge:save") { Mod::Saver.new(mod).save }
     Myc.measure("merge:serialize") { IO.copy(dom.serialize, STDOUT) }
+  end
+
+  protected def _explain
+    if data.values.size == 1
+      input = data.values.first
+      mod, header = load_single(input)
+      IO.copy(_lint(mod, header), STDOUT)
+    elsif data.values.size > 1
+      mods, header = load_all(data.values)
+
+      STDOUT.puts "-" * 50 + " explain for auto-generated header.myc " + "-" * 50
+      IO.copy(_lint(header, header), STDOUT)
+      STDOUT.puts
+
+      mods.each_with_index do |mod, index|
+        STDOUT.puts "-" * 50 + " explain for #{mod.filename} " + "-" * 50
+        IO.copy(_lint(mod, header), STDOUT)
+        STDOUT.puts
+      end
+    else
+      raise data.error("dump empty")
+    end
+  end
+
+  private def _lint(mod : Mod, header : Mod) : IO
+    linter = Linter::Backend.new(data)
+    linter.typer = typer
+    builder = linter.build_mod(mod, header, linter.new_builder).as(Linter::Builder)
+    Mod::Saver.new(mod, builder.notes).save.serialize
   end
 
   protected def run_obj(mod : Mod, header_mod : Mod, output : String)
