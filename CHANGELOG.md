@@ -1,4 +1,6 @@
-## 0.9.0-dev
+## 0.10.0-dev
+
+## 0.9.0 (26.07.2206)
 * cross-module loading: no need to declare types, functions, and globals in every file. Enabled when compiling multiple files: `myc-llvm dir/*.myc c`
 * cross-module inlining via WPA (Whole Program Analysis) for better runtime performance
 * CLI: renamed `beautify` to `fmt`: `myc-llvm fmt dir/`
