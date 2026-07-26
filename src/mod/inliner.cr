@@ -118,7 +118,7 @@ class Myc::Mod::Inliner
     end
 
     def finish(func_def : FuncDef)
-      if func_def.type_fn.vaarg || func_def.name == "main"
+      if func_def.type_fn.vaarg || func_def.noinline? || func_def.name == "main"
         @can_inline = false
         return
       end

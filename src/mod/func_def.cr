@@ -31,4 +31,8 @@ class Myc::Mod::FuncDef
   def private?
     @attrs.includes?(Attr::Private)
   end
+
+  def noinline?
+    @attrs.includes?(Attr::Noinline)
+  end
 end
