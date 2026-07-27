@@ -477,6 +477,8 @@ time MYC_LINKER_FLAGS='-lpcre2-8 plugins/LangArena/c/target/deps/prod/libbase64.
 
 ```
 
+## More benchmarks
+[Here](https://github.com/kostya/myc-benchmarks)
 
 ## License
 
