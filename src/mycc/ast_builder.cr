@@ -28,7 +28,7 @@ class Myc::Mycc::ASTBuilder
       if cursor.kind.struct_decl?
         name = cursor.spelling
         unless name.empty?
-          unless mod.type_defs[name]?
+          unless mod.type_defs[name]? || typer.map[name]?
             struct_type = Type::StructType.new(location(cursor), name)
             node = cursor_to_node(cursor)
             mod.type_defs[name] = Mod::TypeDef.new(@mod, node, struct_type)
@@ -38,7 +38,7 @@ class Myc::Mycc::ASTBuilder
       elsif cursor.kind.union_decl?
         name = cursor.spelling
         unless name.empty?
-          unless mod.type_defs[name]?
+          unless mod.type_defs[name]? || typer.map[name]?
             enum_type = Type::EnumType.new(location(cursor), name, nil)
             node = cursor_to_node(cursor)
             mod.type_defs[name] = Mod::TypeDef.new(@mod, node, enum_type)
@@ -189,7 +189,7 @@ class Myc::Mycc::ASTBuilder
     name ||= cursor.spelling
     return if name.empty? || name.includes?("unnamed")
 
-    struct_type = mod.type_defs[name]?.try(&.type)
+    struct_type = typer.map[name]? || mod.type_defs[name]?.try(&.type)
     unless struct_type.is_a?(Type::StructType)
       struct_type = Type::StructType.new(location(cursor), name)
       node = cursor_to_node(cursor)
@@ -222,7 +222,7 @@ class Myc::Mycc::ASTBuilder
     name ||= cursor.spelling
     return if name.empty? || name.includes?("unnamed")
 
-    enum_type = mod.type_defs[name]?.try(&.type)
+    enum_type = typer.map[name]? || mod.type_defs[name]?.try(&.type)
     unless enum_type.is_a?(Type::EnumType)
       enum_type = Type::EnumType.new(location(cursor), name, nil)
       node = cursor_to_node(cursor)
@@ -341,7 +341,7 @@ class Myc::Mycc::ASTBuilder
           elsif decl_child.kind.typedef_decl?
             type_name = decl_child.spelling
             underlying_type = get_type(decl_child, decl_child.typedef_decl_underlying_type)
-            unless mod.type_defs[type_name]?
+            unless mod.type_defs[type_name]? || typer.map[type_name]?
               mod.type_defs[type_name] = Mod::TypeDef.new(@mod, cursor_to_node(decl_child), underlying_type)
               typer.map[type_name] = underlying_type
             end
