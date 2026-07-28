@@ -110,7 +110,7 @@ class Myc::Cli
 
   private def option_require_argument?(arg : String)
     case arg
-    when "final"
+    when "final", "debug"
       false
     else
       true
@@ -183,6 +183,7 @@ Commands:
 
 OPTIONS:
   --final ; Slow compilation, for final build only.
+  --debug ; To disable inliner
   --target=TARGET   (TARGET: arm64, x86_64, x86, ...; default: native)
 USAGE
   end

@@ -1,5 +1,5 @@
 abstract class Myc::Backend::AbstractBackend
-  record CommonOptions, target : Target?, final : Bool
+  record CommonOptions, target : Target?, final : Bool, debug : Bool
 
   abstract def name
   abstract def dump(mod : Mod, header_mod : Mod, output : String)
@@ -115,7 +115,10 @@ abstract class Myc::Backend::AbstractBackend
       File.open(save_result, "w") { |f| IO.copy(Mod::Saver.new(header_mod).save.serialize, f) }
     end
 
-    inline_cross_module(mods, header_mod) unless ENV["MYC_DISABLE_INLINER"]? == "1"
+    if (ENV["MYC_DISABLE_INLINER"]? == "1") || (common_options.debug)
+    else
+      inline_cross_module(mods, header_mod)
+    end
     {mods, header_mod}
   end
 
@@ -397,7 +400,9 @@ abstract class Myc::Backend::AbstractBackend
              end
 
     final = !!data.options["final"]?
-    CommonOptions.new(target: target, final: final)
+    debug = !!data.options["debug"]?
+    debug = false if final
+    CommonOptions.new(target: target, final: final, debug: debug)
   end
 
   protected def detect_native_target : Target
