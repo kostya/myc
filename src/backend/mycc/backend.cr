@@ -78,7 +78,7 @@ class Myc::Backend::Mycc::Backend < Myc::Backend::AbstractBackend
       source.debug_ast(tu.cursor)
     end
 
-    builder = Myc.measure("mycc:new_astb") { ::Myc::Mycc::ASTBuilder.new(source, tu, typer) }
+    builder = Myc.measure("mycc:new_astb") { ::Myc::Mycc::ASTBuilder.new(source, tu, typer, shared_types) }
     ast = Myc.measure("mycc:astb_build") { builder.build }
 
     Myc.debug(:mycc) do
@@ -101,5 +101,11 @@ class Myc::Backend::Mycc::Backend < Myc::Backend::AbstractBackend
     end
 
     path
+  end
+
+  @shared_types : SharedTypes?
+
+  def shared_types
+    @shared_types ||= SharedTypes.new(typer)
   end
 end

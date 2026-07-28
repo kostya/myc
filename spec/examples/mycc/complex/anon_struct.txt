@@ -1,0 +1,9 @@
+=== Anon Struct/Union Tests ===
+  anon struct inside: before=10 x=20 y=30 after=40
+  anon struct inside1: before=10 x=20 y=30 after=40
+  anon struct inside2: before=10 x=20 y=30 after=40 31 32
+  anon in union: type=100 width=100 height=200
+  anon union inside: kind=i int_val=42
+  anon union inside: kind=f float_val=3.140000
+  deep nest: level=1 a=10 b=2621470 c=30 d=40 e=50 after=60
+=== DONE ===

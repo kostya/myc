@@ -3,10 +3,11 @@ class Myc::Mycc::ASTBuilder
   getter tu : Clang::TranslationUnit
   getter mod : Mod
   getter typer : Typer
+  getter shared_types : Backend::Mycc::SharedTypes
 
   @current_return_type : Type?
 
-  def initialize(@source, @tu, @typer)
+  def initialize(@source, @tu, @typer, @shared_types)
     @mod = Myc::Mod.new("main", source.filename, @typer)
     @structs = Hash(String, Array({String, Type})).new
     @unions = {} of String => Array({String, Type})
@@ -215,6 +216,10 @@ class Myc::Mycc::ASTBuilder
       end
     end
     @structs[name] = fields
+    if (f = @shared_types.struct_fields[name]?) && !f.empty?
+    else
+      @shared_types.struct_fields[name] = fields
+    end
     struct_type.data = fields.map { |_, t| t }
   end
 
@@ -1362,11 +1367,16 @@ class Myc::Mycc::ASTBuilder
 
     if struct_type.is_a?(Type::StructType)
       struct_name = struct_type.id_name
-      if fields = @structs[struct_name]?
+
+      if fields = @shared_types.struct_fields[struct_name]?
         if idx = fields.index { |name, _| name == field_name }
           field_index = idx
           field_type = struct_type.data[idx]
+        else
+          raise error("field not found `#{field_name}` for `#{struct_type.id_name}` #{fields.size}", cursor)
         end
+      else
+        raise error("field not found `#{field_name}` for `#{struct_type.id_name}`", cursor)
       end
     end
 
@@ -1610,14 +1620,14 @@ class Myc::Mycc::ASTBuilder
           return cached
         end
         @unnamed_counter += 1
-        unique_name = "__inline_type_#{@unnamed_counter}"
+        unique_name = "__inline_type_#{source.name}_#{@unnamed_counter}"
 
         result_type = if type_cursor.kind.union_decl?
                         build_union(type_cursor, unique_name)
-                        mod.type_defs[unique_name]?.try(&.type) || raise error("unknown type #{name}", cursor)
+                        typer.map[unique_name]? || mod.type_defs[unique_name]?.try(&.type) || raise error("unknown type #{name}", cursor)
                       elsif type_cursor.kind.struct_decl?
                         build_struct_decl(type_cursor, unique_name)
-                        mod.type_defs[unique_name]?.try(&.type) || raise error("unknown type #{name}", cursor)
+                        typer.map[unique_name]? || mod.type_defs[unique_name]?.try(&.type) || raise error("unknown type #{name}", cursor)
                       else
                         raise error("unknown type #{name}", cursor)
                       end
