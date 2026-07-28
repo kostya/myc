@@ -30,7 +30,7 @@ abstract class Myc::Backend::AbstractBackend
     in .obj?       then _obj
     in .dump?      then _dump
     in .format?    then _format
-    in .merge?     then _merge
+    in .merge?     then _merge(STDOUT)
     in .explain?   then _explain
     in .undefined? then raise data.error("unknown mode #{data.mode}")
     end
@@ -220,7 +220,7 @@ abstract class Myc::Backend::AbstractBackend
     end
   end
 
-  protected def _merge
+  def _merge(io : IO)
     files = data.values.select { |f| filename_source?(f) }
     raise data.error("nothing to merge") if files.empty?
     mods, _ = load_all(files)
@@ -228,7 +228,7 @@ abstract class Myc::Backend::AbstractBackend
     Myc.measure("merge:collect") { mods.each { |m| mod.merge!(m, false) } }
     Myc.measure("merge:clean") { mod.clean_unused_types_and_globals }
     dom = Myc.measure("merge:save") { Mod::Saver.new(mod).save }
-    Myc.measure("merge:serialize") { IO.copy(dom.serialize, STDOUT) }
+    Myc.measure("merge:serialize") { IO.copy(dom.serialize, io) }
   end
 
   protected def _explain

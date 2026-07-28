@@ -284,3 +284,25 @@ require "../src/backend/llvm/all"
 require "../src/backend/c/all"
 require "../src/backend/qbe/all"
 require "../src/backend/mycc/all"
+
+def merge(src1, src2)
+  data = Myc::Cli::Data.new
+  data.mode = :merge
+  runner = Myc::Backend::Llvm::Backend.new(data)
+
+  path1 = runner.new_tmp_path("merge", "myc")
+  File.open(path1, "w") { |f| f.puts(src1) }
+  data.values << path1
+
+  path2 = runner.new_tmp_path("merge", "myc")
+  File.open(path2, "w") { |f| f.puts(src2) }
+  data.values << path2
+
+  io = IO::Memory.new
+  runner._merge(io)
+  io.rewind
+  res = io.to_s
+  res.strip
+ensure
+  data.try &.clean_temp_files
+end
