@@ -35,6 +35,8 @@ class Myc::Backend::Llvm::Backend < Myc::Backend::AbstractBackend
       Myc.measure("backend:llvmopt") do
         mode = if common_options.final
                  "default<O3>"
+               elsif common_options.debug
+                 "default<O0>"
                else
                  "mem2reg,sccp,dce,simplifycfg"
                end

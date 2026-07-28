@@ -29,6 +29,8 @@ class Myc::Backend::C::Backend < Myc::Backend::AbstractBackend
 
     if common_options.final
       args << "-O3"
+    elsif common_options.debug
+      args << "-O0"
     else
       args << "-O1"
       args << "-fno-inline"

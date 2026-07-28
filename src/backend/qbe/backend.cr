@@ -34,7 +34,7 @@ class Myc::Backend::QBE::Backend < Myc::Backend::AbstractBackend
 
   def build(mod : Mod, header_mod : Mod, output : String) : Builder
     if common_options.final && ENV["MYC_SPEC"]? != "1"
-      puts "--final option for QBE is skipped".colorize(:yellow)
+      puts "Warning: --final option for QBE is skipped".colorize(:yellow)
     end
 
     build_mod(mod, header_mod, new_builder).as(Builder).tap do |builder|
