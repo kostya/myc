@@ -10,7 +10,7 @@
 * Whole IR spec fits in 30 minutes of reading. 
 * Compiles to native code via LLVM, QBE, or C. 
 * Fast compilation, "zero" overhead (I hope). 
-* ~7800 lines in Crystal.
+* ~8000 lines in Crystal.
 * Includes mycc as POC: a C subset compiler using myc as backend and libclang for parsing.
 
 ### Why?
@@ -24,7 +24,7 @@
 
 ### Current status
 
-Alpha. But already powerful. All 3 backends work smoothly. 4300 tests pass. mycc can compile [LangArena](https://github.com/kostya/LangArena) benchmark (230kb non-trivial C code). I wasn't able to beat gcc and clang in both compile time and runtime speed at the same time. So instead, I'm focusing on two compromise modes: default(fast compilation with decent runtime performance (like golang)), and final(slow compilation with maximum performance, for when you need every last bit of speed (this mode adds ~5-15% performance)).
+Alpha. But already powerful. All 3 backends work smoothly. 4400 tests pass. mycc can compile [LangArena](https://github.com/kostya/LangArena) benchmark (230kb non-trivial C code). I wasn't able to beat gcc and clang in both compile time and runtime speed at the same time. So instead, I'm focusing on two compromise modes: default(fast compilation with decent runtime performance (like golang)), and final(slow compilation with maximum performance, for when you need every last bit of speed (this mode adds ~5-15% performance)).
 
 
 ## Benchmark: 
