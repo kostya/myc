@@ -125,21 +125,35 @@ class Myc::Source::Tokenizer
     when ':'
       Token::StringValue.new consume_string_until_separator
     when .ascii_number?
-      value = extract_int_or_float
+      value = extract_int_or_float(false)
       unless separator?(current_char)
         raise error("expected separator after number")
       end
-      value.is_a?(Int64) ? Token::IntValue.new(value.as(Int64)) : Token::FloatValue.new(value.as(Float64))
+      case value
+      when Int64, UInt64
+        Token::IntValue.new(value)
+      when Float64
+        Token::FloatValue.new(value)
+      else
+        raise "unreachable"
+      end
     when '-'
       move_next
       if current_char.ascii_number?
-        value = -extract_int_or_float
+        value = extract_int_or_float(true)
 
         unless separator?(current_char)
           raise error("expected separator after number")
         end
 
-        value.is_a?(Int64) ? Token::IntValue.new(value.as(Int64)) : Token::FloatValue.new(value.as(Float64))
+        case value
+        when Int64, UInt64
+          Token::IntValue.new(value)
+        when Float64
+          Token::FloatValue.new(value)
+        else
+          raise "unreachable"
+        end
       else
         raise error("unexpected symbol '-'")
       end
@@ -236,20 +250,32 @@ class Myc::Source::Tokenizer
     end
   end
 
-  private def consume_number : Int64
+  private def consume_pos_number : UInt64
     if take?('0')
       if take?('x')
-        consume_hex_number
+        consume_pos_hex_number
+      else
+        0_u64
+      end
+    else
+      consume_pos_dec_number
+    end
+  end
+
+  private def consume_neg_number : Int64
+    if take?('0')
+      if take?('x')
+        consume_neg_hex_number
       else
         0_i64
       end
     else
-      consume_dec_number
+      consume_neg_dec_number
     end
   end
 
-  private def consume_hex_number : Int64
-    number = 0_i64
+  private def consume_pos_hex_number : UInt64
+    number = 0_u64
 
     consume_chars do |ch|
       case ch
@@ -270,14 +296,36 @@ class Myc::Source::Tokenizer
     raise error("hex number constant is too big")
   end
 
-  private def consume_dec_number : Int64
-    number = current_char.to_i64
+  private def consume_neg_hex_number : Int64
+    number = 0_i64
+
+    consume_chars do |ch|
+      case ch
+      when .ascii_number?
+        number = number * 16 - (ch.ord - '0'.ord)
+      when 'a'..'f'
+        number = number * 16 - (ch.ord - 'a'.ord + 10)
+      when 'A'..'F'
+        number = number * 16 - (ch.ord - 'A'.ord + 10)
+      when '_'
+      else
+        break
+      end
+    end
+
+    number
+  rescue OverflowError
+    raise error("hex number constant is too big")
+  end
+
+  private def consume_pos_dec_number : UInt64
+    number = current_char.to_u64
     move_next
 
     consume_chars do |ch|
       case ch
       when .ascii_number?
-        number = number * 10_i64 + ch.to_i64
+        number = number * 10_u64 + ch.to_u64
       when '_'
       else
         break
@@ -291,8 +339,29 @@ class Myc::Source::Tokenizer
     raise error("number constant is too big")
   end
 
-  private def extract_int_or_float : Int64 | Float64
-    number = consume_number
+  private def consume_neg_dec_number : Int64
+    number = -current_char.to_i64
+    move_next
+
+    consume_chars do |ch|
+      case ch
+      when .ascii_number?
+        number = number * 10_i64 - ch.to_i64
+      when '_'
+      else
+        break
+      end
+    end
+
+    number
+  rescue OverflowError
+    raise error("number constant is too big")
+  rescue ArgumentError
+    raise error("number constant is too big")
+  end
+
+  private def extract_int_or_float(minus : Bool) : Int64 | UInt64 | Float64
+    number = minus ? consume_neg_number : consume_pos_number
 
     if current_char == '.'
       move_next
@@ -303,7 +372,7 @@ class Myc::Source::Tokenizer
           move_next
           zeros += 1
         end
-        m = current_char.ascii_number? ? consume_number : 0_i64
+        m = current_char.ascii_number? ? consume_pos_number : 0_i64
         exp = if current_char == 'e' || current_char == 'E'
                 move_next
                 was_plus = take?('+')
@@ -311,9 +380,9 @@ class Myc::Source::Tokenizer
                   if was_plus
                     raise error("unexpected +-, what is it?")
                   end
-                  -consume_number
+                  consume_neg_number
                 else
-                  consume_number
+                  consume_pos_number
                 end
               else
                 0_i64
@@ -331,9 +400,9 @@ class Myc::Source::Tokenizer
               if was_plus
                 raise error("unexpected +- sequence")
               end
-              -consume_number
+              consume_neg_number
             else
-              consume_number
+              consume_pos_number
             end
       return "#{number}e#{exp}".to_f64
     end

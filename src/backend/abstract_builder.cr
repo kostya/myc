@@ -37,7 +37,7 @@ abstract class Myc::Backend::AbstractBuilder
   end
 
   abstract struct InitValue
-    record Intval < InitValue, type : Type, val : Int64
+    record Intval < InitValue, type : Type, val : Int64 | UInt64
     record Boolval < InitValue, type : Type, val : Bool
     record F32 < InitValue, type : Type, val : Float32
     record F64 < InitValue, type : Type, val : Float64

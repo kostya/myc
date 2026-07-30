@@ -49,7 +49,7 @@ class Myc::Mod::Loader
   private def get_int_value(node, value) : Int
     case v = value
     when Source::Token::IntValue
-      return v.val
+      return v.val.to_i64
     else
       raise error("#{node.code} expect Int value, not #{value.inspect}", node)
     end
@@ -60,7 +60,7 @@ class Myc::Mod::Loader
     raise error("#{node.code} expected only 1 value", node) if !values || values.size != 1
     case v = values.first
     when Source::Token::IntValue
-      return v.val
+      return v.val.to_i64
     else
       raise error("#{node.code} expect int value, not #{v.inspect}", node)
     end
