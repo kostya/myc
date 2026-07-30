@@ -36,6 +36,8 @@ abstract class Myc::Backend::AbstractBackend
     end
   rescue ex : Error
     show_error(ex)
+    data.clean_temp_files
+    Myc.print_timers
     exit(1)
   end
 
