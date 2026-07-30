@@ -1,0 +1,11 @@
+FUNC :main
+  BODY
+    PUSH 1.5
+    LOCAL :x :f64
+    STORE
+    LOCAL :x
+    ADDR
+    AS :ptr<i64>
+    DEREF
+    INSPECT
+ENDFUNC
