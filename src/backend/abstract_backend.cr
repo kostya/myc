@@ -113,7 +113,16 @@ abstract class Myc::Backend::AbstractBackend
     myc_files = resolve_inputs(files)
     parsed = parse_files(myc_files)
     mods = run_phases(parsed)
-    header_mod = build_header_module(mods)
+
+    header_mod = if header_path = data.options["header"]?
+                   myc_files1 = resolve_inputs([header_path])
+                   parsed1 = parse_files(myc_files1)
+                   mods1 = run_phases(parsed1)
+                   mods1[0]
+                 else
+                   build_header_module(mods)
+                 end
+
     if save_result = ENV["MYC_SAVE_HEADER_MOD"]?
       File.open(save_result, "w") { |f| IO.copy(Mod::Saver.new(header_mod).save.serialize, f) }
     end
@@ -168,9 +177,6 @@ abstract class Myc::Backend::AbstractBackend
                     end
 
     mod, header = load_single(input)
-    if header_path = data.options["header"]?
-      header, _ = load_single(header_path)
-    end
     run_obj(mod, header, output)
     puts "generated #{output}"
   end
@@ -180,17 +186,11 @@ abstract class Myc::Backend::AbstractBackend
       input = data.values.first
       output = new_tmp_path("myc", "dump")
       mod, header = load_single(input)
-      if header_path = data.options["header"]?
-        header, _ = load_single(header_path)
-      end
 
       run_dump(mod, header, output)
       puts File.read(output)
     elsif data.values.size > 1
       mods, header = load_all(data.values)
-      if header_path = data.options["header"]?
-        header, _ = load_single(header_path)
-      end
 
       puts "-" * 50 + " dump for auto-generated header.myc " + "-" * 50
       output = new_tmp_path("myc", "dump")
@@ -254,7 +254,6 @@ abstract class Myc::Backend::AbstractBackend
       IO.copy(_lint(mod, header), STDOUT)
     elsif data.values.size > 1
       mods, header = load_all(data.values)
-
       STDOUT.puts "-" * 50 + " explain for auto-generated header.myc " + "-" * 50
       IO.copy(_lint(header, header), STDOUT)
       STDOUT.puts

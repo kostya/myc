@@ -170,6 +170,7 @@ class Examples
     main_files = all_files.reject { |f| f =~ /\.\d+\.(err\.)?(myc|c)$/ }
 
     shared = [] of Example
+    headers = [] of Example
 
     main_files.each do |f|
       if keywords
@@ -212,6 +213,8 @@ class Examples
 
       if basename == "shared.myc"
         shared << ex
+      elsif basename == "header.myc"
+        headers << ex
       else
         examples << ex
       end
