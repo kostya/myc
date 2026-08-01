@@ -18,6 +18,7 @@ class Myc::Backend::Llvm::Func < Myc::Backend::AbstractFunc
     unless builder.backend.common_options.final
       @link.llvm_function.add_attribute LLVM::Attribute::NoInline
     end
+    @link.llvm_function.add_attribute LLVM::Attribute::NoUnwind
     super
   end
 

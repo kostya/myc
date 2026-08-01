@@ -11,10 +11,6 @@ class Myc::Mod
     @name = @name.gsub(/[^a-zA-Z0-9_]/, "_")
   end
 
-  def validate!
-    Validate.new(self).validate!
-  end
-
   def finalize_enums(layout : Backend::Layout)
     @type_defs.each do |_, type_def|
       case type = type_def.type

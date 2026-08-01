@@ -102,8 +102,8 @@ abstract class Myc::Backend::AbstractBackend
       end
     end
 
-    Myc.measure("load:validate") do
-      parsed.each { |mod, _| mod.validate! }
+    Myc.measure("load:check_type_recursion") do
+      parsed.each { |mod, _| mod.check_type_recursion! }
     end
 
     parsed.map(&.first)
@@ -122,6 +122,10 @@ abstract class Myc::Backend::AbstractBackend
                  else
                    build_header_module(mods)
                  end
+
+    Myc.measure("load:check_func_recursion") do
+      mods.each &.check_func_recursion!(header_mod)
+    end
 
     if save_result = ENV["MYC_SAVE_HEADER_MOD"]?
       File.open(save_result, "w") { |f| IO.copy(Mod::Saver.new(header_mod).save.serialize, f) }

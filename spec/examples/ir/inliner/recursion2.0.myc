@@ -1,0 +1,11 @@
+FUNC :indirect
+  ARGS
+    TYPE :i32
+  RETURN
+    TYPE :i32
+  BODY
+    PARAM 0
+    CALL :factorial
+    RET
+ENDFUNC
+

@@ -44,7 +44,7 @@ def validate(src)
   loader = Myc::Mod::Loader.new(dom, "/tmp/1", typer, mod)
   loader.load
 
-  mod.validate!
+  mod.check_type_recursion!
 
   s = Myc::Mod::Saver.new(mod)
   dom2 = s.save

@@ -74,17 +74,9 @@ class Myc::Mod::Inliner
       return false if @call_itself
       return false if @loop_count > 0
       return false if @switch_count > 0
-
-      return false if @inst_count > 50
-      return false if @inst_count == 0
-
-      return false if @ret_count > 5 || @goto_count > 3 || @if_count > 0
-      return true if @inst_count <= 10 && @if_count == 0
-      return true if @inst_count <= 15 && @if_count <= 1 && @goto_count == 0
-      return true if @inst_count <= 20 && @if_count == 0 && @call_count <= 1
-      return true if @inst_count <= 45 && @if_count <= 1 && @call_count == 0 && @goto_count == 0
-
-      false
+      return false if @inst_count > 40
+      return false if @ret_count > 5 || @goto_count > 3 || @if_count > 1
+      true
     end
 
     def update(op : Opcode, mod : Mod)
@@ -115,6 +107,11 @@ class Myc::Mod::Inliner
       when Opcode::Stack, Opcode::Label, Opcode::Param, Opcode::Slot
         @inst_count -= 1
       end
+    end
+
+    def recursive!
+      @call_itself = true
+      @can_inline = false
     end
 
     def finish(func_def : FuncDef)
@@ -188,6 +185,7 @@ class Myc::Mod::Inliner
 
             new_list += list[pos..-1]
             seq.list = new_list
+            list = new_list
             pos += new_seq.list.size + slots.size
             inline_stats.calls[inline_name] -= 1
             @inline_internal_id += 1
@@ -253,6 +251,9 @@ class Myc::Mod::Inliner
           end
         when Opcode::Param
           new_list << Opcode::Slot.new("#{inline_prefix}_#{op.index}").with_position(op)
+        when Opcode::Call
+          @func_def.inline_stats.calls[op.name] += 1
+          new_list << op.dup
         when Opcode::If
           new_list << Opcode::If.new(
             _get_dup_seq(op.then_seq, local_map, slot_map),
