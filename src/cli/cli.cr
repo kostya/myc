@@ -12,6 +12,7 @@ class Myc::Cli
       Format
       Merge
       Explain
+      Header
     end
 
     property mode = Mode::Undefined
@@ -69,8 +70,9 @@ class Myc::Cli
       when "format", "f", "fmt"              then set_mode(:format)
       when "merge", "m"                      then set_mode(:merge)
       when "explain", "e"                    then set_mode(:explain)
+      when "header", "h"                     then set_mode(:header)
       when "--version", "-v", "version", "v" then show_version
-      when "--help", "-h", "help", "h"       then show_usage
+      when "--help", "-h", "help"            then show_usage
       when Nil                               then break
       when "--"
         data.unparsed_argv = argv
@@ -164,6 +166,7 @@ Commands:
   obj|o      ; compile one #{ext} file into object file (.o) for linking
              ;   ./#{cli_name} o file#{ext} file.o
              ;   cat file#{ext} | ./#{cli_name} o file.o
+             ;   ./#{cli_name} o file#{ext} file.o --header header.myc
 
   dump|d     ; output backend IR to console (for debugging and optimization analysis)
              ;   ./#{cli_name} d file#{ext}
@@ -174,6 +177,9 @@ Commands:
 
   merge|m    ; merge multiple #{ext} files into one, output to stdout
              ;   ./#{cli_name} m dir/*#{ext} > summary.myc
+
+  header|h   ; create header #{ext} file for multiple #{ext}, output to stdout
+             ;   ./#{cli_name} h dir/*#{ext} > header.myc
 
   explain|e  ; show stack debug and inline results for multiple *#{ext} files
              ;   ./#{cli_name} e file#{ext}

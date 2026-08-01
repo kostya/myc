@@ -32,6 +32,7 @@ abstract class Myc::Backend::AbstractBackend
     in .format?    then _format
     in .merge?     then _merge(STDOUT)
     in .explain?   then _explain
+    in .header?    then _header
     in .undefined? then raise data.error("unknown mode #{data.mode}")
     end
   rescue ex : Error
@@ -165,6 +166,9 @@ abstract class Myc::Backend::AbstractBackend
                     end
 
     mod, header = load_single(input)
+    if header_path = data.options["header"]?
+      header, _ = load_single(header_path)
+    end
     run_obj(mod, header, output)
     puts "generated #{output}"
   end
@@ -174,10 +178,17 @@ abstract class Myc::Backend::AbstractBackend
       input = data.values.first
       output = new_tmp_path("myc", "dump")
       mod, header = load_single(input)
+      if header_path = data.options["header"]?
+        header, _ = load_single(header_path)
+      end
+
       run_dump(mod, header, output)
       puts File.read(output)
     elsif data.values.size > 1
       mods, header = load_all(data.values)
+      if header_path = data.options["header"]?
+        header, _ = load_single(header_path)
+      end
 
       puts "-" * 50 + " dump for auto-generated header.myc " + "-" * 50
       output = new_tmp_path("myc", "dump")
@@ -261,6 +272,11 @@ abstract class Myc::Backend::AbstractBackend
     linter.typer = typer
     builder = linter.build_mod(mod, header, linter.new_builder).as(Linter::Builder)
     Mod::Saver.new(mod, builder.notes).save.serialize
+  end
+
+  protected def _header
+    _, header = load_all(data.values)
+    IO.copy(Mod::Saver.new(header).save.serialize, STDOUT)
   end
 
   protected def run_obj(mod : Mod, header_mod : Mod, output : String)
