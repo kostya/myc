@@ -148,7 +148,7 @@ class Myc::Mod::TypeFiller
     raise error("expected int", node) unless values && values.size == 1
     case v = values.first
     when Source::Token::IntValue
-      v.val
+      v.val.to_i64
     else
       raise error("expected int value", node)
     end

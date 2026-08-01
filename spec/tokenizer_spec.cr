@@ -231,4 +231,17 @@ context "Myc::Source::Tokenizer" do
       PUSH 1.0
     SRC
   end
+
+  it "parse edge number" do
+    tokenize(<<-SRC).inspect.should eq "[O:PUSH:2, V:-9223372036854775808:7, O:PUSH:30, V:9223372036854775807:35]"
+      PUSH -9223372036854775808
+      PUSH 9223372036854775807
+    SRC
+  end
+
+  it "parse edge u64" do
+    tokenize(<<-SRC).inspect.should eq "[O:PUSH:2, V:18446744073709551615:7]"
+      PUSH 18446744073709551615
+    SRC
+  end
 end

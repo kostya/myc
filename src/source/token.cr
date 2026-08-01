@@ -7,7 +7,7 @@ abstract struct Myc::Source::Token
   abstract struct Value < Token
   end
 
-  record IntValue < Value, val : Int64
+  record IntValue < Value, val : Int64 | UInt64
   record BoolValue < Value, val : Bool
   record StringValue < Value, val : String
   record FloatValue < Value, val : Float64

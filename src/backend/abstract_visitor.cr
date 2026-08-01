@@ -89,20 +89,27 @@ abstract class Myc::Backend::AbstractVisitor
     type = op.type
     value = op.value
 
+    type ||= case value
+             when Source::Token::IntValue
+               v = value.val
+               if Int32::MIN <= v && Int32::MAX >= v
+                 mod.typer.i32
+               elsif Int64::MAX <= v
+                 mod.typer.u64
+               else
+                 mod.typer.i64
+               end
+             when Source::Token::FloatValue
+               mod.typer.f64
+             when Source::Token::BoolValue
+               mod.typer.bool
+             when Source::Token::StringValue
+               mod.typer.u8p
+             else
+               raise error("unknown value #{value.inspect}")
+             end
+
     case value
-    when Source::Token::IntValue
-      v = value.val
-      if Int32::MIN <= v && Int32::MAX >= v
-        type ||= mod.typer.i32
-      elsif Int64::MAX <= v
-        type ||= mod.typer.u64
-      else
-        type ||= mod.typer.i64
-      end
-    when Source::Token::FloatValue
-      type ||= mod.typer.f64
-    when Source::Token::BoolValue
-      type ||= mod.typer.bool
     when Source::Token::StringValue
       if value.val.starts_with?('M')
         case value.val
@@ -112,10 +119,6 @@ abstract class Myc::Backend::AbstractVisitor
           value = Source::Token::StringValue.new(@builder.backend.debug_flags)
         end
       end
-
-      type ||= mod.typer.u8p
-    else
-      raise error("unknown value #{value.inspect}")
     end
 
     raise error("type for value #{op.value.inspect} not found") unless type

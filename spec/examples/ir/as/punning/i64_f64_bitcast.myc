@@ -1,0 +1,12 @@
+FUNC :main
+  BODY
+    PUSH 4609434218613702656
+    LOCAL :x :i64
+    STORE
+    LOCAL :x
+    ADDR
+    AS :ptr<f64>
+    DEREF
+    INSPECT
+ENDFUNC
+
