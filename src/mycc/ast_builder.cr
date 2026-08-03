@@ -23,7 +23,7 @@ class Myc::Mycc::ASTBuilder
   end
 
   def build : TypedAST::Program
-    functions = [] of TypedAST::Function
+    functions = Hash(String, TypedAST::Function).new
 
     tu.cursor.visit_children do |cursor|
       if cursor.kind.struct_decl?
@@ -69,7 +69,14 @@ class Myc::Mycc::ASTBuilder
     tu.cursor.visit_children do |cursor|
       if cursor.kind.function_decl?
         if source_kind(cursor).user_source?
-          functions << build_function(cursor)
+          func = build_function(cursor)
+          if func2 = functions[func.name]?
+            if func.body
+              functions[func.name] = func
+            end
+          else
+            functions[func.name] = func
+          end
         end
       end
       Clang::ChildVisitResult::Continue
@@ -79,13 +86,14 @@ class Myc::Mycc::ASTBuilder
 
     loop do
       break if called_functions_count == @called_functions.size
-      fn_add_list = Set(String).new(@called_functions - functions.map(&.name))
+      fn_add_list = Set(String).new(@called_functions - functions.keys)
       called_functions_count = @called_functions.size
 
       tu.cursor.visit_children do |cursor|
         if cursor.kind.function_decl?
           if fn_add_list.includes?(cursor.spelling)
-            functions << build_function(cursor)
+            func = build_function(cursor)
+            functions[func.name] = func
           end
         end
         Clang::ChildVisitResult::Continue

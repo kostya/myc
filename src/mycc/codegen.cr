@@ -93,7 +93,7 @@ class Myc::Mycc::CodeGenerator
       @globals[var.original_name] = var
     end
 
-    program.functions.each do |f|
+    program.functions.each do |_, f|
       generate_function(f)
     end
     io.rewind

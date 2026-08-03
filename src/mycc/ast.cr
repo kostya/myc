@@ -503,7 +503,7 @@ module Myc::Mycc::TypedAST
   end
 
   class Program
-    getter functions : Array(Function)
+    getter functions : Hash(String, Function)
     getter structs : Hash(String, Array({String, Type}))
     getter unions : Hash(String, Array({String, Type}))
     getter globals : Array(VarDecl)
@@ -523,7 +523,7 @@ module Myc::Mycc::TypedAST
         var.inspect(io)
         io << "\n"
       end
-      functions.each do |func|
+      functions.each do |_, func|
         io << "  "
         func.inspect(io)
         io << "\n"
