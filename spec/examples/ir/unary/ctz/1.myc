@@ -1,0 +1,7 @@
+FUNC :main
+  BODY
+    PUSH 8
+    UNARY :ctz
+    INSPECT
+ENDFUNC
+

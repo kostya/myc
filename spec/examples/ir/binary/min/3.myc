@@ -1,0 +1,8 @@
+FUNC :main
+  BODY
+    PUSH 19 :f32
+    PUSH 7 :f32
+    BINARY :min
+    INSPECT
+ENDFUNC
+

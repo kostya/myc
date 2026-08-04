@@ -242,6 +242,98 @@ class Myc::Backend::QBE::BB < Myc::Backend::AbstractBB
         emit "#{t} =w cge#{qbe_type} #{l}, #{r}"
       end
       return wrap_res(t, typer.bool, lhs.pp)
+    when .min?
+      case ltype
+      when Type::IntType, Type::FloatType
+        pred = case ltype
+               when Type::IntType
+                 ltype.signed ? "cslt" : "cult"
+               else
+                 "clt"
+               end
+        cmp = new_temp
+        emit "#{cmp} =w #{pred}#{qbe_type} #{l}, #{r}"
+        emit "#{t} =#{qbe_type} copy #{r}"
+        label_true = builder.new_label("min_true")
+        label_end = builder.new_label("min_end")
+        emit "jnz #{cmp}, @#{label_true}, @#{label_end}"
+        emit_label(label_true)
+        emit "#{t} =#{qbe_type} copy #{l}"
+        emit_label(label_end)
+      end
+      return wrap_res(t, ltype, lhs.pp)
+    when .max?
+      case ltype
+      when Type::IntType, Type::FloatType
+        pred = case ltype
+               when Type::IntType
+                 ltype.signed ? "csgt" : "cugt"
+               else
+                 "cgt"
+               end
+        cmp = new_temp
+        emit "#{cmp} =w #{pred}#{qbe_type} #{l}, #{r}"
+        emit "#{t} =#{qbe_type} copy #{r}"
+        label_true = builder.new_label("max_true")
+        label_end = builder.new_label("max_end")
+        emit "jnz #{cmp}, @#{label_true}, @#{label_end}"
+        emit_label(label_true)
+        emit "#{t} =#{qbe_type} copy #{l}"
+        emit_label(label_end)
+      end
+      return wrap_res(t, ltype, lhs.pp)
+    when .copysign?
+      case ltype
+      when Type::FloatType
+        abs_temp = new_temp
+        sign_temp = new_temp
+        int_result = new_temp
+        if ltype.bytes_count == 8
+          emit "#{abs_temp} =l and #{l}, 9223372036854775807"
+          emit "#{sign_temp} =l and #{r}, -9223372036854775808"
+          emit "#{int_result} =l or #{abs_temp}, #{sign_temp}"
+
+          tmp_ptr = new_temp
+          emit "#{tmp_ptr} =l alloc8 8"
+          emit "storel #{int_result}, #{tmp_ptr}"
+          emit "#{t} =d loadd #{tmp_ptr}"
+        else
+          emit "#{abs_temp} =w and #{l}, 2147483647"
+          emit "#{sign_temp} =w and #{r}, -2147483648"
+          emit "#{int_result} =w or #{abs_temp}, #{sign_temp}"
+          tmp_ptr = new_temp
+          emit "#{tmp_ptr} =l alloc8 4"
+          emit "storew #{int_result}, #{tmp_ptr}"
+          emit "#{t} =s loads #{tmp_ptr}"
+        end
+      end
+      return wrap_res(t, ltype, lhs.pp)
+    when .rotl?
+      case ltype
+      when Type::IntType
+        width = ltype.bytes_count * 8
+        shl_temp = new_temp
+        shr_temp = new_temp
+        sub_temp = new_temp
+        emit "#{sub_temp} =#{qbe_type} sub #{width}, #{r}"
+        emit "#{shl_temp} =#{qbe_type} shl #{l}, #{r}"
+        emit "#{shr_temp} =#{qbe_type} shr #{l}, #{sub_temp}"
+        emit "#{t} =#{qbe_type} or #{shl_temp}, #{shr_temp}"
+      end
+      return wrap_res(t, ltype, lhs.pp)
+    when .rotr?
+      case ltype
+      when Type::IntType
+        width = ltype.bytes_count * 8
+        shr_temp = new_temp
+        shl_temp = new_temp
+        sub_temp = new_temp
+        emit "#{sub_temp} =#{qbe_type} sub #{width}, #{r}"
+        emit "#{shr_temp} =#{qbe_type} shr #{l}, #{r}"
+        emit "#{shl_temp} =#{qbe_type} shl #{l}, #{sub_temp}"
+        emit "#{t} =#{qbe_type} or #{shl_temp}, #{shr_temp}"
+      end
+      return wrap_res(t, ltype, lhs.pp)
     else
       return nil
     end

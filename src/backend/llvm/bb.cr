@@ -200,6 +200,37 @@ class Myc::Backend::Llvm::BB < Myc::Backend::AbstractBB
       when Type::FloatType
         wrap_res(@llvm_builder.fcmp(LLVM::RealPredicate::OGE, l, r), typer.bool, lhs.pp)
       end
+    in .rotl?
+      case ltype
+      when Type::IntType
+        wrap_res(intrinsic_call("llvm.fshl", ltype, [l, l, r]), ltype, lhs.pp)
+      end
+    in .rotr?
+      case ltype
+      when Type::IntType
+        wrap_res(intrinsic_call("llvm.fshr", ltype, [l, l, r]), ltype, lhs.pp)
+      end
+    in .min?
+      case ltype
+      when Type::IntType
+        prefix = ltype.as(Type::IntType).signed ? "llvm.smin" : "llvm.umin"
+        wrap_res(intrinsic_call(prefix, ltype, [l, r]), ltype, lhs.pp)
+      when Type::FloatType
+        wrap_res(intrinsic_call("llvm.minnum", ltype, [l, r]), ltype, lhs.pp)
+      end
+    in .max?
+      case ltype
+      when Type::IntType
+        prefix = ltype.as(Type::IntType).signed ? "llvm.smax" : "llvm.umax"
+        wrap_res(intrinsic_call(prefix, ltype, [l, r]), ltype, lhs.pp)
+      when Type::FloatType
+        wrap_res(intrinsic_call("llvm.maxnum", ltype, [l, r]), ltype, lhs.pp)
+      end
+    in .copysign?
+      case ltype
+      when Type::FloatType
+        wrap_res(intrinsic_call("llvm.copysign", ltype, [l, r]), ltype, lhs.pp)
+      end
     end
   end
 
@@ -418,5 +449,25 @@ class Myc::Backend::Llvm::BB < Myc::Backend::AbstractBB
     arg_types = type_fn.args.map { |t| llvm_type(t) }
     ret_type = llvm_type(type_fn.ret)
     LLVM::Type.function(arg_types, ret_type, type_fn.vaarg)
+  end
+
+  private def intrinsic_link(name : String, type : Type, args_count : Int32) : FuncLink
+    fname = name
+    case type
+    when Type::IntType
+      fname += ".i#{type.bytes_count * 8}"
+    when Type::FloatType
+      fname += ".f#{type.bytes_count * 8}"
+    else
+      raise "unreachable"
+    end
+
+    type_fn = Type::Fn.new(Location.new("", 0), [type.as(Type)] * args_count, type)
+    builder.func_link(fname, type_fn)
+  end
+
+  private def intrinsic_call(name : String, type : Type, args : Array(LLVM::Value)) : LLVM::Value
+    link = intrinsic_link(name, type, args.size)
+    @llvm_builder.call(link.llvm_type, link.llvm_function, args)
   end
 end

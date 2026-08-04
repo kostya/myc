@@ -114,6 +114,35 @@ class Myc::Backend::C::BB < Myc::Backend::AbstractBB
     l = c_val(lhs)
     r = c_val(rhs)
 
+    case op
+    when .min?
+      temp = builder.new_temp
+      emit "#{c_type(lhs.type)} #{temp} = (#{l} < #{r}) ? #{l} : #{r};"
+      return wrap_res(temp, lhs.type, lhs.pp)
+    when .max?
+      temp = builder.new_temp
+      emit "#{c_type(lhs.type)} #{temp} = (#{l} > #{r}) ? #{l} : #{r};"
+      return wrap_res(temp, lhs.type, lhs.pp)
+    when .copysign?
+      temp = builder.new_temp
+      emit "#{c_type(lhs.type)} #{temp} = __builtin_copysign(#{l}, #{r});"
+      return wrap_res(temp, lhs.type, lhs.pp)
+    when .rotl?
+      case ltype = lhs.type
+      when Type::IntType
+        temp = builder.new_temp
+        emit "#{c_type(lhs.type)} #{temp} = __builtin_rotateleft#{ltype.bytes_count * 8}(#{l}, #{r});"
+        return wrap_res(temp, lhs.type, lhs.pp)
+      end
+    when .rotr?
+      case ltype = lhs.type
+      when Type::IntType
+        temp = builder.new_temp
+        emit "#{c_type(lhs.type)} #{temp} = __builtin_rotateright#{ltype.bytes_count * 8}(#{l}, #{r});"
+        return wrap_res(temp, lhs.type, lhs.pp)
+      end
+    end
+
     op_str = case op
              when .add?        then "+"
              when .sub?        then "-"

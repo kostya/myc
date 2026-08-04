@@ -1,0 +1,7 @@
+FUNC :main
+  BODY
+    PUSH 16.0
+    UNARY :sqrt
+    INSPECT
+ENDFUNC
+

@@ -1,0 +1,7 @@
+FUNC :main
+  BODY
+    PUSH -3.14
+    UNARY :abs
+    INSPECT
+ENDFUNC
+
