@@ -412,26 +412,28 @@ class Myc::Backend::QBE::BB < Myc::Backend::AbstractBB
       case type
       when Type::IntType
         width = type.bytes_count * 8
-        if width == 32
-          emit "#{t} =#{qbe_type} call $__clzsi2(#{qbe_type} #{val})"
-        elsif width < 32
-          emit "#{t} =#{qbe_type} call $__clzsi2(#{qbe_type} #{val})"
-          tmp2 = new_temp
-          emit "#{tmp2} =#{qbe_type} sub #{t}, #{32 - width}"
-          t = tmp2
-        else
-          emit "#{t} =#{qbe_type} call $__clzdi2(#{qbe_type} #{val})"
-        end
+        ext = type.signed ? "extsw" : "extuw"
+        ext_val = new_temp
+        emit "#{ext_val} =l #{ext} #{val}"
+        tmp = new_temp
+        emit "#{tmp} =l call $__clzdi2(l #{ext_val})"
+        emit "#{t} =l sub #{tmp}, #{64 - width}"
       end
     when .ctz?
       case type
       when Type::IntType
-        emit "#{t} =#{qbe_type} call $__ctzsi2(#{qbe_type} #{val})"
+        ext = type.signed ? "extsw" : "extuw"
+        ext_val = new_temp
+        emit "#{ext_val} =l #{ext} #{val}"
+        emit "#{t} =l call $__ctzdi2(l #{ext_val})"
       end
     when .popcnt?
       case type
       when Type::IntType
-        emit "#{t} =#{qbe_type} call $__popcountsi2(#{qbe_type} #{val})"
+        ext = type.signed ? "extsw" : "extuw"
+        ext_val = new_temp
+        emit "#{ext_val} =l #{ext} #{val}"
+        emit "#{t} =l call $__popcountdi2(l #{ext_val})"
       end
     else
       return nil
