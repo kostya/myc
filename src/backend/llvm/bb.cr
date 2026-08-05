@@ -200,6 +200,37 @@ class Myc::Backend::Llvm::BB < Myc::Backend::AbstractBB
       when Type::FloatType
         wrap_res(@llvm_builder.fcmp(LLVM::RealPredicate::OGE, l, r), typer.bool, lhs.pp)
       end
+    in .rotl?
+      case ltype
+      when Type::IntType
+        wrap_res(intrinsic_call("llvm.fshl", ltype, [lhs, lhs, rhs]), ltype, lhs.pp)
+      end
+    in .rotr?
+      case ltype
+      when Type::IntType
+        wrap_res(intrinsic_call("llvm.fshr", ltype, [lhs, lhs, rhs]), ltype, lhs.pp)
+      end
+    in .min?
+      case ltype
+      when Type::IntType
+        prefix = ltype.as(Type::IntType).signed ? "llvm.smin" : "llvm.umin"
+        wrap_res(intrinsic_call(prefix, ltype, [lhs, rhs]), ltype, lhs.pp)
+      when Type::FloatType
+        wrap_res(intrinsic_call("llvm.minnum", ltype, [lhs, rhs]), ltype, lhs.pp)
+      end
+    in .max?
+      case ltype
+      when Type::IntType
+        prefix = ltype.as(Type::IntType).signed ? "llvm.smax" : "llvm.umax"
+        wrap_res(intrinsic_call(prefix, ltype, [lhs, rhs]), ltype, lhs.pp)
+      when Type::FloatType
+        wrap_res(intrinsic_call("llvm.maxnum", ltype, [lhs, rhs]), ltype, lhs.pp)
+      end
+    in .copysign?
+      case ltype
+      when Type::FloatType
+        wrap_res(intrinsic_call("llvm.copysign", ltype, [lhs, rhs]), ltype, lhs.pp)
+      end
     end
   end
 
@@ -225,6 +256,53 @@ class Myc::Backend::Llvm::BB < Myc::Backend::AbstractBB
         wrap_res(@llvm_builder.neg(v), t, rhs.pp)
       when Type::FloatType
         wrap_res(@llvm_builder.fneg(v), t, rhs.pp)
+      end
+    in .abs?
+      case rhs.type
+      when Type::IntType
+        wrap_res(intrinsic_call("llvm.abs", t, [rhs, value_false]), t, rhs.pp)
+      when Type::FloatType
+        wrap_res(intrinsic_call("llvm.fabs", t, [rhs]), t, rhs.pp)
+      end
+    in .ceil?
+      case rhs.type
+      when Type::FloatType
+        wrap_res(intrinsic_call("llvm.ceil", t, [rhs]), t, rhs.pp)
+      end
+    in .floor?
+      case rhs.type
+      when Type::FloatType
+        wrap_res(intrinsic_call("llvm.floor", t, [rhs]), t, rhs.pp)
+      end
+    in .trunc?
+      case rhs.type
+      when Type::FloatType
+        wrap_res(intrinsic_call("llvm.trunc", t, [rhs]), t, rhs.pp)
+      end
+    in .nearest?
+      case rhs.type
+      when Type::FloatType
+        wrap_res(intrinsic_call("llvm.nearbyint", t, [rhs]), t, rhs.pp)
+      end
+    in .sqrt?
+      case rhs.type
+      when Type::FloatType
+        wrap_res(intrinsic_call("llvm.sqrt", t, [rhs]), t, rhs.pp)
+      end
+    in .clz?
+      case rhs.type
+      when Type::IntType
+        wrap_res(intrinsic_call("llvm.ctlz", t, [rhs, value_false]), t, rhs.pp)
+      end
+    in .ctz?
+      case rhs.type
+      when Type::IntType
+        wrap_res(intrinsic_call("llvm.cttz", t, [rhs, value_false]), t, rhs.pp)
+      end
+    in .popcnt?
+      case rhs.type
+      when Type::IntType
+        wrap_res(intrinsic_call("llvm.ctpop", t, [rhs]), t, rhs.pp)
       end
     end
   end
@@ -418,5 +496,30 @@ class Myc::Backend::Llvm::BB < Myc::Backend::AbstractBB
     arg_types = type_fn.args.map { |t| llvm_type(t) }
     ret_type = llvm_type(type_fn.ret)
     LLVM::Type.function(arg_types, ret_type, type_fn.vaarg)
+  end
+
+  private def intrinsic_link(name : String, ret_type : Type, arg_types : Array(Type)) : FuncLink
+    fname = name
+    case ret_type
+    when Type::IntType
+      fname += ".i#{ret_type.bytes_count * 8}"
+    when Type::FloatType
+      fname += ".f#{ret_type.bytes_count * 8}"
+    else
+      raise "unreachable"
+    end
+
+    type_fn = Type::Fn.new(Location.new("", 0), arg_types, ret_type)
+    builder.func_link(fname, type_fn)
+  end
+
+  private def intrinsic_call(name : String, ret_type : Type, args : Array(Value)) : LLVM::Value
+    arg_types = args.map { |a| a.type }
+    link = intrinsic_link(name, ret_type, arg_types)
+    @llvm_builder.call(link.llvm_type, link.llvm_function, args.map { |a| llvm_val(a) })
+  end
+
+  private def value_false : Value
+    Value.new(BBVal.new(llvm_type(typer.bool).const_int(0)), typer.bool, Value::MM::Val, Value::PP::Primitive.new)
   end
 end

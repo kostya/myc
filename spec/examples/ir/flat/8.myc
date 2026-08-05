@@ -1,0 +1,13 @@
+GLOBAL :data
+  TYPE "flat<u8, 13>"
+  INITIAL 72 101 108 108 111 32 87 111 114 108 100 33 10
+ENDGLOBAL
+
+FUNC :main
+  BODY
+    GLOBAL :data
+    ADDR
+    AS :ptr<u8>
+    PRINTF 0
+ENDFUNC
+

@@ -1,4 +1,4 @@
-# BINARY — Binary Operation
+# BINARY - Binary Operation
 #
 # Pops two values, performs the operation, pushes result.
 # First popped = left operand, second popped = right operand.
@@ -17,9 +17,10 @@
 #   INSPECT
 #
 # Operations:
-#   Arithmetic (Int/Float): add, sub, mul, div, rem
-#   Bitwise (Int/Bool):     and, or, xor, shl, shr, sar
-#   Comparison (-> Bool):    eq, not_eq, less, less_eq, more, more_eq
+#   Arithmetic (Int/Float): add, sub, mul, div, rem, min, max
+#   Bitwise (Int):          and, or, xor, shl, shr, sar, rotl, rotr
+#   Float:                  copysign
+#   Comparison (-> Bool):   eq, not_eq, less, less_eq, more, more_eq
 #
 # Pointer arithmetic:
 #   When left is ptr<T> and right is Int, :add and :sub perform pointer arithmetic.
@@ -42,6 +43,8 @@ class Myc::Opcode::Binary < Myc::Opcode
     Shl
     Shr
     Sar
+    Rotl
+    Rotr
 
     Eq
     NotEq
@@ -49,6 +52,10 @@ class Myc::Opcode::Binary < Myc::Opcode
     LessEq
     More
     MoreEq
+
+    Min
+    Max
+    Copysign
   end
 
   getter op : Op

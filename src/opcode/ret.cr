@@ -1,4 +1,4 @@
-# RET — Return from Function
+# RET - Return from Function
 #
 # Exits current function immediately.
 # For non-void functions: pops return value from stack.

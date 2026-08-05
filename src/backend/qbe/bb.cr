@@ -242,6 +242,98 @@ class Myc::Backend::QBE::BB < Myc::Backend::AbstractBB
         emit "#{t} =w cge#{qbe_type} #{l}, #{r}"
       end
       return wrap_res(t, typer.bool, lhs.pp)
+    when .min?
+      case ltype
+      when Type::IntType, Type::FloatType
+        pred = case ltype
+               when Type::IntType
+                 ltype.signed ? "cslt" : "cult"
+               else
+                 "clt"
+               end
+        cmp = new_temp
+        emit "#{cmp} =w #{pred}#{qbe_type} #{l}, #{r}"
+        emit "#{t} =#{qbe_type} copy #{r}"
+        label_true = builder.new_label("min_true")
+        label_end = builder.new_label("min_end")
+        emit "jnz #{cmp}, @#{label_true}, @#{label_end}"
+        emit_label(label_true)
+        emit "#{t} =#{qbe_type} copy #{l}"
+        emit_label(label_end)
+      end
+      return wrap_res(t, ltype, lhs.pp)
+    when .max?
+      case ltype
+      when Type::IntType, Type::FloatType
+        pred = case ltype
+               when Type::IntType
+                 ltype.signed ? "csgt" : "cugt"
+               else
+                 "cgt"
+               end
+        cmp = new_temp
+        emit "#{cmp} =w #{pred}#{qbe_type} #{l}, #{r}"
+        emit "#{t} =#{qbe_type} copy #{r}"
+        label_true = builder.new_label("max_true")
+        label_end = builder.new_label("max_end")
+        emit "jnz #{cmp}, @#{label_true}, @#{label_end}"
+        emit_label(label_true)
+        emit "#{t} =#{qbe_type} copy #{l}"
+        emit_label(label_end)
+      end
+      return wrap_res(t, ltype, lhs.pp)
+    when .copysign?
+      case ltype
+      when Type::FloatType
+        abs_temp = new_temp
+        sign_temp = new_temp
+        int_result = new_temp
+        if ltype.bytes_count == 8
+          emit "#{abs_temp} =l and #{l}, 9223372036854775807"
+          emit "#{sign_temp} =l and #{r}, -9223372036854775808"
+          emit "#{int_result} =l or #{abs_temp}, #{sign_temp}"
+
+          tmp_ptr = new_temp
+          emit "#{tmp_ptr} =l alloc8 8"
+          emit "storel #{int_result}, #{tmp_ptr}"
+          emit "#{t} =d loadd #{tmp_ptr}"
+        else
+          emit "#{abs_temp} =w and #{l}, 2147483647"
+          emit "#{sign_temp} =w and #{r}, -2147483648"
+          emit "#{int_result} =w or #{abs_temp}, #{sign_temp}"
+          tmp_ptr = new_temp
+          emit "#{tmp_ptr} =l alloc8 4"
+          emit "storew #{int_result}, #{tmp_ptr}"
+          emit "#{t} =s loads #{tmp_ptr}"
+        end
+      end
+      return wrap_res(t, ltype, lhs.pp)
+    when .rotl?
+      case ltype
+      when Type::IntType
+        width = ltype.bytes_count * 8
+        shl_temp = new_temp
+        shr_temp = new_temp
+        sub_temp = new_temp
+        emit "#{sub_temp} =#{qbe_type} sub #{width}, #{r}"
+        emit "#{shl_temp} =#{qbe_type} shl #{l}, #{r}"
+        emit "#{shr_temp} =#{qbe_type} shr #{l}, #{sub_temp}"
+        emit "#{t} =#{qbe_type} or #{shl_temp}, #{shr_temp}"
+      end
+      return wrap_res(t, ltype, lhs.pp)
+    when .rotr?
+      case ltype
+      when Type::IntType
+        width = ltype.bytes_count * 8
+        shr_temp = new_temp
+        shl_temp = new_temp
+        sub_temp = new_temp
+        emit "#{sub_temp} =#{qbe_type} sub #{width}, #{r}"
+        emit "#{shr_temp} =#{qbe_type} shr #{l}, #{r}"
+        emit "#{shl_temp} =#{qbe_type} shl #{l}, #{sub_temp}"
+        emit "#{t} =#{qbe_type} or #{shl_temp}, #{shr_temp}"
+      end
+      return wrap_res(t, ltype, lhs.pp)
     else
       return nil
     end
@@ -268,6 +360,81 @@ class Myc::Backend::QBE::BB < Myc::Backend::AbstractBB
       end
     when .neg?
       emit "#{t} =#{qbe_type} neg #{val}"
+    when .sqrt?
+      case type
+      when Type::FloatType
+        func_name = type.bytes_count == 8 ? "sqrt" : "sqrtf"
+        emit "#{t} =#{qbe_type} call $#{func_name}(#{qbe_type} #{val})"
+      end
+    when .ceil?
+      case type
+      when Type::FloatType
+        func_name = type.bytes_count == 8 ? "ceil" : "ceilf"
+        emit "#{t} =#{qbe_type} call $#{func_name}(#{qbe_type} #{val})"
+      end
+    when .floor?
+      case type
+      when Type::FloatType
+        func_name = type.bytes_count == 8 ? "floor" : "floorf"
+        emit "#{t} =#{qbe_type} call $#{func_name}(#{qbe_type} #{val})"
+      end
+    when .trunc?
+      case type
+      when Type::FloatType
+        func_name = type.bytes_count == 8 ? "trunc" : "truncf"
+        emit "#{t} =#{qbe_type} call $#{func_name}(#{qbe_type} #{val})"
+      end
+    when .nearest?
+      case type
+      when Type::FloatType
+        func_name = type.bytes_count == 8 ? "nearbyint" : "nearbyintf"
+        emit "#{t} =#{qbe_type} call $#{func_name}(#{qbe_type} #{val})"
+      end
+    when .abs?
+      case type
+      when Type::IntType
+        cmp = new_temp
+        neg = new_temp
+        emit "#{cmp} =w cslt#{qbe_type} #{val}, 0"
+        emit "#{neg} =#{qbe_type} neg #{val}"
+        emit "#{t} =#{qbe_type} copy #{val}"
+        label_neg = builder.new_label("abs_neg")
+        label_end = builder.new_label("abs_end")
+        emit "jnz #{cmp}, @#{label_neg}, @#{label_end}"
+        emit_label(label_neg)
+        emit "#{t} =#{qbe_type} copy #{neg}"
+        emit_label(label_end)
+      when Type::FloatType
+        func_name = type.bytes_count == 8 ? "fabs" : "fabsf"
+        emit "#{t} =#{qbe_type} call $#{func_name}(#{qbe_type} #{val})"
+      end
+    when .clz?
+      case type
+      when Type::IntType
+        width = type.bytes_count * 8
+        ext = type.signed ? "extsw" : "extuw"
+        ext_val = new_temp
+        emit "#{ext_val} =l #{ext} #{val}"
+        tmp = new_temp
+        emit "#{tmp} =l call $__clzdi2(l #{ext_val})"
+        emit "#{t} =l sub #{tmp}, #{64 - width}"
+      end
+    when .ctz?
+      case type
+      when Type::IntType
+        ext = type.signed ? "extsw" : "extuw"
+        ext_val = new_temp
+        emit "#{ext_val} =l #{ext} #{val}"
+        emit "#{t} =l call $__ctzdi2(l #{ext_val})"
+      end
+    when .popcnt?
+      case type
+      when Type::IntType
+        ext = type.signed ? "extsw" : "extuw"
+        ext_val = new_temp
+        emit "#{ext_val} =l #{ext} #{val}"
+        emit "#{t} =l call $__popcountdi2(l #{ext_val})"
+      end
     else
       return nil
     end

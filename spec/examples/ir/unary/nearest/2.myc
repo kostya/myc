@@ -1,0 +1,7 @@
+FUNC :main
+  BODY
+    PUSH 3.6 :f32
+    UNARY :nearest
+    INSPECT
+ENDFUNC
+
