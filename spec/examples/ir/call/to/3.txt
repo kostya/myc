@@ -1,1 +1,4 @@
-unknown safe transform from f32 to i32
+FUNC :main
+  BODY
+    PUSH 1 :f32               ; (1) [val(f32:Co)]
+    CALL :bla                 <

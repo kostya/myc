@@ -95,11 +95,11 @@ class Examples
     dir : String,
     categories : Array(String),
     multi_modules : Array(String) do
-    def register(backend : String, final : Bool)
+    def register(backend : String, mode : Int32)
       test_name = if kind.c?
-                    "[#{backend}#{final ? 1 : 0}] [cat #{rel_filename}] (crystal src/cli/mycc.cr #{rel_filename} --backend #{backend.downcase} d)"
+                    "[#{backend}#{mode}] [cat #{rel_filename}] (crystal src/cli/mycc.cr #{rel_filename} --backend #{backend.downcase} d)"
                   else
-                    "[#{backend}#{final ? 1 : 0}] [cat #{rel_filename}] (crystal src/cli/#{backend.downcase}.cr #{rel_filename} d)"
+                    "[#{backend}#{mode}] [cat #{rel_filename}] (crystal src/cli/#{backend.downcase}.cr #{rel_filename} d)"
                   end
 
       if @pending
@@ -107,26 +107,28 @@ class Examples
       elsif error
         it(test_name) do
           ex = expect_raises(Myc::Error, "") do
-            run(backend, final)
+            run(backend, mode)
           end
           s = String.build { |io| ex.print(io) }
           s.gsub(/\e\[[\d;]*m/, "").should contain(expect)
         end
       else
         it(test_name) do
-          run(backend, final).should eq expect
+          run(backend, mode).should eq expect
         end
       end
     end
 
-    def run(backend : String, final : Bool)
+    def run(backend : String, mode : Int32)
       p filename if ENV["FILENAME"]? == "1"
       data = Myc::Cli::Data.new
       data.mode = :run
       data.values << filename
 
-      if final
+      if mode == 2
         data.options["final"] = ""
+      elsif mode == 0
+        data.options["debug"] = ""
       end
 
       unless multi_modules.empty?
@@ -244,12 +246,12 @@ class Examples
   end
 
   def run
-    all_modes = Array(Tuple(String, Bool)).new
+    all_modes = Array(Tuple(String, Int32)).new
 
     backends = %w{LLVM QBE C}
 
     backends.each do |backend|
-      {true, false}.each do |mode|
+      {0, 1, 2}.each do |mode|
         all_modes << {backend, mode}
       end
     end
@@ -258,15 +260,17 @@ class Examples
     filtered_modes = if backend_filter.empty?
                        all_modes
                      else
-                       res = Array(Tuple(String, Bool)).new
+                       res = Array(Tuple(String, Int32)).new
                        backend_filter.each do |filter|
                          modes = all_modes.dup
-                         modes.reject! { |b, m| m } if filter == "0"
-                         modes.reject! { |b, m| !m } if filter == "1"
+                         modes.reject! { |b, m| m != 0 } if filter == "0"
+                         modes.reject! { |b, m| m != 1 } if filter == "1"
+                         modes.reject! { |b, m| m != 2 } if filter == "2"
                          backends.each do |backend|
                            modes.select! { |b, m| b == backend } if filter == backend.downcase
-                           modes.select! { |b, m| b == backend && !m } if filter == "#{backend.downcase}0"
-                           modes.select! { |b, m| b == backend && m } if filter == "#{backend.downcase}1"
+                           modes.select! { |b, m| b == backend && m == 0 } if filter == "#{backend.downcase}0"
+                           modes.select! { |b, m| b == backend && m == 1 } if filter == "#{backend.downcase}1"
+                           modes.select! { |b, m| b == backend && m == 2 } if filter == "#{backend.downcase}2"
                          end
                          res += modes
                        end
