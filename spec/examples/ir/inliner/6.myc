@@ -1,0 +1,21 @@
+FUNC :bla
+  ARGS
+    TYPE :i32
+  BODY
+    PARAM 0
+    INSPECT
+    RET
+ENDFUNC
+
+FUNC :some
+  BODY
+    PUSH 42
+    CALL :bla
+    RET
+ENDFUNC
+
+FUNC :main
+  BODY
+    CALL :some
+ENDFUNC
+

@@ -171,9 +171,11 @@ class Myc::Mod::Inliner
             new_list += new_seq.list
 
             if @inline_func_def.inline_stats.@ret_count == 0
-            elsif @inline_func_def.inline_stats.@ret_last && @inline_func_def.inline_stats.@ret_count == 1
-              new_list << Opcode::Slot.new("#{inline_prefix}_ret").with_position(op)
-              new_list << Opcode::Slot.new("#{inline_prefix}_ret").with_position(op)
+            elsif @inline_func_def.inline_stats.@ret_last && (@inline_func_def.inline_stats.@ret_count == 1)
+              unless @inline_func_def.type_fn.ret.eq?(@mod.typer.void)
+                new_list << Opcode::Slot.new("#{inline_prefix}_ret").with_position(op)
+                new_list << Opcode::Slot.new("#{inline_prefix}_ret").with_position(op)
+              end
             else
               if @inline_func_def.type_fn.ret.eq?(@mod.typer.void)
                 new_list << Opcode::Label.new("#{inline_prefix}_end").with_position(op)
