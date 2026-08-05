@@ -2,7 +2,7 @@
 * CLI: `header` command - create header for multiple *.myc files: `myc-llvm h proj/*.myc > header.myc`, and use it to compile object file with `--header` option: `myc-llvm o proj/1.myc --header header.myc`
 * inliner: fix recursion, tune
 * BINARY: add 5 new commands (rotl, rotr, min, max, copysign)
-* UNARY: add 9 new commands ()
+* UNARY: add 9 new commands (clz, ctz, popcnt, abs, ceil, floor, trunc, nearest, sqrt)
 
 ## 0.9.1 (28.07.2026)
 * add --debug option to disable inliner

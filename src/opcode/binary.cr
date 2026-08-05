@@ -1,4 +1,4 @@
-# BINARY — Binary Operation
+# BINARY - Binary Operation
 #
 # Pops two values, performs the operation, pushes result.
 # First popped = left operand, second popped = right operand.

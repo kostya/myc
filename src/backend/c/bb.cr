@@ -189,6 +189,35 @@ class Myc::Backend::C::BB < Myc::Backend::AbstractBB
       emit "#{c_type_str} #{temp} = ~#{val};"
     when .neg?
       emit "#{c_type_str} #{temp} = -(#{val});"
+    when .abs?
+      if type.is_a?(Type::IntType)
+        emit "#{c_type_str} #{temp} = (#{val} < 0) ? -(#{val}) : #{val};"
+      else
+        emit "#{c_type_str} #{temp} = __builtin_fabs(#{val});"
+      end
+    when .clz?
+      if type.is_a?(Type::IntType)
+        width = type.bytes_count * 8
+        if width <= 32
+          emit "#{c_type_str} #{temp} = __builtin_clz(#{val}) - (#{32 - width});"
+        else
+          emit "#{c_type_str} #{temp} = __builtin_clzll(#{val});"
+        end
+      end
+    when .ctz?
+      emit "#{c_type_str} #{temp} = __builtin_ctz(#{val});"
+    when .popcnt?
+      emit "#{c_type_str} #{temp} = __builtin_popcount(#{val});"
+    when .ceil?
+      emit "#{c_type_str} #{temp} = __builtin_ceil(#{val});"
+    when .floor?
+      emit "#{c_type_str} #{temp} = __builtin_floor(#{val});"
+    when .trunc?
+      emit "#{c_type_str} #{temp} = __builtin_trunc(#{val});"
+    when .nearest?
+      emit "#{c_type_str} #{temp} = __builtin_nearbyint(#{val});"
+    when .sqrt?
+      emit "#{c_type_str} #{temp} = __builtin_sqrt(#{val});"
     else
       return nil
     end

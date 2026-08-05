@@ -360,6 +360,79 @@ class Myc::Backend::QBE::BB < Myc::Backend::AbstractBB
       end
     when .neg?
       emit "#{t} =#{qbe_type} neg #{val}"
+    when .sqrt?
+      case type
+      when Type::FloatType
+        func_name = type.bytes_count == 8 ? "sqrt" : "sqrtf"
+        emit "#{t} =#{qbe_type} call $#{func_name}(#{qbe_type} #{val})"
+      end
+    when .ceil?
+      case type
+      when Type::FloatType
+        func_name = type.bytes_count == 8 ? "ceil" : "ceilf"
+        emit "#{t} =#{qbe_type} call $#{func_name}(#{qbe_type} #{val})"
+      end
+    when .floor?
+      case type
+      when Type::FloatType
+        func_name = type.bytes_count == 8 ? "floor" : "floorf"
+        emit "#{t} =#{qbe_type} call $#{func_name}(#{qbe_type} #{val})"
+      end
+    when .trunc?
+      case type
+      when Type::FloatType
+        func_name = type.bytes_count == 8 ? "trunc" : "truncf"
+        emit "#{t} =#{qbe_type} call $#{func_name}(#{qbe_type} #{val})"
+      end
+    when .nearest?
+      case type
+      when Type::FloatType
+        func_name = type.bytes_count == 8 ? "nearbyint" : "nearbyintf"
+        emit "#{t} =#{qbe_type} call $#{func_name}(#{qbe_type} #{val})"
+      end
+    when .abs?
+      case type
+      when Type::IntType
+        cmp = new_temp
+        neg = new_temp
+        emit "#{cmp} =w cslt#{qbe_type} #{val}, 0"
+        emit "#{neg} =#{qbe_type} neg #{val}"
+        emit "#{t} =#{qbe_type} copy #{val}"
+        label_neg = builder.new_label("abs_neg")
+        label_end = builder.new_label("abs_end")
+        emit "jnz #{cmp}, @#{label_neg}, @#{label_end}"
+        emit_label(label_neg)
+        emit "#{t} =#{qbe_type} copy #{neg}"
+        emit_label(label_end)
+      when Type::FloatType
+        func_name = type.bytes_count == 8 ? "fabs" : "fabsf"
+        emit "#{t} =#{qbe_type} call $#{func_name}(#{qbe_type} #{val})"
+      end
+    when .clz?
+      case type
+      when Type::IntType
+        width = type.bytes_count * 8
+        if width == 32
+          emit "#{t} =#{qbe_type} call $__clzsi2(#{qbe_type} #{val})"
+        elsif width < 32
+          emit "#{t} =#{qbe_type} call $__clzsi2(#{qbe_type} #{val})"
+          tmp2 = new_temp
+          emit "#{tmp2} =#{qbe_type} sub #{t}, #{32 - width}"
+          t = tmp2
+        else
+          emit "#{t} =#{qbe_type} call $__clzdi2(#{qbe_type} #{val})"
+        end
+      end
+    when .ctz?
+      case type
+      when Type::IntType
+        emit "#{t} =#{qbe_type} call $__ctzsi2(#{qbe_type} #{val})"
+      end
+    when .popcnt?
+      case type
+      when Type::IntType
+        emit "#{t} =#{qbe_type} call $__popcountsi2(#{qbe_type} #{val})"
+      end
     else
       return nil
     end
