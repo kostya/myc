@@ -412,12 +412,16 @@ class Myc::Backend::QBE::BB < Myc::Backend::AbstractBB
       case type
       when Type::IntType
         width = type.bytes_count * 8
-        ext = type.signed ? "extsw" : "extuw"
-        ext_val = new_temp
-        emit "#{ext_val} =l #{ext} #{val}"
-        tmp = new_temp
-        emit "#{tmp} =l call $__clzdi2(l #{ext_val})"
-        emit "#{t} =l sub #{tmp}, #{64 - width}"
+        if width == 64
+          emit "#{t} =l call $__clzdi2(l #{val})"
+        else
+          ext = type.signed ? "extsw" : "extuw"
+          ext_val = new_temp
+          emit "#{ext_val} =l #{ext} #{val}"
+          tmp = new_temp
+          emit "#{tmp} =l call $__clzdi2(l #{ext_val})"
+          emit "#{t} =l sub #{tmp}, #{64 - width}"
+        end
       end
     when .ctz?
       case type
