@@ -46,7 +46,7 @@ ENDFUNC
 
 ![plot](https://github.com/kostya/myc-benchmarks/blob/master/plot1.png?raw=true)
 
-This scatter plot shows the tradeoff between compile time and runtime. The ideal is the bottom-left corner: fast compiles, fast runtime. This is the Pareto frontier - you can't improve one without sacrificing the other. Myc-qbe(default) and myc-llvm(default) occupy a spot that even Go would respect. Measured on pure IR files - no parsing overhead, just optimization and code generation for both MycIR and LLVM-LL. [Link to benchmark and reproduce steps](https://github.com/kostya/myc-benchmarks#benchmark-1-langarena-single-ir-file-myc-vs-clang).
+This scatter plot shows the tradeoff between compile time and runtime. The ideal is the bottom-left corner: fast compiles, fast runtime. This is the Pareto frontier - you can't improve one without sacrificing the other. Myc-qbe(default) and myc-llvm(default) occupy a spot that even Go would respect. Measured on pure IR files - no C parsing overhead, just optimization and code generation for both MycIR and LLVM-LL. [Link to benchmark and reproduce steps](https://github.com/kostya/myc-benchmarks#benchmark-1-langarena-single-ir-file-myc-vs-clang).
 
 ## mycIR
 
