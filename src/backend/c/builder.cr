@@ -206,7 +206,7 @@ class Myc::Backend::C::Builder < Myc::Backend::AbstractBuilder
       s << '('
 
       if name == "main"
-        s << "int arg0, char *arg1[]"
+        s << "int arg0, char *_arg1[]"
       else
         type_fn.args.each_with_index do |t, i|
           s << ", " if i != 0

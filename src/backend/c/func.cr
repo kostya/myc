@@ -46,6 +46,9 @@ class Myc::Backend::C::Func < Myc::Backend::AbstractFunc
       end
     end
     emit("#{attrs}#{builder.func_head_str(@func_def.name, @func_def.type_fn, is_static)} {")
+    if @func_def.name == "main"
+      emit("uint8_t** arg1 = (uint8_t**)_arg1;")
+    end
 
     v = new_visitor
     v.visit
