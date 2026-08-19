@@ -28,6 +28,8 @@ void test1() {
 
   printf("sizeof(int)                = %zu\n", sizeof(int));
   printf("sizeof(unsigned int)       = %zu\n", sizeof(unsigned int));
+  printf("sizeof(unsigned)           = %zu\n", sizeof(unsigned));
+  printf("sizeof(signed)             = %zu\n", sizeof(signed));
 
   printf("sizeof(long)               = %zu\n", sizeof(long));
   printf("sizeof(unsigned long)      = %zu\n", sizeof(unsigned long));

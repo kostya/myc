@@ -1345,6 +1345,7 @@ class Myc::Mycc::ASTBuilder
     "long long" => "i64", "signed long long" => "i64", "unsigned long long" => "u64",
     "float" => "f32", "double" => "f64", "long double" => "f64",
     "void" => "void", "bool" => "bool", "_Bool" => "bool",
+    "unsigned" => "u32", "signed" => "i32",
   }
 
   private def extract_sizeof_type(cursor : Clang::Cursor) : Tuple(String, Int32)
