@@ -175,7 +175,7 @@ class Myc::Mycc::ASTBuilder
         @current_function_params[param_name] = TypedAST::Function::ParamInfo.new(param_name, param_type, @current_function_params.size)
       when .compound_stmt?
         body = build_stmts(child)
-      when .first_attr?, .type_ref?, .first_expr?, .warn_unused_result_attr?, .const_attr?, .visibility_attr?, .asm_label_attr?, .pure_attr?
+      when .first_attr?, .type_ref?, .first_expr?, .warn_unused_result_attr?, .const_attr?, .visibility_attr?, .pure_attr?
       else
         raise error("Unhandled child: #{child.kind}", child)
       end
@@ -328,11 +328,8 @@ class Myc::Mycc::ASTBuilder
         build_binary(cursor)
       end
     when .paren_expr?, .first_expr?
-      if result = cursor.evaluate
-        case result.kind
-        when LibC::CXEvalResultKind::Int
-          return TypedAST::IntLiteral.new(result.as_long_long, typer.u64, location(cursor))
-        end
+      if literal = try_evaluate(cursor)
+        return literal
       end
 
       children = children(cursor)
@@ -585,6 +582,10 @@ class Myc::Mycc::ASTBuilder
 
     init = nil
 
+    if !init && (literal = try_evaluate(cursor))
+      init = literal
+    end
+    
     if is_vla
       children(cursor).each do |child|
         if size_node = build_node(child)
@@ -596,24 +597,12 @@ class Myc::Mycc::ASTBuilder
       end
     end
 
-    if !init && (result = cursor.evaluate)
-      case result.kind
-      when LibC::CXEvalResultKind::Int
-        init = TypedAST::IntLiteral.new(result.as_long_long, var_type, location(cursor))
-      when LibC::CXEvalResultKind::Float
-        init = TypedAST::FloatLiteral.new(result.as_double, var_type, location(cursor))
-      when LibC::CXEvalResultKind::StrLiteral
-        init = TypedAST::StringLiteral.new(result.as_str, var_type, location(cursor))
-      end
-    end
-
     unless init
       children(cursor).each do |child|
         if node = build_node(child)
           init = node
         elsif child.kind.parm_decl? || child.kind.type_ref? ||
-              child.kind.struct_decl? || child.kind.union_decl? || child.kind.enum_decl? ||
-              child.kind.asm_label_attr? || child.kind.visibility_attr?
+              child.kind.struct_decl? || child.kind.union_decl? || child.kind.enum_decl? || child.kind.visibility_attr?
         else
           raise error("Unhandled child: #{child.kind}", child)
         end
@@ -900,6 +889,10 @@ class Myc::Mycc::ASTBuilder
   end
 
   private def build_binary(cursor : Clang::Cursor) : TypedAST::Node
+    if literal = try_evaluate(cursor)
+      return literal
+    end
+
     op = cursor.spelling
     if op.empty?
       @tu.tokenize(cursor.extent) do |token|
@@ -973,6 +966,10 @@ class Myc::Mycc::ASTBuilder
   end
 
   private def build_unary(cursor : Clang::Cursor, is_statement : Bool = false, known_op : String? = nil) : TypedAST::Node
+    if literal = try_evaluate(cursor)
+      return literal
+    end
+
     op = known_op || detect_unary_op(cursor)
 
     children_list = children(cursor)
@@ -1802,5 +1799,22 @@ class Myc::Mycc::ASTBuilder
     else
       SourceKind::UserHeader
     end
+  end
+
+  private def try_evaluate(cursor : Clang::Cursor) : TypedAST::Node?
+    if result = cursor.evaluate
+      case result.kind
+      when LibC::CXEvalResultKind::Int
+        type = get_type(cursor, cursor.type)
+        return TypedAST::IntLiteral.new(result.as_long_long, type, location(cursor))
+      when LibC::CXEvalResultKind::Float
+        type = get_type(cursor, cursor.type)
+        return TypedAST::FloatLiteral.new(result.as_double, type, location(cursor))
+      when LibC::CXEvalResultKind::StrLiteral
+        type = get_type(cursor, cursor.type)
+        return TypedAST::StringLiteral.new(result.as_str, type, location(cursor))
+      end
+    end
+    nil
   end
 end
