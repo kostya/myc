@@ -514,6 +514,20 @@ class Myc::Mycc::ASTBuilder
       bin_op = BINARY_MAP[base_op]? || :add
       value = TypedAST::BinaryOp.new(bin_op, left.dup, right, left.type, location(cursor))
       TypedAST::Assign.new(left, value, location(cursor))
+    when .c_style_cast_expr?
+      target_type = get_type(cursor, cursor.type)
+      if target_type.id_name == "void"
+        children_list = children(cursor)
+        if children_list.size > 0
+          expr_node = build_node(children_list.last)
+          if expr_node
+            TypedAST::ExprStmt.new(expr_node, location(cursor))
+          end
+        end
+      else
+        expr = build_cast(cursor)
+        TypedAST::ExprStmt.new(expr, location(cursor))
+      end
     end
   end
 
@@ -1516,15 +1530,14 @@ class Myc::Mycc::ASTBuilder
     child = cursor.first_child?
     raise error("case without value", cursor) unless child
 
-    case child.kind
-    when .integer_literal?, .character_literal?
-      if result = child.evaluate
-        case result.kind
-        when LibC::CXEvalResultKind::Int
-          return result.as_long_long
-        end
+    if result = child.evaluate
+      case result.kind
+      when LibC::CXEvalResultKind::Int
+        return result.as_long_long
       end
-      raise error("cannot evaluate case value", cursor)
+    end
+
+    case child.kind
     when .decl_ref_expr?
       name = child.spelling
       @enum_values[name] || raise error("unknown enum value #{name}", cursor)
