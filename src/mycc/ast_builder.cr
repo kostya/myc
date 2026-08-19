@@ -328,6 +328,13 @@ class Myc::Mycc::ASTBuilder
         build_binary(cursor)
       end
     when .paren_expr?, .first_expr?
+      if result = cursor.evaluate
+        case result.kind
+        when LibC::CXEvalResultKind::Int
+          return TypedAST::IntLiteral.new(result.as_long_long, typer.u64, location(cursor))
+        end
+      end
+
       children = children(cursor)
       children.size == 1 ? build_node(children[0]) : nil
     else
