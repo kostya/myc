@@ -448,6 +448,18 @@ class Myc::Mycc::ASTBuilder
       build_for(cursor)
     when .switch_stmt?
       build_switch(cursor)
+    when .paren_expr?, .first_expr?
+      children_list = children(cursor)
+      if children_list.size == 1
+        child = children_list[0]
+        if stmt = build_stmt(child)
+          stmt
+        else
+          if node = build_node(child)
+            TypedAST::ExprStmt.new(node, location(cursor))
+          end
+        end
+      end
     when .binary_operator?
       op = cursor.spelling
       if op == ","
@@ -491,8 +503,6 @@ class Myc::Mycc::ASTBuilder
         end
       end
       TypedAST::Goto.new(label_name, location(cursor))
-    when .compound_stmt?
-      nil
     when .compound_assign_operator?
       op = cursor.spelling
       children_list = children(cursor)
@@ -504,8 +514,6 @@ class Myc::Mycc::ASTBuilder
       bin_op = BINARY_MAP[base_op]? || :add
       value = TypedAST::BinaryOp.new(bin_op, left.dup, right, left.type, location(cursor))
       TypedAST::Assign.new(left, value, location(cursor))
-    else
-      nil
     end
   end
 
@@ -579,7 +587,7 @@ class Myc::Mycc::ASTBuilder
           init = node
         elsif child.kind.parm_decl? || child.kind.type_ref? ||
               child.kind.struct_decl? || child.kind.union_decl? || child.kind.enum_decl? ||
-              child.kind.asm_label_attr?
+              child.kind.asm_label_attr? || child.kind.visibility_attr?
         else
           raise error("Unhandled child: #{child.kind}", child)
         end
