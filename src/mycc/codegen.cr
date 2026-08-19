@@ -118,6 +118,10 @@ class Myc::Mycc::CodeGenerator
       elem.elements.each do |elem|
         emit_init_element(elem)
       end
+    when TypedAST::VarRef
+      emit(" #{elem.name}")
+    when TypedAST::AddrOf
+      emit_init_element(elem.operand)
     else
       raise "Unsupported init element: #{elem.class}"
     end
