@@ -119,7 +119,11 @@ class Myc::Mycc::CodeGenerator
         emit_init_element(elem)
       end
     when TypedAST::VarRef
-      emit(" #{elem.name}")
+      if mapped_name = @builder.@static_func_names_map[elem.name]?
+        emit(" #{mapped_name}")
+      else
+        emit(" #{elem.name}")
+      end
     when TypedAST::AddrOf
       emit_init_element(elem.operand)
     else
