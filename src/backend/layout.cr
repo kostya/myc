@@ -115,7 +115,7 @@ class Myc::Backend::Layout
 
   private def compute_enum_size(type : Type::EnumType) : UInt64
     tag_size = 0_u64
-    tag_align = 0u64
+    tag_align = 0_u64
 
     if index_type = type.index_type
       tag_size = size_of(index_type)
@@ -134,7 +134,8 @@ class Myc::Backend::Layout
                     0_u64
                   end
 
-    (tag_size > 0 ? align_to(tag_size, tag_align) : tag_size) + max_payload
+    total = (tag_size > 0 ? align_to(tag_size, tag_align) : tag_size) + max_payload
+    align_to(total, compute_enum_alignment(type))
   end
 
   private def compute_enum_alignment(type : Type::EnumType) : UInt64
@@ -147,7 +148,7 @@ class Myc::Backend::Layout
     max_payload = if type.data.any?
                     type.data.max_of do |_, variant|
                       if cvt = variant.composite_value_type
-                        size_of(cvt)
+                        alignment_of(cvt)
                       else
                         0_u64
                       end
@@ -156,7 +157,7 @@ class Myc::Backend::Layout
                     0_u64
                   end
 
-    {tag_align, max_payload > 0 ? 4_u64 : 1_u64}.max
+    {tag_align, max_payload, 1_u64}.max
   end
 
   def enum_payload_count(type : Type::EnumType) : UInt64

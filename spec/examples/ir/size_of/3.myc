@@ -1,0 +1,20 @@
+ENUM :Union
+  TAG
+    SKIP
+  VARIANT :i
+    TYPE :i32
+  VARIANT :d
+    TYPE :f64
+  VARIANT :p
+    TYPE :ptr<void>
+ENDENUM
+
+STRUCT :Bla
+  TYPE :i32
+  TYPE :Union
+ENDSTRUCT
+
+FUNC :main BODY
+  SIZEOF :Bla
+  INSPECT
+ENDFUNC
