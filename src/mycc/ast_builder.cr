@@ -431,6 +431,9 @@ class Myc::Mycc::ASTBuilder
 
   private def build_stmt(cursor : Clang::Cursor) : TypedAST::Stmt?
     case cursor.kind
+    when .compound_stmt?
+      body = build_stmts(cursor)
+      TypedAST::Block.new(body, location(cursor))
     when .call_expr?
       expr = build_call(cursor)
       TypedAST::ExprStmt.new(expr, location(cursor))
@@ -535,6 +538,8 @@ class Myc::Mycc::ASTBuilder
         expr = build_cast(cursor)
         TypedAST::ExprStmt.new(expr, location(cursor))
       end
+    when .null_stmt?
+      TypedAST::Block.new([] of TypedAST::Stmt, location(cursor))
     end
   end
 
@@ -1450,7 +1455,7 @@ class Myc::Mycc::ASTBuilder
                 if stmt = build_stmt(inner)
                   body << stmt
                 else
-                  raise error("Unhandled child: #{child.kind}", inner)
+                  raise error("Unhandled child: #{inner.kind}", inner)
                 end
               end
             end
