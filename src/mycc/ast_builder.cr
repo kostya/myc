@@ -1690,7 +1690,8 @@ class Myc::Mycc::ASTBuilder
         typer.find(name, location(cursor))
       end
     when .constant_array?
-      typer.find("flat<#{get_type(cursor, canonical.array_element_type, count)}, #{canonical.array_size}>", location(cursor))
+      type_name = "flat<#{get_type(cursor, canonical.array_element_type, count)}, #{canonical.array_size}>"
+      typer.find(type_name, location(cursor))
     when .incomplete_array?
       typer.to_ptr(get_type(cursor, canonical.array_element_type, count), location(cursor))
     when .elaborated?

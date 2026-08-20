@@ -109,7 +109,21 @@ class Myc::Mycc::CodeGenerator
     when TypedAST::FloatLiteral
       emit(" #{elem.value}")
     when TypedAST::StringLiteral
-      emit(" \"#{Backend::AbstractBuilder.escaped_string(elem.value)}\"")
+      if elem.type.is_a?(Type::PtrType)
+        emit(" \"#{Backend::AbstractBuilder.escaped_string(elem.value)}\"")
+      else
+        value = elem.value
+        str = String.build do |s|
+          i = 0
+          value.each_byte do |b|
+            s << ' ' if i != 0
+            s << b
+            i += 1
+          end
+          s << " 0"
+        end
+        emit(" #{str}")
+      end
     when TypedAST::Cast
       emit_init_element(elem.operand)
     when TypedAST::ZeroInitializer
