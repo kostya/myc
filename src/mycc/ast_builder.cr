@@ -175,7 +175,8 @@ class Myc::Mycc::ASTBuilder
         @current_function_params[param_name] = TypedAST::Function::ParamInfo.new(param_name, param_type, @current_function_params.size)
       when .compound_stmt?
         body = build_stmts(child)
-      when .first_attr?, .type_ref?, .first_expr?, .warn_unused_result_attr?, .const_attr?, .visibility_attr?, .pure_attr?
+      when .first_attr?, .type_ref?, .first_expr?, .warn_unused_result_attr?,
+           .const_attr?, .visibility_attr?, .pure_attr?, .asm_label_attr?
       else
         raise error("Unhandled child: #{child.kind}", child)
       end
@@ -585,7 +586,7 @@ class Myc::Mycc::ASTBuilder
     if !init && (literal = try_evaluate(cursor))
       init = literal
     end
-    
+
     if is_vla
       children(cursor).each do |child|
         if size_node = build_node(child)
@@ -602,7 +603,9 @@ class Myc::Mycc::ASTBuilder
         if node = build_node(child)
           init = node
         elsif child.kind.parm_decl? || child.kind.type_ref? ||
-              child.kind.struct_decl? || child.kind.union_decl? || child.kind.enum_decl? || child.kind.visibility_attr?
+              child.kind.struct_decl? || child.kind.union_decl? ||
+              child.kind.enum_decl? || child.kind.visibility_attr? ||
+              child.kind.asm_label_attr?
         else
           raise error("Unhandled child: #{child.kind}", child)
         end
