@@ -1637,6 +1637,8 @@ class Myc::Mycc::ASTBuilder
     when .float?                 then typer.f32
     when .double?                then typer.f64
     when .long_double?           then typer.f64
+    when .l_value_reference?
+      get_type(cursor, canonical.pointee_type, count)
     when .variable_array?
       elem_type = get_type(cursor, canonical.array_element_type, count)
       typer.to_ptr(elem_type, location(cursor))
