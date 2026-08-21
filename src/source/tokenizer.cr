@@ -387,7 +387,8 @@ class Myc::Source::Tokenizer
               else
                 0_i64
               end
-        return "#{number}.#{"0" * zeros}#{m}e#{exp}".to_f64
+        result = "#{number}.#{"0" * zeros}#{m}e#{exp}".to_f64
+        return (minus && number == 0) ? -result : result
       else
         raise error("expected number after .")
       end
@@ -404,7 +405,8 @@ class Myc::Source::Tokenizer
             else
               consume_pos_number
             end
-      return "#{number}e#{exp}".to_f64
+      result = "#{number}e#{exp}".to_f64
+      return (minus && number == 0) ? -result : result
     end
 
     number
