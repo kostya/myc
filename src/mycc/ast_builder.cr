@@ -335,8 +335,16 @@ class Myc::Mycc::ASTBuilder
 
       children = children(cursor)
       children.size == 1 ? build_node(children[0]) : nil
-    else
-      nil
+    when .compound_assign_operator?
+      op = cursor.spelling
+      children_list = children(cursor)
+      left = build_node(children_list[0]).not_nil!
+      right = build_node(children_list[1]).not_nil!
+      right = auto_cast(right, left.type, location(cursor))
+
+      base_op = op.ends_with?('=') ? op[0..-2] : op
+      bin_op = BINARY_MAP[base_op]? || raise error("Unknown op: #{base_op}", cursor)
+      TypedAST::BinaryOp.new(bin_op, left, right, left.type, location(cursor))
     end
   end
 
