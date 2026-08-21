@@ -13,7 +13,6 @@ sizeof(long long)          = 8
 sizeof(unsigned long long) = 8
 sizeof(float)              = 4
 sizeof(double)             = 8
-sizeof(long double)        = 8
 sizeof(void*)              = 8
 sizeof(char*)              = 8
 sizeof(int*)               = 8

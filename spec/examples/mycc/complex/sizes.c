@@ -39,7 +39,6 @@ void test1() {
 
   printf("sizeof(float)              = %zu\n", sizeof(float));
   printf("sizeof(double)             = %zu\n", sizeof(double));
-  printf("sizeof(long double)        = %zu\n", sizeof(long double));
 
   printf("sizeof(void*)              = %zu\n", sizeof(void *));
   printf("sizeof(char*)              = %zu\n", sizeof(char *));
