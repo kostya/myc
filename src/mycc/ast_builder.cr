@@ -1331,64 +1331,20 @@ class Myc::Mycc::ASTBuilder
   end
 
   private def build_sizeof(cursor : Clang::Cursor) : TypedAST::Node
-    children_list = children(cursor)
-    if children_list.size > 0
-      child = children_list[0]
-      target_type = get_type(child, child.type)
-      _, ptr_count = extract_sizeof_type(cursor)
-      if ptr_count > 0
-        type_name = target_type.id_name
-        ptr_count.times { type_name = "ptr<#{type_name}>" }
-        target_type = typer.find(type_name, location(cursor))
-      end
+    case literal = try_evaluate(cursor)
+    when TypedAST::IntLiteral
+      return literal
     else
-      type_name, ptr_count = extract_sizeof_type(cursor)
-      ptr_count.times { type_name = "ptr<#{type_name}>" }
-      target_type = typer.find(type_name, location(cursor))
-    end
-
-    TypedAST::SizeOf.new(target_type, typer.u64, location(cursor))
-  end
-
-  SIZEOF_TYPE_ALIASES = {
-    "char" => "u8", "signed char" => "i8", "unsigned char" => "u8",
-    "short" => "i16", "signed short" => "i16", "unsigned short" => "u16",
-    "int" => "i32", "signed int" => "i32", "unsigned int" => "u32",
-    "long" => "i64", "signed long" => "i64", "unsigned long" => "u64",
-    "long long" => "i64", "signed long long" => "i64", "unsigned long long" => "u64",
-    "float" => "f32", "double" => "f64", "long double" => "f64",
-    "void" => "void", "bool" => "bool", "_Bool" => "bool",
-    "unsigned" => "u32", "signed" => "i32",
-  }
-
-  private def extract_sizeof_type(cursor : Clang::Cursor) : Tuple(String, Int32)
-    tokens = [] of String
-    @tu.tokenize(cursor.extent) do |token|
-      tokens << token.spelling
-    end
-
-    start = tokens.index("(")
-    finish = tokens.rindex(")")
-    unless start && finish && start < finish
-      raise error("cant parse sizeof type #{tokens.inspect}", cursor)
-    end
-
-    type_tokens = tokens[start + 1...finish]
-    type_tokens = type_tokens.reject { |t| {"const", "volatile", "restrict"}.includes?(t) }
-    ptr_count = 0
-    type_tokens.reverse_each do |t|
-      if t == "*"
-        ptr_count += 1
+      children_list = children(cursor)
+      if children_list.size > 0
+        child = children_list[0]
+        target_type = get_type(child, child.type)
+        TypedAST::SizeOf.new(target_type, typer.u64, location(cursor))
       else
-        break
+        target_type = get_type(cursor, cursor.type)
+        TypedAST::SizeOf.new(target_type, typer.u64, location(cursor))
       end
     end
-
-    type_tokens = type_tokens.reject { |t| t == "*" }
-    type_name = type_tokens.join(" ")
-    type_name = SIZEOF_TYPE_ALIASES[type_name]? || type_name
-
-    {type_name, ptr_count}
   end
 
   private def get_field_types(type : Type?) : Array(Type)
