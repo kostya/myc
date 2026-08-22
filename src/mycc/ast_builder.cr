@@ -377,63 +377,67 @@ class Myc::Mycc::ASTBuilder
           end
         end
       else
-        if stmt = build_stmt(child)
-          stmts << stmt
-        else
-          case child.kind
-          when .compound_stmt?
-            body = build_stmts(child)
-            stmts << TypedAST::Block.new(body, location(child))
-          when .return_stmt?
-            stmts << build_return(child)
-          when .if_stmt?
-            stmts << build_if(child)
-          when .while_stmt?
-            stmts << build_while(child)
-          when .for_stmt?
-            stmts << build_for(child)
-          when .call_expr?
-            expr = build_call(child)
-            stmts << TypedAST::ExprStmt.new(expr, location(child))
-          when .binary_operator?
-            if stmt = build_stmt(child)
-              stmts << stmt
-            end
-          when .unary_operator?
-            if stmt = build_stmt(child)
-              stmts << stmt
-            end
-          when .null_stmt?
-          when .c_style_cast_expr?
-            target_type = get_type(child, child.type)
-            if target_type.id_name == "void"
-              children_list = children(child)
-              if children_list.size > 0
-                expr_node = build_node(children_list.last)
-                if expr_node
-                  stmts << TypedAST::ExprStmt.new(expr_node, location(child))
-                end
-              end
-            else
-              expr = build_cast(child)
-              stmts << TypedAST::ExprStmt.new(expr, location(child))
-            end
-          when .label_stmt?
-            stmts << TypedAST::Label.new(child.spelling, location(child))
-            children(child).each do |label_child|
-              if s = build_stmt(label_child)
-                stmts << s
-              else
-                raise error("Unhandled child: #{child.kind}", label_child)
-              end
-            end
-          else
-            raise error("Unhandled child: #{child.kind}", child)
-          end
-        end
+        build_body(child, stmts)
       end
     end
     stmts
+  end
+
+  private def build_body(child : Clang::Cursor, stmts : Array(TypedAST::Stmt))
+    if stmt = build_stmt(child)
+      stmts << stmt
+    else
+      case child.kind
+      when .compound_stmt?
+        body = build_stmts(child)
+        stmts << TypedAST::Block.new(body, location(child))
+      when .return_stmt?
+        stmts << build_return(child)
+      when .if_stmt?
+        stmts << build_if(child)
+      when .while_stmt?
+        stmts << build_while(child)
+      when .for_stmt?
+        stmts << build_for(child)
+      when .call_expr?
+        expr = build_call(child)
+        stmts << TypedAST::ExprStmt.new(expr, location(child))
+      when .binary_operator?
+        if stmt = build_stmt(child)
+          stmts << stmt
+        end
+      when .unary_operator?
+        if stmt = build_stmt(child)
+          stmts << stmt
+        end
+      when .null_stmt?
+      when .c_style_cast_expr?
+        target_type = get_type(child, child.type)
+        if target_type.id_name == "void"
+          children_list = children(child)
+          if children_list.size > 0
+            expr_node = build_node(children_list.last)
+            if expr_node
+              stmts << TypedAST::ExprStmt.new(expr_node, location(child))
+            end
+          end
+        else
+          expr = build_cast(child)
+          stmts << TypedAST::ExprStmt.new(expr, location(child))
+        end
+      when .label_stmt?
+        stmts << TypedAST::Label.new(child.spelling, location(child))
+        children(child).each do |label_child|
+          if s = build_stmt(label_child)
+            stmts << s
+          else
+            raise error("Unhandled child: #{child.kind}", label_child)
+          end
+        end
+      else
+        raise error("Unhandled child: #{child.kind}", child)
+      end
+    end
   end
 
   private def build_stmt(cursor : Clang::Cursor) : TypedAST::Stmt?
@@ -1458,6 +1462,7 @@ class Myc::Mycc::ASTBuilder
         has_break = nested_break || has_break
       when .break_stmt?
         has_break = true
+      when .character_literal?, .integer_literal?, .decl_ref_expr?
       when .compound_stmt?
         children(child).each do |inner|
           case inner.kind
@@ -1471,22 +1476,8 @@ class Myc::Mycc::ASTBuilder
             end
           end
         end
-      when .character_literal?, .integer_literal?, .decl_ref_expr?
-      when .label_stmt?
-        body << TypedAST::Label.new(child.spelling, location(child))
-        children(child).each do |label_child|
-          if s = build_stmt(label_child)
-            body << s
-          else
-            raise error("Unhandled child: #{child.kind}", label_child)
-          end
-        end
       else
-        if stmt = build_stmt(child)
-          body << stmt
-        else
-          raise error("Unhandled child: #{child.kind}", child)
-        end
+        build_body(child, body)
       end
     end
     has_break
