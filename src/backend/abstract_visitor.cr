@@ -1002,17 +1002,11 @@ abstract class Myc::Backend::AbstractVisitor
   end
 
   def visit(op : Opcode::Slot)
-    found_slot = nil
     @slots.reverse_each do |slots_hash|
       if s = slots_hash[op.name]?
-        found_slot = s
-        break
+        self << s
+        return
       end
-    end
-
-    if found_slot
-      self << found_slot
-      return
     end
 
     raise error("using slot #{op.name} out of it scope") if @all_slots.has_key?(op.name)
