@@ -63,7 +63,7 @@ class Myc::Mod
         when Opcode::Alloca, Opcode::As, Opcode::Create, Opcode::Local,
              Opcode::Malloc, Opcode::Push, Opcode::SizeOf, Opcode::To
           if t = op.type
-            used_typedefs << t.id_name
+            collect_type_deps(t, used_typedefs)
           end
         end
       end
