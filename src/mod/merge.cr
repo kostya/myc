@@ -54,7 +54,7 @@ class Myc::Mod
     used_typedefs = Set(String).new
 
     @func_defs.each_value do |func_def|
-      collect_type_deps(func_def.type_fn, used_typedefs)
+      collect_type_deps(func_def.type_fn, used_typedefs) unless used_typedefs.includes?(func_def.type_fn.id_name)
 
       func_def.deep_walk do |op|
         case op
@@ -63,7 +63,7 @@ class Myc::Mod
         when Opcode::Alloca, Opcode::As, Opcode::Create, Opcode::Local,
              Opcode::Malloc, Opcode::Push, Opcode::SizeOf, Opcode::To
           if t = op.type
-            collect_type_deps(t, used_typedefs)
+            collect_type_deps(t, used_typedefs) unless used_typedefs.includes?(t.id_name)
           end
         end
       end
@@ -74,7 +74,7 @@ class Myc::Mod
     end
 
     @global_defs.each do |_, global_def|
-      collect_type_deps(global_def.type, used_typedefs)
+      collect_type_deps(global_def.type, used_typedefs) unless used_typedefs.includes?(global_def.type.id_name)
     end
 
     unprocessed = used_typedefs.dup
