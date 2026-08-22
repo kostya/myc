@@ -549,7 +549,7 @@ class Myc::Mycc::CodeGenerator
       emit_local(tmp, typer.bool)
     when :comma
       generate_expr(expr.left)
-      emit("STACK :drop")
+      emit("STACK :drop") unless expr.left.type.eq?(typer.void)
       generate_expr(expr.right)
     else
       generate_expr(expr.right)
