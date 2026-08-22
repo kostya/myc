@@ -1439,12 +1439,10 @@ class Myc::Mycc::ASTBuilder
           end
         end
       else
-        if stmt = build_stmt(child)
-          if last_case = cases.last?
-            last_case.body << stmt
-          end
+        if last_case = cases.last?
+          build_body(child, last_case.body)
         else
-          raise error("Unhandled child: #{child.kind}", child)
+          raise error("No cases: #{child.kind}", child)
         end
       end
     end
