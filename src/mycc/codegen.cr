@@ -650,7 +650,11 @@ class Myc::Mycc::CodeGenerator
 
   def generate_expr(expr : TypedAST::Cast)
     generate_expr(expr.operand)
-    emit("AS #{type_s(expr.type)}")
+    if expr.type.eq?(typer.void)
+      emit("STACK :drop")
+    else
+      emit("AS #{type_s(expr.type)}")
+    end
   end
 
   def generate_expr(expr : TypedAST::Subscript)
