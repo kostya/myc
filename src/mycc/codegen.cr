@@ -413,11 +413,11 @@ class Myc::Mycc::CodeGenerator
   end
 
   def generate_stmt(stmt : TypedAST::Switch)
-    label = "__switch_#{@switch_count}"
+    label = "__switch_#{stmt.switch_id}"
     @switch_count += 1
 
     generate_expr(stmt.value)
-    switch_val = "__switch_val_#{@switch_count}"
+    switch_val = "#{label}_val"
     emit_local(switch_val, stmt.value.type)
     emit("STORE")
 
@@ -431,12 +431,12 @@ class Myc::Mycc::CodeGenerator
           emit("BINARY :eq")
           emit("IF")
           @indent += 1
-          emit("THEN GOTO \"#{label}__case_#{case_counter}\"")
+          emit("THEN GOTO \"#{c.label}\"")
           @indent -= 1
           emit("ENDIF")
         end
       else
-        emit("GOTO \"#{label}__case_#{case_counter}\"")
+        emit("GOTO \"#{c.label}\"")
       end
       case_counter += 1
     end
@@ -445,7 +445,7 @@ class Myc::Mycc::CodeGenerator
 
     case_counter = 0
     stmt.cases.each do |c|
-      emit("LABEL \"#{label}__case_#{case_counter}\"")
+      emit("LABEL \"#{c.label}\"")
       push_scope
       c.body.each { |s| generate_stmt(s) }
       pop_scope

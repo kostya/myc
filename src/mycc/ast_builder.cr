@@ -18,6 +18,7 @@ class Myc::Mycc::ASTBuilder
     @enum_types = {} of String => Type
     @called_functions = Set(String).new
     @unnamed_counter = 0_u64
+    @switch_counter = 0_u64
     @unnamed_types = Hash(String, Type).new
     @static_func_names_map = Hash(String, String).new
   end
@@ -1394,44 +1395,24 @@ class Myc::Mycc::ASTBuilder
     children_list = children(cursor)
     value = build_node(children_list[0]).not_nil!
     cases = [] of TypedAST::Case
+    switch_label_prefix = "__switch_#{@switch_counter}"
+    swith_id = @switch_counter
+    @switch_counter += 1
 
     children(children_list[1]).each do |child|
       case child.kind
       when .case_stmt?
+        label = "#{switch_label_prefix}_#{cases.size}"
         values = [extract_case_value(child)]
         body = [] of TypedAST::Stmt
         has_break = collect_case_values_and_body(child, values, body)
-        cases << TypedAST::Case.new(values, body, has_break, location(child))
+        cases << TypedAST::Case.new(values, body, has_break, location(child), label)
       when .default_stmt?
+        label = "#{switch_label_prefix}_#{cases.size}"
+        values = [] of Int64
         body = [] of TypedAST::Stmt
-        has_break = false
-        children(child).each do |child|
-          case child.kind
-          when .break_stmt?
-            has_break = true
-          when .null_stmt?
-          when .compound_stmt?
-            children(child).each do |inner|
-              case inner.kind
-              when .break_stmt?
-                has_break = true
-              else
-                if stmt = build_stmt(inner)
-                  body << stmt
-                else
-                  raise error("Unhandled child: #{inner.kind}", inner)
-                end
-              end
-            end
-          else
-            if stmt = build_stmt(child)
-              body << stmt
-            else
-              raise error("Unhandled child: #{child.kind}", child)
-            end
-          end
-        end
-        cases << TypedAST::Case.new([] of Int64, body, has_break, location(child))
+        has_break = collect_case_values_and_body(child, values, body)
+        cases << TypedAST::Case.new(values, body, has_break, location(child), label)
       when .break_stmt?
         if last_case = cases.last?
           last_case.has_break = true
@@ -1464,7 +1445,7 @@ class Myc::Mycc::ASTBuilder
       end
     end
 
-    TypedAST::Switch.new(value, cases, location(cursor))
+    TypedAST::Switch.new(value, cases, location(cursor), swith_id)
   end
 
   private def collect_case_values_and_body(cursor, values, body) : Bool
@@ -1477,7 +1458,6 @@ class Myc::Mycc::ASTBuilder
         has_break = nested_break || has_break
       when .break_stmt?
         has_break = true
-      when .null_stmt?
       when .compound_stmt?
         children(child).each do |inner|
           case inner.kind
@@ -1491,7 +1471,16 @@ class Myc::Mycc::ASTBuilder
             end
           end
         end
-      when .character_literal?, .integer_literal?, .first_expr?, .paren_expr?, .decl_ref_expr?
+      when .character_literal?, .integer_literal?, .decl_ref_expr?
+      when .label_stmt?
+        body << TypedAST::Label.new(child.spelling, location(child))
+        children(child).each do |label_child|
+          if s = build_stmt(label_child)
+            body << s
+          else
+            raise error("Unhandled child: #{child.kind}", label_child)
+          end
+        end
       else
         if stmt = build_stmt(child)
           body << stmt

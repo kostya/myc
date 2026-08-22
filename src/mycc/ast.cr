@@ -442,8 +442,9 @@ module Myc::Mycc::TypedAST
   class Switch < Stmt
     getter value : Node
     getter cases : Array(Case)
+    getter switch_id : UInt64
 
-    def initialize(@value, @cases, @location); end
+    def initialize(@value, @cases, @location, @switch_id); end
 
     private def inspect_fields(io : IO)
       value.inspect(io)
@@ -463,9 +464,10 @@ module Myc::Mycc::TypedAST
   class Case
     getter values : Array(Int64)
     getter body : Array(Stmt)
+    getter label : String
     property has_break : Bool
 
-    def initialize(@values, @body, @has_break, @location : Location)
+    def initialize(@values, @body, @has_break, @location : Location, @label)
     end
   end
 
