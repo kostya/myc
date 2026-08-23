@@ -1434,12 +1434,10 @@ class Myc::Mycc::ASTBuilder
               last_case.has_break = true
             end
           else
-            if stmt = build_stmt(inner)
-              if last_case = cases.last?
-                last_case.body << stmt
-              end
+            if last_case = cases.last?
+              build_body(inner, last_case.body)
             else
-              raise error("Unhandled child: #{child.kind}", inner)
+              raise error("No cases: #{inner.kind}", inner)
             end
           end
         end
@@ -1472,11 +1470,7 @@ class Myc::Mycc::ASTBuilder
           when .break_stmt?
             has_break = true
           else
-            if stmt = build_stmt(inner)
-              body << stmt
-            else
-              raise error("Unhandled child: #{child.kind}", inner)
-            end
+            build_body(inner, body)
           end
         end
       else
