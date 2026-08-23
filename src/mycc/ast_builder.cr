@@ -491,6 +491,9 @@ class Myc::Mycc::ASTBuilder
          .decl_ref_expr?, .member_ref_expr?, .array_subscript_expr?
       node = build_node(cursor)
       body << TypedAST::ExprStmt.new(node, location(cursor))
+    when .conditional_operator?
+      node = build_conditional(cursor)
+      body << TypedAST::ExprStmt.new(node, location(cursor))
     when .null_stmt?
       body << TypedAST::Block.new([] of TypedAST::Stmt, location(cursor))
     when .label_stmt?
