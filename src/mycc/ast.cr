@@ -384,9 +384,9 @@ module Myc::Mycc::TypedAST
   end
 
   class For < Stmt
-    getter init : Stmt?
+    getter init : Array(Stmt)
     getter condition : Node?
-    getter update : Stmt?
+    getter update : Array(Stmt)
     property body : Array(Stmt)
 
     def initialize(@init, @condition, @update, @body, @location); end

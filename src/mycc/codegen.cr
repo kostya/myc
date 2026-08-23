@@ -323,9 +323,7 @@ class Myc::Mycc::CodeGenerator
   end
 
   def generate_stmt(stmt : TypedAST::For)
-    if init = stmt.init
-      generate_stmt(init)
-    end
+    stmt.init.each { |s| generate_stmt(s) }
 
     emit("LOOP")
     @indent += 1
@@ -347,9 +345,7 @@ class Myc::Mycc::CodeGenerator
     @indent -= 1
 
     emit("STEP")
-    if update = stmt.update
-      generate_stmt(update)
-    end
+    stmt.update.each { |s| generate_stmt(s) }
 
     @indent -= 1
     emit("ENDLOOP")
