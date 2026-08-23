@@ -359,7 +359,7 @@ module Myc::Mycc::TypedAST
 
   class While < Stmt
     getter condition : Node
-    getter body : Array(Stmt)
+    property body : Array(Stmt)
 
     def initialize(@condition, @body, @location); end
 
@@ -372,7 +372,7 @@ module Myc::Mycc::TypedAST
 
   class DoWhile < Stmt
     getter condition : Node
-    getter body : Array(Stmt)
+    property body : Array(Stmt)
 
     def initialize(@condition, @body, @location); end
 
@@ -387,7 +387,7 @@ module Myc::Mycc::TypedAST
     getter init : Stmt?
     getter condition : Node?
     getter update : Stmt?
-    getter body : Array(Stmt)
+    property body : Array(Stmt)
 
     def initialize(@init, @condition, @update, @body, @location); end
 
@@ -442,9 +442,9 @@ module Myc::Mycc::TypedAST
   class Switch < Stmt
     getter value : Node
     getter cases : Array(Case)
-    getter switch_id : UInt64
+    getter label_prefix : String
 
-    def initialize(@value, @cases, @location, @switch_id); end
+    def initialize(@value, @cases, @location, @label_prefix); end
 
     private def inspect_fields(io : IO)
       value.inspect(io)
@@ -455,7 +455,7 @@ module Myc::Mycc::TypedAST
         else
           io << "case("
         end
-        {c.values, c.body, c.has_break}.inspect(io)
+        {c.values, c.body}.inspect(io)
         io << ")"
       end
     end
@@ -465,9 +465,8 @@ module Myc::Mycc::TypedAST
     getter values : Array(Int64)
     getter body : Array(Stmt)
     getter label : String
-    property has_break : Bool
 
-    def initialize(@values, @body, @has_break, @location : Location, @label)
+    def initialize(@values, @body, @location : Location, @label)
     end
   end
 

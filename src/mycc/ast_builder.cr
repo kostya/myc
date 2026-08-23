@@ -21,6 +21,7 @@ class Myc::Mycc::ASTBuilder
     @switch_counter = 0_u64
     @unnamed_types = Hash(String, Type).new
     @static_func_names_map = Hash(String, String).new
+    @break_stack = Deque(TypedAST::Stmt).new
   end
 
   def build : TypedAST::Program
@@ -511,7 +512,14 @@ class Myc::Mycc::ASTBuilder
         TypedAST::ExprStmt.new(expr, location(cursor))
       end
     when .break_stmt?
-      TypedAST::Break.new(location(cursor))
+      case state = @break_stack.last?
+      when TypedAST::Switch
+        TypedAST::Goto.new(state.label_prefix + "_end", location(cursor))
+      when Nil
+        raise error("unexpected break", cursor)
+      else
+        TypedAST::Break.new(location(cursor))
+      end
     when .continue_stmt?
       TypedAST::Continue.new(location(cursor))
     when .goto_stmt?
@@ -1109,27 +1117,34 @@ class Myc::Mycc::ASTBuilder
   private def build_while(cursor : Clang::Cursor) : TypedAST::While
     children_list = children(cursor)
     condition = ensure_bool(build_node(children_list[0]).not_nil!)
-    body = if children_list.size > 1
-             build_stmt_or_stmts(children_list[1])
-           else
-             [] of TypedAST::Stmt
-           end
-    TypedAST::While.new(condition, body, location(cursor))
+    w = TypedAST::While.new(condition, [] of TypedAST::Stmt, location(cursor))
+    @break_stack << w
+    w.body = if children_list.size > 1
+               build_stmt_or_stmts(children_list[1])
+             else
+               [] of TypedAST::Stmt
+             end
+    @break_stack.pop
+    w
   end
 
   private def build_do_while(cursor : Clang::Cursor) : TypedAST::DoWhile
     children_list = children(cursor)
-    body = if children_list.size > 0
-             build_stmt_or_stmts(children_list[0])
-           else
-             [] of TypedAST::Stmt
-           end
+
     condition = if children_list.size > 1
                   ensure_bool(build_node(children_list[1]).not_nil!)
                 else
                   TypedAST::IntLiteral.new(1_i64, typer.i32, location(cursor))
                 end
-    TypedAST::DoWhile.new(condition, body, location(cursor))
+    dw = TypedAST::DoWhile.new(condition, [] of TypedAST::Stmt, location(cursor))
+    @break_stack << dw
+    dw.body = if children_list.size > 0
+                build_stmt_or_stmts(children_list[0])
+              else
+                [] of TypedAST::Stmt
+              end
+    @break_stack.pop
+    dw
   end
 
   private def build_for(cursor : Clang::Cursor) : TypedAST::For
@@ -1202,9 +1217,11 @@ class Myc::Mycc::ASTBuilder
       part_idx += 1
     end
 
-    body = build_stmt_or_stmts(children_list.last)
-
-    TypedAST::For.new(init, condition, update, body, location(cursor))
+    f = TypedAST::For.new(init, condition, update, [] of TypedAST::Stmt, location(cursor))
+    @break_stack << f
+    f.body = build_stmt_or_stmts(children_list.last)
+    @break_stack.pop
+    f
   end
 
   private def build_string_literal(cursor : Clang::Cursor) : TypedAST::StringLiteral
@@ -1405,8 +1422,9 @@ class Myc::Mycc::ASTBuilder
     value = build_node(children_list[0]).not_nil!
     cases = [] of TypedAST::Case
     switch_label_prefix = "__switch_#{@switch_counter}"
-    swith_id = @switch_counter
     @switch_counter += 1
+    sw = TypedAST::Switch.new(value, cases, location(cursor), switch_label_prefix)
+    @break_stack << sw
 
     children(children_list[1]).each do |child|
       case child.kind
@@ -1414,33 +1432,14 @@ class Myc::Mycc::ASTBuilder
         label = "#{switch_label_prefix}_#{cases.size}"
         values = [extract_case_value(child)]
         body = [] of TypedAST::Stmt
-        has_break = collect_case_values_and_body(child, values, body)
-        cases << TypedAST::Case.new(values, body, has_break, location(child), label)
+        collect_case_values_and_body(child, values, body)
+        cases << TypedAST::Case.new(values, body, location(child), label)
       when .default_stmt?
         label = "#{switch_label_prefix}_#{cases.size}"
         values = [] of Int64
         body = [] of TypedAST::Stmt
-        has_break = collect_case_values_and_body(child, values, body)
-        cases << TypedAST::Case.new(values, body, has_break, location(child), label)
-      when .break_stmt?
-        if last_case = cases.last?
-          last_case.has_break = true
-        end
-      when .compound_stmt?
-        children(child).each do |inner|
-          case inner.kind
-          when .break_stmt?
-            if last_case = cases.last?
-              last_case.has_break = true
-            end
-          else
-            if last_case = cases.last?
-              build_body(inner, last_case.body)
-            else
-              raise error("No cases: #{inner.kind}", inner)
-            end
-          end
-        end
+        collect_case_values_and_body(child, values, body)
+        cases << TypedAST::Case.new(values, body, location(child), label)
       else
         if last_case = cases.last?
           build_body(child, last_case.body)
@@ -1450,34 +1449,21 @@ class Myc::Mycc::ASTBuilder
       end
     end
 
-    TypedAST::Switch.new(value, cases, location(cursor), swith_id)
+    @break_stack.pop
+    sw
   end
 
-  private def collect_case_values_and_body(cursor, values, body) : Bool
-    has_break = false
+  private def collect_case_values_and_body(cursor, values, body)
     children(cursor).each do |child|
       case child.kind
       when .case_stmt?
         values << extract_case_value(child)
-        nested_break = collect_case_values_and_body(child, values, body)
-        has_break = nested_break || has_break
-      when .break_stmt?
-        has_break = true
-      when .character_literal?, .integer_literal?, .decl_ref_expr?
-      when .compound_stmt?
-        children(child).each do |inner|
-          case inner.kind
-          when .break_stmt?
-            has_break = true
-          else
-            build_body(inner, body)
-          end
-        end
+        collect_case_values_and_body(child, values, body)
+      when .decl_ref_expr?, .integer_literal?, .character_literal?, .paren_expr?, .first_expr?
       else
         build_body(child, body)
       end
     end
-    has_break
   end
 
   private def extract_case_value(cursor : Clang::Cursor) : Int64
