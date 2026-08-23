@@ -1,0 +1,24 @@
+STRUCT :Bla
+  TYPE :i32
+ENDSTRUCT
+
+FUNC :set_field
+  ARGS
+    TYPE :ptr<i32>
+  BODY
+    PUSH 42
+    PARAM 0
+    DEREF
+    STORE
+ENDFUNC
+
+FUNC :main
+  BODY
+    LOCAL :bla :Bla
+    FIELD 0
+    ADDR
+    CALL :set_field
+    LOCAL :bla
+    INSPECT
+ENDFUNC
+

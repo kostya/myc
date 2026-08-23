@@ -159,7 +159,7 @@ class Myc::Backend::Value
     case _pp = @pp
     when PP::LocalUninitialized
       if local = visitor.locals[_pp.name]?
-        local.pp = PP::Local.new(_pp.name)
+        @pp = local.pp = PP::Local.new(_pp.name)
       end
     end
   end
