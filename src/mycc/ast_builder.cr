@@ -1372,6 +1372,11 @@ class Myc::Mycc::ASTBuilder
 
     if struct_type.is_a?(Type::EnumType)
       variant_type = typer.find("#{struct_type.id_name}::#{field_name}", location(cursor))
+
+      if is_arrow && obj.type.is_a?(Type::PtrType)
+        obj = TypedAST::Deref.new(obj, obj.type.as(Type::PtrType).target_type, location(cursor))
+      end
+
       casted = TypedAST::Cast.new(obj, variant_type, location(cursor))
       field_type = struct_type.data[variant_type.id_name]?.try(&.value_types.first?) || struct_type
       return TypedAST::FieldAccess.new(casted, field_name, 1, field_type, location(cursor))
