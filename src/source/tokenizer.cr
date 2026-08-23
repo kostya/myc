@@ -184,7 +184,7 @@ class Myc::Source::Tokenizer
         if f = parse_special_float
           Token::FloatValue.new(f)
         else
-          raise error("unexpected symbol '-'")
+          raise error("unexpected symbol '+'")
         end
       end
     else
@@ -225,7 +225,7 @@ class Myc::Source::Tokenizer
 
     String.build do |io|
       while (current_char != close_char) && (current_char != END_CHAR)
-        c = _consume_escaped_char
+        c = _consume_char
         io << c
       end
 
@@ -242,7 +242,7 @@ class Myc::Source::Tokenizer
 
     String.build do |io|
       while !separator?(current_char)
-        c = _consume_escaped_char
+        c = _consume_char
         io << c
       end
     end
@@ -263,20 +263,208 @@ class Myc::Source::Tokenizer
     '\'' => '\'',
   }
 
-  private def _consume_escaped_char
+  private def _consume_char : Char
     if current_char == '\\'
       move_next
-      c2 = current_char
-      if ch = ESCAPE_MAP[c2]?
-        move_next
-        ch
-      else
-        raise error("undefined escape char: #{c2.ord}")
+      if current_char == END_CHAR
+        raise error("unexpected end of input after '\\'")
       end
+      _consume_escaped_char
     else
       ch = current_char
       move_next
       ch
+    end
+  end
+
+  private def codepoint_to_char(cp : Int) : Char
+    unless 0 <= cp <= 0x10FFFF
+      raise error("invalid codepoint: #{cp}")
+    end
+
+    cp.chr
+  end
+
+  private def _consume_escaped_char : Char
+    c2 = current_char
+
+    if ch = ESCAPE_MAP[c2]?
+      move_next
+      return ch
+    end
+
+    case c2
+    when 'x'
+      move_next
+      if current_char == '{'
+        move_next
+        hex_str = String.build do |str|
+          loop do
+            c = current_char
+            break if c == '}'
+            if c == END_CHAR
+              raise error("unterminated \\x{...} sequence")
+            end
+            unless c.hex?
+              raise error("invalid hex digit in \\x{...}: #{c.inspect}")
+            end
+            str << c
+            move_next
+          end
+        end
+        move_next
+
+        if hex_str.empty?
+          raise error("empty \\x{} sequence")
+        end
+
+        return codepoint_to_char(hex_str.to_i(16))
+      else
+        hex_str = String.build do |str|
+          2.times do
+            if current_char == END_CHAR
+              raise error("unexpected end of input in \\x escape")
+            end
+            c = current_char
+            unless c.hex?
+              raise error("invalid hex digit in \\x escape: #{c.inspect}")
+            end
+            str << c
+            move_next
+          end
+        end
+        return codepoint_to_char(hex_str.to_i(16))
+      end
+    when 'o'
+      move_next
+      if current_char == '{'
+        move_next
+        oct_str = String.build do |str|
+          loop do
+            c = current_char
+            break if c == '}'
+            if c == END_CHAR
+              raise error("unterminated \\o{...} sequence")
+            end
+            unless '0' <= c <= '7'
+              raise error("invalid octal digit in \\o{...}: #{c.inspect}")
+            end
+            str << c
+            move_next
+          end
+        end
+        move_next
+
+        if oct_str.empty?
+          raise error("empty \\o{} sequence")
+        end
+
+        return codepoint_to_char(oct_str.to_i(8))
+      else
+        oct_str = String.build do |str|
+          3.times do
+            if current_char == END_CHAR
+              raise error("unexpected end of input in \\o escape")
+            end
+            c = current_char
+            unless '0' <= c <= '7'
+              raise error("invalid octal digit in \\o escape: #{c.inspect}")
+            end
+            str << c
+            move_next
+          end
+        end
+        return codepoint_to_char(oct_str.to_i(8))
+      end
+    when '0'..'7'
+      oct_str = String.build do |str|
+        str << c2
+        move_next
+        2.times do
+          c = current_char
+          break unless '0' <= c <= '7'
+          str << c
+          move_next
+        end
+      end
+      cp = oct_str.to_i(8)
+      if cp > 0xFF
+        raise error("octal escape \\#{oct_str} is out of range (max \\377)")
+      end
+      return codepoint_to_char(cp)
+    when 'u'
+      move_next
+
+      if current_char == '{'
+        move_next
+        hex_str = String.build do |str|
+          loop do
+            c = current_char
+            break if c == '}'
+            if c == END_CHAR
+              raise error("unterminated \\u{...} sequence")
+            end
+            unless c.hex?
+              raise error("invalid hex digit in \\u{...}: #{c.inspect}")
+            end
+            str << c
+            move_next
+          end
+        end
+        move_next
+
+        if hex_str.empty?
+          raise error("empty \\u{} sequence")
+        end
+
+        return codepoint_to_char(hex_str.to_i(16))
+      else
+        hex_str = String.build do |str|
+          4.times do |i|
+            if current_char == END_CHAR
+              raise error("unexpected end of input in \\u escape")
+            end
+            c = current_char
+            unless c.hex?
+              raise error("invalid hex digit at position #{i} in \\u escape: #{c.inspect}")
+            end
+            str << c
+            move_next
+          end
+        end
+        return codepoint_to_char(hex_str.to_i(16))
+      end
+    when 'c', 'C'
+      move_next
+
+      if current_char == '-'
+        move_next
+      end
+
+      if current_char == END_CHAR
+        raise error("unexpected end of input in \\c escape")
+      end
+
+      ctrl_char = current_char
+      move_next
+
+      code = case ctrl_char
+             when '@'      then 0
+             when 'A'..'Z' then ctrl_char.ord - 64
+             when 'a'..'z' then ctrl_char.ord - 96
+             when '['      then 27
+             when '\\'     then 28
+             when ']'      then 29
+             when '^'      then 30
+             when '_'      then 31
+             when '?'      then 127
+             else
+               raise error("invalid control character: \\c#{ctrl_char.inspect}")
+             end
+
+      return codepoint_to_char(code)
+    else
+      raise error("undefined escape char: \\#{c2.inspect}")
     end
   end
 

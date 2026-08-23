@@ -253,4 +253,332 @@ context "Myc::Source::Tokenizer" do
       PUSH -NAN
     SRC
   end
+
+  context "escaping" do
+    it "PUSH escaping symbols" do
+      tokenize(<<-SRC).inspect.should eq "[O:PUSH:2, V:\"ሴ\":7]"
+      PUSH "\\u1234"
+    SRC
+    end
+
+    it "escapes \\n" do
+      tokenize(<<-SRC).inspect.should eq "[O:PUSH:2, V:\"\\n\":7]"
+      PUSH "\\n"
+    SRC
+    end
+
+    it "escapes \\t" do
+      tokenize(<<-SRC).inspect.should eq "[O:PUSH:2, V:\"\\t\":7]"
+      PUSH "\\t"
+    SRC
+    end
+
+    it "escapes \\r" do
+      tokenize(<<-SRC).inspect.should eq "[O:PUSH:2, V:\"\\r\":7]"
+      PUSH "\\r"
+    SRC
+    end
+
+    it "escapes \\f" do
+      tokenize(<<-SRC).inspect.should eq "[O:PUSH:2, V:\"\\f\":7]"
+      PUSH "\\f"
+    SRC
+    end
+
+    it "escapes \\v" do
+      tokenize(<<-SRC).inspect.should eq "[O:PUSH:2, V:\"\\v\":7]"
+      PUSH "\\v"
+    SRC
+    end
+
+    it "escapes \\a" do
+      tokenize(<<-SRC).inspect.should eq "[O:PUSH:2, V:\"\\a\":7]"
+      PUSH "\\a"
+    SRC
+    end
+
+    it "escapes \\b" do
+      tokenize(<<-SRC).inspect.should eq "[O:PUSH:2, V:\"\\b\":7]"
+      PUSH "\\b"
+    SRC
+    end
+
+    it "escapes \\s to space" do
+      tokenize(<<-SRC).inspect.should eq "[O:PUSH:2, V:\" \":7]"
+      PUSH "\\s"
+    SRC
+    end
+
+    it "escapes \\e to ESC" do
+      tokenize(<<-SRC).inspect.should eq "[O:PUSH:2, V:\"\\e\":7]"
+      PUSH "\\e"
+    SRC
+    end
+
+    it "escapes \\\\" do
+      tokenize(<<-SRC).inspect.should eq "[O:PUSH:2, V:\"\\\\\":7]"
+      PUSH "\\\\"
+    SRC
+    end
+
+    it "escapes \\\"" do
+      tokenize(<<-SRC).inspect.should eq "[O:PUSH:2, V:\"\\\"\":7]"
+      PUSH "\\""
+    SRC
+    end
+
+    it "escapes \\' inside single quotes" do
+      tokenize(<<-SRC).inspect.should eq "[O:PUSH:2, V:\"'\":7]"
+      PUSH '\\''
+    SRC
+    end
+
+    it "escapes \\u0041 to A" do
+      tokenize(<<-SRC).inspect.should eq "[O:PUSH:2, V:\"A\":7]"
+      PUSH "\\u0041"
+    SRC
+    end
+
+    it "escapes \\uFFFF" do
+      tokenize(<<-SRC).inspect.should eq "[O:PUSH:2, V:\"\uFFFF\":7]"
+      PUSH "\\uFFFF"
+    SRC
+    end
+
+    it "escapes \\u0000 to NUL" do
+      tokenize(<<-SRC).inspect.should eq "[O:PUSH:2, V:\"\\u0000\":7]"
+      PUSH "\\u0000"
+    SRC
+    end
+
+    it "escapes \\u{41} to A" do
+      tokenize(<<-SRC).inspect.should eq "[O:PUSH:2, V:\"A\":7]"
+      PUSH "\\u{41}"
+    SRC
+    end
+
+    it "escapes \\u{1F52E} to crystal ball" do
+      tokenize(<<-SRC).inspect.should eq "[O:PUSH:2, V:\"🔮\":7]"
+      PUSH "\\u{1F52E}"
+    SRC
+    end
+
+    it "escapes \\u{10FFFF}" do
+      tokenize(<<-SRC).inspect.should eq "[O:PUSH:2, V:\"\u{10FFFF}\":7]"
+      PUSH "\\u{10FFFF}"
+    SRC
+    end
+
+    it "escapes \\x41 to A" do
+      tokenize(<<-SRC).inspect.should eq "[O:PUSH:2, V:\"A\":7]"
+      PUSH "\\x41"
+    SRC
+    end
+
+    it "escapes \\xFF" do
+      tokenize(<<-SRC).inspect.should eq "[O:PUSH:2, V:\"ÿ\":7]"
+      PUSH "\\xFF"
+    SRC
+    end
+
+    it "escapes \\x{41} to A" do
+      tokenize(<<-SRC).inspect.should eq "[O:PUSH:2, V:\"A\":7]"
+      PUSH "\\x{41}"
+    SRC
+    end
+
+    it "escapes \\x{1F52E}" do
+      tokenize(<<-SRC).inspect.should eq "[O:PUSH:2, V:\"🔮\":7]"
+      PUSH "\\x{1F52E}"
+    SRC
+    end
+
+    it "escapes \\o101 to A" do
+      tokenize(<<-SRC).inspect.should eq "[O:PUSH:2, V:\"A\":7]"
+      PUSH "\\o101"
+    SRC
+    end
+
+    it "escapes \\o{101} to A" do
+      tokenize(<<-SRC).inspect.should eq "[O:PUSH:2, V:\"A\":7]"
+      PUSH "\\o{101}"
+    SRC
+    end
+
+    it "escapes \\o{777} to ǿ" do
+      tokenize(<<-SRC).inspect.should eq "[O:PUSH:2, V:\"ǿ\":7]"
+      PUSH "\\o{777}"
+    SRC
+    end
+
+    it "escapes \\0 to NUL" do
+      tokenize(<<-SRC).inspect.should eq "[O:PUSH:2, V:\"\\u0000\":7]"
+      PUSH "\\0"
+    SRC
+    end
+
+    it "escapes \\101 to A" do
+      tokenize(<<-SRC).inspect.should eq "[O:PUSH:2, V:\"A\":7]"
+      PUSH "\\101"
+    SRC
+    end
+
+    it "escapes \\377 to 0xFF" do
+      tokenize(<<-SRC).inspect.should eq "[O:PUSH:2, V:\"ÿ\":7]"
+      PUSH "\\377"
+    SRC
+    end
+
+    it "escapes \\cA to SOH" do
+      tokenize(<<-SRC).inspect.should eq "[O:PUSH:2, V:\"\\u0001\":7]"
+      PUSH "\\cA"
+    SRC
+    end
+
+    it "escapes \\c-a to SOH" do
+      tokenize(<<-SRC).inspect.should eq "[O:PUSH:2, V:\"\\u0001\":7]"
+      PUSH "\\c-a"
+    SRC
+    end
+
+    it "escapes \\c@" do
+      tokenize(<<-SRC).inspect.should eq "[O:PUSH:2, V:\"\\u0000\":7]"
+      PUSH "\\c@"
+    SRC
+    end
+
+    it "escapes \\c?" do
+      tokenize(<<-SRC).inspect.should eq "[O:PUSH:2, V:\"\\u007F\":7]"
+      PUSH "\\c?"
+    SRC
+    end
+
+    it "escapes \\c[" do
+      tokenize(<<-SRC).inspect.should eq "[O:PUSH:2, V:\"\\e\":7]"
+      PUSH "\\c["
+    SRC
+    end
+
+    it "escapes mixed sequences" do
+      tokenize(<<-SRC).inspect.should eq "[O:PUSH:2, V:\"a\\tb\\n\":7]"
+      PUSH "a\\tb\\n"
+    SRC
+    end
+
+    it "escapes adjacent escapes" do
+      tokenize(<<-SRC).inspect.should eq "[O:PUSH:2, V:\"\\u0001\\u0002\":7]"
+      PUSH "\\u0001\\u0002"
+    SRC
+    end
+
+    it "does not escape ordinary backslash-free string" do
+      tokenize(<<-SRC).inspect.should eq "[O:PUSH:2, V:\"hello\":7]"
+      PUSH "hello"
+    SRC
+    end
+
+    it "raises on unterminated string" do
+      expect_raises(Myc::Error::ErrorLoc, /string not ended/) do
+        tokenize(<<-SRC)
+        PUSH "abc
+      SRC
+      end
+    end
+
+    it "raises on undefined escape" do
+      expect_raises(Myc::Error::ErrorLoc, /undefined escape char/) do
+        tokenize(<<-SRC)
+        PUSH "\\q"
+      SRC
+      end
+    end
+
+    it "raises on bad hex in \\x" do
+      expect_raises(Myc::Error::ErrorLoc, /invalid hex digit/) do
+        tokenize(<<-SRC)
+        PUSH "\\xZZ"
+      SRC
+      end
+    end
+
+    it "raises on bad hex in \\u" do
+      expect_raises(Myc::Error::ErrorLoc, /invalid hex digit/) do
+        tokenize(<<-SRC)
+        PUSH "\\uZZZZ"
+      SRC
+      end
+    end
+
+    it "raises on bad hex in \\u{}" do
+      expect_raises(Myc::Error::ErrorLoc, /invalid hex digit/) do
+        tokenize(<<-SRC)
+        PUSH "\\u{ZZ}"
+      SRC
+      end
+    end
+
+    it "raises on empty \\u{}" do
+      expect_raises(Myc::Error::ErrorLoc, /empty/) do
+        tokenize(<<-SRC)
+        PUSH "\\u{}"
+      SRC
+      end
+    end
+
+    it "raises on empty \\x{}" do
+      expect_raises(Myc::Error::ErrorLoc, /empty/) do
+        tokenize(<<-SRC)
+        PUSH "\\x{}"
+      SRC
+      end
+    end
+
+    it "raises on unterminated \\u{...}" do
+      expect_raises(Myc::Error::ErrorLoc, /unterminated/) do
+        tokenize(<<-SRC)
+        PUSH "\\u{41
+      SRC
+      end
+    end
+
+    it "raises on unterminated \\x{...}" do
+      expect_raises(Myc::Error::ErrorLoc, /unterminated/) do
+        tokenize(<<-SRC)
+        PUSH "\\x{41
+      SRC
+      end
+    end
+
+    it "raises on codepoint too large in \\u{}" do
+      expect_raises(Myc::Error::ErrorLoc, /invalid codepoint/) do
+        tokenize(<<-SRC)
+        PUSH "\\u{110000}"
+      SRC
+      end
+    end
+
+    it "raises on trailing backslash" do
+      expect_raises(Myc::Error::ErrorLoc, /unexpected end of input/) do
+        tokenize(<<-SRC)
+        PUSH "abc\\
+      SRC
+      end
+    end
+
+    it "raises on \\c without control char" do
+      expect_raises(Myc::Error::ErrorLoc, /unexpected end of input/) do
+        tokenize(<<-SRC)
+        PUSH "\\c
+      SRC
+      end
+    end
+
+    it "raises on invalid control char" do
+      expect_raises(Myc::Error::ErrorLoc, /invalid control character/) do
+        tokenize(<<-SRC)
+        PUSH "\\c!"
+      SRC
+      end
+    end
+  end
 end

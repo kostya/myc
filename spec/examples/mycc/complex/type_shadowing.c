@@ -217,7 +217,8 @@ static int test_inner_shadow() {
     struct Data data2;
     data2.a = 1;
     data2.b = 2;
-    printf("test_inner_shadow: %d, %d, %d, %d\n", data2.a, data2.b, data.x, data.y);
+    printf("test_inner_shadow: %d, %d, %d, %d\n", data2.a, data2.b, data.x,
+           data.y);
   }
 
   return 0;

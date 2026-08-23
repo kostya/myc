@@ -124,7 +124,7 @@ class Myc::Mycc::CodeGenerator
       emit(" #{elem.value}")
     when TypedAST::StringLiteral
       if elem.type.is_a?(Type::PtrType)
-        emit(" \"#{Backend::AbstractBuilder.escaped_string(elem.value)}\"")
+        emit(" #{elem.value.inspect}")
       else
         value = elem.value
         str = String.build do |s|

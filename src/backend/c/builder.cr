@@ -102,7 +102,7 @@ class Myc::Backend::C::Builder < Myc::Backend::AbstractBuilder
         io << val
       end
     when InitValue::Str
-      io << '"' << AbstractBuilder.escaped_string(init.str) << '"'
+      init.str.inspect(io)
     when InitValue::Zero
       io << "NULL"
     when InitValue::GlobalRef
@@ -124,7 +124,7 @@ class Myc::Backend::C::Builder < Myc::Backend::AbstractBuilder
       end
       io << '}'
     when InitValue::FlatStr
-      io << '"' << AbstractBuilder.escaped_string(init.str) << '"'
+      init.str.inspect(io)
     end
   end
 

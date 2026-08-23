@@ -1,0 +1,61 @@
+FUNC :main
+  BODY
+    PUSH "Hello\nWorld"
+    INSPECT
+    PUSH "Tab\tseparated"
+    INSPECT
+    PUSH "Backslash: \\"
+    INSPECT
+    PUSH "Quote: \"test\""
+    INSPECT
+    PUSH "Hex bytes: \x48\x65\x6C\x6C\x6F"
+    INSPECT
+    PUSH "Hex bytes: \x41\x42\x43"
+    INSPECT
+    PUSH "Hex braces: \x{48}\x{49}"
+    INSPECT
+    PUSH "Mixed: Hello\nWorld!"
+    INSPECT
+    PUSH "Octal: \101\102\103"
+    INSPECT
+    PUSH "Octal braces: \o{104}\o{105}"
+    INSPECT
+    PUSH "Octal space: \40Hello!"
+    INSPECT
+    PUSH "Octal two: \110\111"
+    INSPECT
+    PUSH "Unicode: \u041F\u0440\u0438\u0432\u0435\u0442"
+    INSPECT
+    PUSH "Unicode short: \u0048\u0065\u006C\u006C\u006F"
+    INSPECT
+    PUSH "Unicode omega: \u03A9"
+    INSPECT
+    PUSH "Unicode arrow: \u2192"
+    INSPECT
+    PUSH "Unicode braces: \u{41}\u{42}\u{43}"
+    INSPECT
+    PUSH "Emoji: \u{1F600}"
+    INSPECT
+    PUSH "Chinese: \u{4F60}\u{597D}"
+    INSPECT
+    PUSH "Complex: \u{1F44B} Hello \u{1F44B}"
+    INSPECT
+    PUSH "Clef: \u{1D11E}"
+    INSPECT
+    PUSH "MAX: \u{10FFFF}"
+    INSPECT
+    PUSH "Mixed: Hello! World?\nNew line\n"
+    INSPECT
+    PUSH "JSON: {\"key\": \"value\"}"
+    INSPECT
+    PUSH "Path: C:\\Users\\Name\\file.txt"
+    INSPECT
+    PUSH "Tabbed:\tcol1\tcol2\tcol3"
+    INSPECT
+    PUSH "Single: A"
+    INSPECT
+    PUSH "Digits: 123"
+    INSPECT
+    PUSH "Space:  "
+    INSPECT
+ENDFUNC

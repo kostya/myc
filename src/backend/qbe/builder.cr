@@ -146,7 +146,11 @@ class Myc::Backend::QBE::Builder < Myc::Backend::AbstractBuilder
     @string_constants.put_if_absent(str) do
       name = "str_#{@str_counter}"
       @str_counter += 1
-      @data_io << "data $#{name} = { b \"#{AbstractBuilder.escaped_string(str)}\", b 0 }\n"
+      @data_io << "data $#{name} = { "
+      str.each_byte do |b|
+        @data_io << "b #{b}, "
+      end
+      @data_io << "b 0 }\n"
       "$#{name}"
     end
   end
