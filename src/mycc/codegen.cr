@@ -323,9 +323,7 @@ class Myc::Mycc::CodeGenerator
   end
 
   def generate_stmt(stmt : TypedAST::For)
-    if init = stmt.init
-      generate_stmt(init)
-    end
+    stmt.init.each { |s| generate_stmt(s) }
 
     emit("LOOP")
     @indent += 1
@@ -347,9 +345,7 @@ class Myc::Mycc::CodeGenerator
     @indent -= 1
 
     emit("STEP")
-    if update = stmt.update
-      generate_stmt(update)
-    end
+    stmt.update.each { |s| generate_stmt(s) }
 
     @indent -= 1
     emit("ENDLOOP")
@@ -413,15 +409,14 @@ class Myc::Mycc::CodeGenerator
   end
 
   def generate_stmt(stmt : TypedAST::Switch)
-    label = "__switch_#{@switch_count}"
+    label = stmt.label_prefix
     @switch_count += 1
 
     generate_expr(stmt.value)
-    switch_val = "__switch_val_#{@switch_count}"
+    switch_val = "#{label}_val"
     emit_local(switch_val, stmt.value.type)
     emit("STORE")
 
-    case_counter = 0
     stmt.cases.each do |c|
       if c.values.present?
         c.values.each do |val|
@@ -431,26 +426,22 @@ class Myc::Mycc::CodeGenerator
           emit("BINARY :eq")
           emit("IF")
           @indent += 1
-          emit("THEN GOTO \"#{label}__case_#{case_counter}\"")
+          emit("THEN GOTO \"#{c.label}\"")
           @indent -= 1
           emit("ENDIF")
         end
       else
-        emit("GOTO \"#{label}__case_#{case_counter}\"")
+        emit("GOTO \"#{c.label}\"")
       end
-      case_counter += 1
     end
 
     emit("GOTO \"#{label}_end\"")
 
-    case_counter = 0
     stmt.cases.each do |c|
-      emit("LABEL \"#{label}__case_#{case_counter}\"")
+      emit("LABEL \"#{c.label}\"")
       push_scope
       c.body.each { |s| generate_stmt(s) }
       pop_scope
-      emit("GOTO \"#{label}_end\"") if c.has_break
-      case_counter += 1
     end
 
     emit("LABEL \"#{label}_end\"")
@@ -549,7 +540,7 @@ class Myc::Mycc::CodeGenerator
       emit_local(tmp, typer.bool)
     when :comma
       generate_expr(expr.left)
-      emit("STACK :drop")
+      emit("STACK :drop") unless expr.left.type.eq?(typer.void)
       generate_expr(expr.right)
     else
       generate_expr(expr.right)
@@ -650,7 +641,11 @@ class Myc::Mycc::CodeGenerator
 
   def generate_expr(expr : TypedAST::Cast)
     generate_expr(expr.operand)
-    emit("AS #{type_s(expr.type)}")
+    if expr.type.eq?(typer.void)
+      emit("STACK :drop")
+    else
+      emit("AS #{type_s(expr.type)}")
+    end
   end
 
   def generate_expr(expr : TypedAST::Subscript)
@@ -696,27 +691,43 @@ class Myc::Mycc::CodeGenerator
   end
 
   def generate_expr(expr : TypedAST::Conditional)
-    tmp = "__ternary_#{@local_marks.size}"
+    if expr.type.eq?(typer.void)
+      generate_expr(expr.condition)
+      emit("IF")
+      @indent += 1
+      emit("THEN")
+      @indent += 1
+      generate_expr(expr.then_expr)
+      @indent -= 1
+      emit("ELSE")
+      @indent += 1
+      generate_expr(expr.else_expr)
+      @indent -= 1
+      @indent -= 1
+      emit("ENDIF")
+    else
+      tmp = "__ternary_#{@local_marks.size}"
 
-    generate_expr(expr.condition)
-    emit("IF")
-    @indent += 1
-    emit("THEN")
-    @indent += 1
-    generate_expr(expr.then_expr)
-    emit_local(tmp, expr.type)
-    emit("STORE")
-    @indent -= 1
-    emit("ELSE")
-    @indent += 1
-    generate_expr(expr.else_expr)
-    emit_local(tmp, expr.type)
-    emit("STORE")
-    @indent -= 1
-    @indent -= 1
-    emit("ENDIF")
+      generate_expr(expr.condition)
+      emit("IF")
+      @indent += 1
+      emit("THEN")
+      @indent += 1
+      generate_expr(expr.then_expr)
+      emit_local(tmp, expr.type)
+      emit("STORE")
+      @indent -= 1
+      emit("ELSE")
+      @indent += 1
+      generate_expr(expr.else_expr)
+      emit_local(tmp, expr.type)
+      emit("STORE")
+      @indent -= 1
+      @indent -= 1
+      emit("ENDIF")
 
-    emit_local(tmp, expr.type)
+      emit_local(tmp, expr.type)
+    end
   end
 
   def generate_expr(expr : TypedAST::ZeroInitializer)

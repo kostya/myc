@@ -14,7 +14,9 @@ STRUCT :Bla
   TYPE :Union
 ENDSTRUCT
 
-FUNC :main BODY
-  SIZEOF :Bla
-  INSPECT
+FUNC :main
+  BODY
+    SIZEOF :Bla
+    INSPECT
 ENDFUNC
+

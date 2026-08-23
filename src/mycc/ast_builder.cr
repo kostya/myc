@@ -18,8 +18,10 @@ class Myc::Mycc::ASTBuilder
     @enum_types = {} of String => Type
     @called_functions = Set(String).new
     @unnamed_counter = 0_u64
+    @switch_counter = 0_u64
     @unnamed_types = Hash(String, Type).new
     @static_func_names_map = Hash(String, String).new
+    @break_stack = Deque(TypedAST::Stmt).new
   end
 
   def build : TypedAST::Program
@@ -160,23 +162,35 @@ class Myc::Mycc::ASTBuilder
     return_type = get_type(cursor, cursor.result_type)
     @current_return_type = return_type
 
+    param_names = [] of String
+    children(cursor).each do |child|
+      if child.kind.parm_decl?
+        param_name = child.spelling
+        param_name = "__param_#{param_names.size}" if param_name.empty?
+        param_names << param_name
+      end
+    end
+
+    if fn_type = func_type.as?(Type::Fn)
+      fn_type.args.each_with_index do |arg_type, i|
+        param_name = param_names[i]? || "__param_#{i}"
+        if arg_type.is_a?(Type::FlatType)
+          arg_type = typer.to_ptr(arg_type.target_type, location(cursor))
+        end
+        @current_function_params[param_name] = TypedAST::Function::ParamInfo.new(
+          param_name, arg_type, @current_function_params.size
+        )
+      end
+    end
+
     children(cursor).each do |child|
       case child.kind
-      when .parm_decl?
-        param_name = child.spelling
-        if param_name.empty?
-          param_name = "__param_#{@current_function_params.size}"
-        end
-        param_type = get_type(child, child.type)
-        if param_type.is_a?(Type::FlatType)
-          param_type = typer.to_ptr(param_type.target_type, location(child))
-        end
-
-        @current_function_params[param_name] = TypedAST::Function::ParamInfo.new(param_name, param_type, @current_function_params.size)
       when .compound_stmt?
-        body = build_stmts(child)
-      when .first_attr?, .type_ref?, .first_expr?, .warn_unused_result_attr?,
-           .const_attr?, .visibility_attr?, .pure_attr?, .asm_label_attr?
+        body = [] of TypedAST::Stmt
+        children(child).each { |c| build_stmt(c, body) }
+      when .parm_decl?, .first_attr?, .type_ref?, .first_expr?,
+           .warn_unused_result_attr?, .const_attr?, .visibility_attr?,
+           .pure_attr?, .asm_label_attr?
       else
         raise error("Unhandled child: #{child.kind}", child)
       end
@@ -189,10 +203,31 @@ class Myc::Mycc::ASTBuilder
       @static_func_names_map[name] = name2
       name = name2
     end
-    TypedAST::Function.new(name, @current_function_params.dup, return_type, body, location(cursor), vaarg, is_static)
+
+    TypedAST::Function.new(
+      name,
+      @current_function_params.dup,
+      return_type,
+      body,
+      location(cursor),
+      vaarg,
+      is_static
+    )
   ensure
     @current_return_type = nil
     @current_function_name = old_name.not_nil!
+  end
+
+  def build_body(cursor : Clang::Cursor, body : Array(TypedAST::Stmt))
+    if cursor.kind.compound_stmt?
+      children(cursor).each { |child| build_stmt(child, body) }
+    else
+      build_stmt(cursor, body)
+    end
+  end
+
+  def build_body(cursor : Clang::Cursor) : Array(TypedAST::Stmt)
+    Array(TypedAST::Stmt).new.tap { |body| build_body(cursor, body) }
   end
 
   private def build_struct_decl(cursor : Clang::Cursor, name : String? = nil)
@@ -300,7 +335,7 @@ class Myc::Mycc::ASTBuilder
     end
   end
 
-  private def build_node(cursor : Clang::Cursor) : TypedAST::Node?
+  private def build_node(cursor : Clang::Cursor) : TypedAST::Node
     case cursor.kind
     when .integer_literal?       then build_int_literal(cursor)
     when .floating_literal?      then build_float_literal(cursor)
@@ -320,8 +355,8 @@ class Myc::Mycc::ASTBuilder
       op = cursor.spelling
       if op == "="
         children_list = children(cursor)
-        left = build_node(children_list[0]).not_nil!
-        right = build_node(children_list[1]).not_nil!
+        left = build_node(children_list[0])
+        right = build_node(children_list[1])
         right = auto_cast(right, left.type, location(cursor))
         mark_param_changed(left)
         TypedAST::AssignExpr.new(left, right, location(cursor))
@@ -334,181 +369,109 @@ class Myc::Mycc::ASTBuilder
       end
 
       children = children(cursor)
-      children.size == 1 ? build_node(children[0]) : nil
+      children.size == 1 ? build_node(children[0]) : raise error("Unknown node #{cursor.kind}", cursor)
     when .compound_assign_operator?
       op = cursor.spelling
       children_list = children(cursor)
-      left = build_node(children_list[0]).not_nil!
-      right = build_node(children_list[1]).not_nil!
+      left = build_node(children_list[0])
+      right = build_node(children_list[1])
       right = auto_cast(right, left.type, location(cursor))
 
       base_op = op.ends_with?('=') ? op[0..-2] : op
       bin_op = BINARY_MAP[base_op]? || raise error("Unknown op: #{base_op}", cursor)
       TypedAST::BinaryOp.new(bin_op, left, right, left.type, location(cursor))
+    else
+      raise error("Unknown node #{cursor.kind}", cursor)
     end
   end
 
-  private def build_stmts(cursor : Clang::Cursor) : Array(TypedAST::Stmt)
-    stmts = [] of TypedAST::Stmt
-    children(cursor).each do |child|
-      next if child.spelling == "{" || child.spelling == "}"
-
-      case child.kind
-      when .decl_stmt?
-        children(child).each do |decl_child|
-          if decl_child.kind.var_decl?
-            stmts << build_var_decl(decl_child)
-          elsif decl_child.kind.struct_decl?
-            build_struct_decl(decl_child)
-          elsif decl_child.kind.union_decl?
-            build_union(decl_child)
-          elsif decl_child.kind.enum_decl?
-            build_enum(decl_child)
-          elsif decl_child.kind.typedef_decl?
-            type_name = decl_child.spelling
-            underlying_type = get_type(decl_child, decl_child.typedef_decl_underlying_type)
-            unless mod.type_defs[type_name]? || typer.map[type_name]?
-              mod.type_defs[type_name] = Mod::TypeDef.new(@mod, cursor_to_node(decl_child), underlying_type)
-              typer.map[type_name] = underlying_type
-            end
-          else
-            raise error("Unhandled child: #{child.kind}", decl_child)
-          end
-        end
-      else
-        if stmt = build_stmt(child)
-          stmts << stmt
-        else
-          case child.kind
-          when .compound_stmt?
-            body = build_stmts(child)
-            stmts << TypedAST::Block.new(body, location(child))
-          when .return_stmt?
-            stmts << build_return(child)
-          when .if_stmt?
-            stmts << build_if(child)
-          when .while_stmt?
-            stmts << build_while(child)
-          when .for_stmt?
-            stmts << build_for(child)
-          when .call_expr?
-            expr = build_call(child)
-            stmts << TypedAST::ExprStmt.new(expr, location(child))
-          when .binary_operator?
-            if stmt = build_stmt(child)
-              stmts << stmt
-            end
-          when .unary_operator?
-            if stmt = build_stmt(child)
-              stmts << stmt
-            end
-          when .null_stmt?
-          when .c_style_cast_expr?
-            target_type = get_type(child, child.type)
-            if target_type.id_name == "void"
-              children_list = children(child)
-              if children_list.size > 0
-                expr_node = build_node(children_list.last)
-                if expr_node
-                  stmts << TypedAST::ExprStmt.new(expr_node, location(child))
-                end
-              end
-            else
-              expr = build_cast(child)
-              stmts << TypedAST::ExprStmt.new(expr, location(child))
-            end
-          when .label_stmt?
-            stmts << TypedAST::Label.new(child.spelling, location(child))
-            children(child).each do |label_child|
-              if s = build_stmt(label_child)
-                stmts << s
-              else
-                raise error("Unhandled child: #{child.kind}", label_child)
-              end
-            end
-          else
-            raise error("Unhandled child: #{child.kind}", child)
-          end
-        end
-      end
-    end
-    stmts
-  end
-
-  private def build_stmt(cursor : Clang::Cursor) : TypedAST::Stmt?
+  private def build_stmt(cursor : Clang::Cursor, body : Array(TypedAST::Stmt))
     case cursor.kind
     when .compound_stmt?
-      body = build_stmts(cursor)
-      TypedAST::Block.new(body, location(cursor))
+      block_body = [] of TypedAST::Stmt
+      children(cursor).each { |child| build_stmt(child, block_body) }
+      body << TypedAST::Block.new(block_body, location(cursor))
     when .call_expr?
       expr = build_call(cursor)
-      TypedAST::ExprStmt.new(expr, location(cursor))
+      body << TypedAST::ExprStmt.new(expr, location(cursor))
     when .decl_stmt?
       children(cursor).each do |child|
         if child.kind.var_decl?
-          return build_var_decl(child)
+          body << build_var_decl(child)
+        elsif child.kind.struct_decl?
+          build_struct_decl(child)
+        elsif child.kind.union_decl?
+          build_union(child)
+        elsif child.kind.enum_decl?
+          build_enum(child)
+        elsif child.kind.typedef_decl?
+          type_name = child.spelling
+          underlying_type = get_type(child, child.typedef_decl_underlying_type)
+          unless mod.type_defs[type_name]? || typer.map[type_name]?
+            mod.type_defs[type_name] = Mod::TypeDef.new(@mod, cursor_to_node(child), underlying_type)
+            typer.map[type_name] = underlying_type
+          end
         else
           raise error("Unhandled child: #{child.kind}", child)
         end
       end
-      nil
     when .return_stmt?
-      build_return(cursor)
+      body << build_return(cursor)
     when .if_stmt?
-      build_if(cursor)
+      body << build_if(cursor)
     when .while_stmt?
-      build_while(cursor)
+      body << build_while(cursor)
     when .do_stmt?
-      build_do_while(cursor)
+      body << build_do_while(cursor)
     when .for_stmt?
-      build_for(cursor)
+      body << build_for(cursor)
     when .switch_stmt?
-      build_switch(cursor)
+      body << build_switch(cursor)
     when .paren_expr?, .first_expr?
       children_list = children(cursor)
       if children_list.size == 1
         child = children_list[0]
-        if stmt = build_stmt(child)
-          stmt
-        else
-          if node = build_node(child)
-            TypedAST::ExprStmt.new(node, location(cursor))
-          end
-        end
+        build_stmt(child, body)
+      else
+        raise error("unexpected #{cursor.kind} with #{children_list.size} children", cursor)
       end
     when .binary_operator?
       op = cursor.spelling
       if op == ","
-        children_list = children(cursor)
         stmts = [] of TypedAST::Stmt
-
         collect_comma_stmts(cursor, stmts)
-        TypedAST::Block.new(stmts, location(cursor))
+        body << TypedAST::Block.new(stmts, location(cursor))
       elsif op == "="
         children_list = children(cursor)
-        left = build_node(children_list[0]).not_nil!
-        right = build_node(children_list[1]).not_nil!
-
+        left = build_node(children_list[0])
+        right = build_node(children_list[1])
         right = auto_cast(right, left.type, location(cursor))
         mark_param_changed(left)
-        TypedAST::Assign.new(left, right, location(cursor))
+        body << TypedAST::Assign.new(left, right, location(cursor))
       else
         expr = build_binary(cursor)
-        TypedAST::ExprStmt.new(expr, location(cursor))
+        body << TypedAST::ExprStmt.new(expr, location(cursor))
       end
     when .unary_operator?
       op = detect_unary_op(cursor)
       if op == "++" || op == "--"
         expr = build_unary(cursor, is_statement: true, known_op: op)
-        TypedAST::ExprStmt.new(expr, location(cursor))
+        body << TypedAST::ExprStmt.new(expr, location(cursor))
       else
         expr = build_unary(cursor, known_op: op)
-        TypedAST::ExprStmt.new(expr, location(cursor))
+        body << TypedAST::ExprStmt.new(expr, location(cursor))
       end
     when .break_stmt?
-      TypedAST::Break.new(location(cursor))
+      case state = @break_stack.last?
+      when TypedAST::Switch
+        body << TypedAST::Goto.new(state.label_prefix + "_end", location(cursor))
+      when Nil
+        raise error("unexpected break", cursor)
+      else
+        body << TypedAST::Break.new(location(cursor))
+      end
     when .continue_stmt?
-      TypedAST::Continue.new(location(cursor))
+      body << TypedAST::Continue.new(location(cursor))
     when .goto_stmt?
       label_name = ""
       children(cursor).each do |child|
@@ -518,63 +481,71 @@ class Myc::Mycc::ASTBuilder
           raise error("Unhandled child: #{child.kind}", child)
         end
       end
-      TypedAST::Goto.new(label_name, location(cursor))
+      body << TypedAST::Goto.new(label_name, location(cursor))
     when .compound_assign_operator?
       op = cursor.spelling
       children_list = children(cursor)
-      left = build_node(children_list[0]).not_nil!
-      right = build_node(children_list[1]).not_nil!
+      left = build_node(children_list[0])
+      right = build_node(children_list[1])
       right = auto_cast(right, left.type, location(cursor))
       mark_param_changed(left)
       base_op = op.ends_with?('=') ? op[0..-2] : op
       bin_op = BINARY_MAP[base_op]? || :add
       value = TypedAST::BinaryOp.new(bin_op, left.dup, right, left.type, location(cursor))
-      TypedAST::Assign.new(left, value, location(cursor))
+      body << TypedAST::Assign.new(left, value, location(cursor))
     when .c_style_cast_expr?
       target_type = get_type(cursor, cursor.type)
       if target_type.id_name == "void"
         children_list = children(cursor)
         if children_list.size > 0
           expr_node = build_node(children_list.last)
-          if expr_node
-            TypedAST::ExprStmt.new(expr_node, location(cursor))
-          end
+          body << TypedAST::ExprStmt.new(expr_node, location(cursor))
+        else
+          raise error("void cast without expression", cursor)
         end
       else
         expr = build_cast(cursor)
-        TypedAST::ExprStmt.new(expr, location(cursor))
+        body << TypedAST::ExprStmt.new(expr, location(cursor))
       end
+    when .integer_literal?, .floating_literal?, .character_literal?, .string_literal?,
+         .decl_ref_expr?, .member_ref_expr?, .array_subscript_expr?
+      node = build_node(cursor)
+      body << TypedAST::ExprStmt.new(node, location(cursor))
+    when .conditional_operator?
+      node = build_conditional(cursor)
+      body << TypedAST::ExprStmt.new(node, location(cursor))
     when .null_stmt?
-      TypedAST::Block.new([] of TypedAST::Stmt, location(cursor))
+      body << TypedAST::Block.new([] of TypedAST::Stmt, location(cursor))
+    when .label_stmt?
+      body << TypedAST::Label.new(cursor.spelling, location(cursor))
+      children(cursor).each { |child| build_stmt(child, body) }
+    when .var_decl?
+      body << build_var_decl(cursor)
+    when .label_ref?
+    else
+      raise error("Unhandled stmt #{cursor.kind}", cursor)
     end
   end
 
-  private def collect_comma_stmts(cursor, stmts)
+  private def collect_comma_stmts(cursor : Clang::Cursor, body : Array(TypedAST::Stmt))
     if cursor.kind.binary_operator? && cursor.spelling == ","
       children_list = children(cursor)
-      collect_comma_stmts(children_list[0], stmts)
-      collect_comma_stmts(children_list[1], stmts)
+      collect_comma_stmts(children_list[0], body)
+      collect_comma_stmts(children_list[1], body)
     elsif cursor.kind.paren_expr?
       children(cursor).each do |child|
-        collect_comma_stmts(child, stmts)
+        collect_comma_stmts(child, body)
       end
     else
-      if stmt = build_stmt(cursor)
-        stmts << stmt
-      else
-        raise error("Unhandled child: #{cursor.kind}", cursor)
-      end
+      build_body(cursor, body)
     end
   end
 
   private def build_return(cursor : Clang::Cursor) : TypedAST::Return
     value = nil
     children(cursor).each do |child|
-      if node = build_node(child)
-        value = node
-      else
-        raise error("Unhandled child: #{child.kind}", child)
-      end
+      node = build_node(child)
+      value = node
     end
     if value && (ctr = @current_return_type)
       value = auto_cast(value, ctr, location(cursor))
@@ -597,25 +568,21 @@ class Myc::Mycc::ASTBuilder
 
     if is_vla
       children(cursor).each do |child|
-        if size_node = build_node(child)
+        unless child.kind.parm_decl? || child.kind.type_ref?
+          size_node = build_node(child)
           init = size_node
-        elsif child.kind.parm_decl? || child.kind.type_ref?
-        else
-          raise error("Unhandled child: #{child.kind}", child)
         end
       end
     end
 
     unless init
       children(cursor).each do |child|
-        if node = build_node(child)
+        unless child.kind.parm_decl? || child.kind.type_ref? ||
+               child.kind.struct_decl? || child.kind.union_decl? ||
+               child.kind.enum_decl? || child.kind.visibility_attr? ||
+               child.kind.asm_label_attr?
+          node = build_node(child)
           init = node
-        elsif child.kind.parm_decl? || child.kind.type_ref? ||
-              child.kind.struct_decl? || child.kind.union_decl? ||
-              child.kind.enum_decl? || child.kind.visibility_attr? ||
-              child.kind.asm_label_attr?
-        else
-          raise error("Unhandled child: #{child.kind}", child)
         end
       end
 
@@ -719,20 +686,11 @@ class Myc::Mycc::ASTBuilder
 
   private def build_if(cursor : Clang::Cursor) : TypedAST::If
     children_list = children(cursor)
-    condition = ensure_bool(build_node(children_list[0]).not_nil!)
-
-    then_body = if children_list.size > 1
-                  build_stmt_or_stmts(children_list[1])
-                else
-                  [] of TypedAST::Stmt
-                end
-
-    else_body = if children_list.size > 2
-                  build_stmt_or_stmts(children_list[2])
-                else
-                  [] of TypedAST::Stmt
-                end
-
+    condition = ensure_bool(build_node(children_list[0]))
+    then_body = [] of TypedAST::Stmt
+    build_body(children_list[1], then_body) if children_list.size > 1
+    else_body = [] of TypedAST::Stmt
+    build_body(children_list[2], else_body) if children_list.size > 2
     TypedAST::If.new(condition, then_body, else_body, location(cursor))
   end
 
@@ -777,22 +735,23 @@ class Myc::Mycc::ASTBuilder
 
     if is_invoke
       args = [] of TypedAST::Node
-      if func_name.empty?
-        callee_node = build_node(children_list[0]).not_nil!
-        args = children_list[1..].map { |c| build_node(c).not_nil! }
-      elsif callee
-        callee_node = build_node(callee).not_nil!
-        args = children_list.reject { |c| c == callee }
-          .map { |c| build_node(c).not_nil! }
-      end
+      callee_node = if func_name.empty?
+                      node = build_node(children_list[0])
+                      args = children_list[1..].map { |c| build_node(c) }
+                      node
+                    elsif callee
+                      node = build_node(callee)
+                      args = children_list.reject { |c| c == callee }.map { |c| build_node(c) }
+                      node
+                    else
+                      raise error("bad invoke", cursor)
+                    end
       ret_type = get_type(cursor, cursor.type)
 
       if param_types
-        all_args = [callee_node.not_nil!] + args
+        all_args = [callee_node] + args
         param_types.each_with_index do |pt, i|
-          if all_args[i + 1]?
-            all_args[i + 1] = auto_cast(all_args[i + 1], pt, location(cursor))
-          end
+          all_args[i + 1] = auto_cast(all_args[i + 1], pt, location(cursor))
         end
 
         args = all_args[1..]
@@ -804,25 +763,20 @@ class Myc::Mycc::ASTBuilder
       end
 
       vaargs_count = param_types ? args.size - param_types.size : 0
-      TypedAST::Call.new("", [callee_node.not_nil!] + args, ret_type, location(cursor), is_invoke: true, vaargs_count: vaargs_count)
+      TypedAST::Call.new("", [callee_node] + args, ret_type, location(cursor), is_invoke: true, vaargs_count: vaargs_count)
     else
       args = [] of TypedAST::Node
 
       children(cursor).each do |child|
         next if child.kind.decl_ref_expr? && child.spelling == func_name
-        if node = build_node(child)
-          next if node.is_a?(TypedAST::VarRef) && node.name == func_name
-          args << node
-        else
-          raise error("Unhandled child: #{child.kind}", child)
-        end
+        node = build_node(child)
+        next if node.is_a?(TypedAST::VarRef) && node.name == func_name
+        args << node
       end
 
       if param_types
         param_types.each_with_index do |pt, i|
-          if args[i]?
-            args[i] = auto_cast(args[i], pt, location(cursor))
-          end
+          args[i] = auto_cast(args[i], pt, location(cursor))
         end
       end
 
@@ -879,7 +833,7 @@ class Myc::Mycc::ASTBuilder
     nil
   end
 
-  private def build_compound_literal(cursor : Clang::Cursor) : TypedAST::Node?
+  private def build_compound_literal(cursor : Clang::Cursor) : TypedAST::Node
     target_type = get_type(cursor, cursor.type)
 
     node = nil
@@ -892,11 +846,11 @@ class Myc::Mycc::ASTBuilder
       end
     end
 
-    unless node
+    if node
+      return node.as(TypedAST::Node)
+    else
       raise error("cant build_compound_literal", cursor)
     end
-
-    node
   end
 
   private def build_binary(cursor : Clang::Cursor) : TypedAST::Node
@@ -915,8 +869,8 @@ class Myc::Mycc::ASTBuilder
     end
 
     children_list = children(cursor)
-    left = build_node(children_list[0]).not_nil!
-    right = build_node(children_list[1]).not_nil!
+    left = build_node(children_list[0])
+    right = build_node(children_list[1])
     left = auto_decay(left)
     right = auto_decay(right)
     loc = location(cursor)
@@ -943,8 +897,8 @@ class Myc::Mycc::ASTBuilder
         result = TypedAST::BinaryOp.new(op_name, left, right, typer.bool, loc)
       end
     when ","
-      left = build_node(children_list[0]).not_nil!
-      right = build_node(children_list[1]).not_nil!
+      left = build_node(children_list[0])
+      right = build_node(children_list[1])
 
       TypedAST::BinaryOp.new(:comma, left, right, right.type, loc)
     else
@@ -984,26 +938,26 @@ class Myc::Mycc::ASTBuilder
     op = known_op || detect_unary_op(cursor)
 
     children_list = children(cursor)
-    operand = children_list.size > 0 ? build_node(children_list[0]) : nil
+    operand = children_list.size > 0 ? build_node(children_list[0]) : raise error("unary no child", cursor)
     loc = location(cursor)
 
     case op
     when "-"
-      TypedAST::UnaryOp.new(:neg, operand.not_nil!, operand.not_nil!.type, loc)
+      TypedAST::UnaryOp.new(:neg, operand, operand.type, loc)
     when "!"
       if operand && operand.type.is_a?(Type::PtrType)
         zero = auto_cast(TypedAST::IntLiteral.new(0_i64, typer.i32, loc), operand.type, loc)
         TypedAST::BinaryOp.new(:eq, operand, zero, typer.bool, loc)
       elsif operand && operand.type.is_a?(Type::BoolType)
-        TypedAST::UnaryOp.new(:lnot, operand.not_nil!, typer.bool, loc)
+        TypedAST::UnaryOp.new(:lnot, operand, typer.bool, loc)
       else
-        zero = TypedAST::IntLiteral.new(0_i64, operand.not_nil!.type, loc)
-        TypedAST::BinaryOp.new(:eq, operand.not_nil!, zero, typer.bool, loc)
+        zero = TypedAST::IntLiteral.new(0_i64, operand.type, loc)
+        TypedAST::BinaryOp.new(:eq, operand, zero, typer.bool, loc)
       end
     when "~"
-      TypedAST::UnaryOp.new(:bnot, operand.not_nil!, operand.not_nil!.type, loc)
+      TypedAST::UnaryOp.new(:bnot, operand, operand.type, loc)
     when "*"
-      operand = auto_decay(operand.not_nil!)
+      operand = auto_decay(operand)
       type = operand.type
       if type.is_a?(Type::PtrType)
         TypedAST::Deref.new(operand, type.target_type, loc)
@@ -1016,8 +970,8 @@ class Myc::Mycc::ASTBuilder
       if operand && operand.type.is_a?(Type::Fn)
         operand
       else
-        ptr_type = typer.to_ptr(operand.not_nil!.type, loc)
-        TypedAST::AddrOf.new(operand.not_nil!, ptr_type, loc)
+        ptr_type = typer.to_ptr(operand.type, loc)
+        TypedAST::AddrOf.new(operand, ptr_type, loc)
       end
     when "++", "--"
       is_inc = op == "++"
@@ -1032,12 +986,12 @@ class Myc::Mycc::ASTBuilder
                  raise "unreachable"
                end
 
-      mark_param_changed(operand.not_nil!)
+      mark_param_changed(operand)
 
-      op_type = is_statement ? typer.void : operand.not_nil!.type
-      TypedAST::UnaryOp.new(op_sym, operand.not_nil!, op_type, loc, is_statement)
+      op_type = is_statement ? typer.void : operand.type
+      TypedAST::UnaryOp.new(op_sym, operand, op_type, loc, is_statement)
     else
-      operand || raise error("Unknown unary operator: #{op}", cursor)
+      raise error("Unknown unary operator: #{op}", cursor)
     end
   end
 
@@ -1071,16 +1025,13 @@ class Myc::Mycc::ASTBuilder
         elements << build_init_list(child, nested_type)
         field_idx += 1
       else
-        if node = build_node(child)
-          expected_type = field_types[field_idx]?
-          if expected_type
-            node = auto_cast(node, expected_type, node.location)
-          end
-          elements << node
-          field_idx += 1
-        else
-          raise error("Unhandled child: #{child.kind}", child)
+        node = build_node(child)
+        expected_type = field_types[field_idx]?
+        if expected_type
+          node = auto_cast(node, expected_type, node.location)
         end
+        elements << node
+        field_idx += 1
       end
     end
 
@@ -1088,43 +1039,29 @@ class Myc::Mycc::ASTBuilder
     TypedAST::InitList.new(elements, type, location(cursor))
   end
 
-  private def build_stmt_or_stmts(cursor : Clang::Cursor) : Array(TypedAST::Stmt)
-    case cursor.kind
-    when .compound_stmt?
-      build_stmts(cursor)
-    else
-      if stmt = build_stmt(cursor)
-        [stmt] of TypedAST::Stmt
-      else
-        [] of TypedAST::Stmt
-      end
-    end
-  end
-
   private def build_while(cursor : Clang::Cursor) : TypedAST::While
     children_list = children(cursor)
-    condition = ensure_bool(build_node(children_list[0]).not_nil!)
-    body = if children_list.size > 1
-             build_stmt_or_stmts(children_list[1])
-           else
-             [] of TypedAST::Stmt
-           end
-    TypedAST::While.new(condition, body, location(cursor))
+    condition = ensure_bool(build_node(children_list[0]))
+    w = TypedAST::While.new(condition, [] of TypedAST::Stmt, location(cursor))
+    @break_stack << w
+    build_body(children_list[1], w.body) if children_list.size > 1
+    @break_stack.pop
+    w
   end
 
   private def build_do_while(cursor : Clang::Cursor) : TypedAST::DoWhile
     children_list = children(cursor)
-    body = if children_list.size > 0
-             build_stmt_or_stmts(children_list[0])
-           else
-             [] of TypedAST::Stmt
-           end
+
     condition = if children_list.size > 1
-                  ensure_bool(build_node(children_list[1]).not_nil!)
+                  ensure_bool(build_node(children_list[1]))
                 else
-                  TypedAST::IntLiteral.new(1_i64, typer.i32, location(cursor))
+                  raise error("No condition", cursor)
                 end
-    TypedAST::DoWhile.new(condition, body, location(cursor))
+    dw = TypedAST::DoWhile.new(condition, [] of TypedAST::Stmt, location(cursor))
+    @break_stack << dw
+    build_body(children_list[0], dw.body) if children_list.size > 0
+    @break_stack.pop
+    dw
   end
 
   private def build_for(cursor : Clang::Cursor) : TypedAST::For
@@ -1175,31 +1112,33 @@ class Myc::Mycc::ASTBuilder
     end
 
     parts = children_list[...-1]
-    init = nil
+    init = Array(TypedAST::Stmt).new
     condition = nil
-    update = nil
+    update = Array(TypedAST::Stmt).new
 
     part_idx = 0
 
     if has_init && part_idx < parts.size
-      init = build_stmt(parts[part_idx])
+      build_body(parts[part_idx], init)
       part_idx += 1
     end
 
     if has_cond && part_idx < parts.size
       node = build_node(parts[part_idx])
-      condition = ensure_bool(node) if node
+      condition = ensure_bool(node)
       part_idx += 1
     end
 
     if has_step && part_idx < parts.size
-      update = build_stmt(parts[part_idx])
+      build_stmt(parts[part_idx], update)
       part_idx += 1
     end
 
-    body = build_stmt_or_stmts(children_list.last)
-
-    TypedAST::For.new(init, condition, update, body, location(cursor))
+    f = TypedAST::For.new(init, condition, update, [] of TypedAST::Stmt, location(cursor))
+    @break_stack << f
+    build_body(children_list.last, f.body)
+    @break_stack.pop
+    f
   end
 
   private def build_string_literal(cursor : Clang::Cursor) : TypedAST::StringLiteral
@@ -1265,9 +1204,9 @@ class Myc::Mycc::ASTBuilder
 
   private def build_conditional(cursor : Clang::Cursor) : TypedAST::Node
     children_list = children(cursor)
-    condition = ensure_bool(build_node(children_list[0]).not_nil!)
-    then_expr = build_node(children_list[1]).not_nil!
-    else_expr = build_node(children_list[2]).not_nil!
+    condition = ensure_bool(build_node(children_list[0]))
+    then_expr = build_node(children_list[1])
+    else_expr = build_node(children_list[2])
     common = common_type(then_expr.type, else_expr.type)
     then_expr2 = auto_cast(then_expr, common, location(cursor))
     else_expr2 = auto_cast(else_expr, common, location(cursor))
@@ -1306,8 +1245,8 @@ class Myc::Mycc::ASTBuilder
     target_type = get_type(cursor, cursor.type)
 
     children_list = children(cursor)
-    operand = children_list.size > 0 ? build_node(children_list.last) : nil
-    operand = auto_decay(operand.not_nil!)
+    operand = build_node(children_list.last)
+    operand = auto_decay(operand)
 
     from = operand.type
     if (from.is_a?(Type::PtrType) || from.is_a?(Type::Fn)) && target_type.is_a?(Type::IntType)
@@ -1319,8 +1258,8 @@ class Myc::Mycc::ASTBuilder
 
   private def build_subscript(cursor : Clang::Cursor) : TypedAST::Subscript
     children_list = children(cursor)
-    array = build_node(children_list[0]).not_nil!
-    index = build_node(children_list[1]).not_nil!
+    array = build_node(children_list[0])
+    index = build_node(children_list[1])
     elem_type = case type = array.type
                 when Type::PtrType  then type.target_type
                 when Type::FlatType then type.target_type
@@ -1358,7 +1297,7 @@ class Myc::Mycc::ASTBuilder
   private def build_field(cursor : Clang::Cursor) : TypedAST::FieldAccess
     field_name = cursor.spelling
     children_list = children(cursor)
-    obj = build_node(children_list[0]).not_nil!
+    obj = build_node(children_list[0])
     obj_type = obj.type
     is_arrow = obj_type.is_a?(Type::PtrType)
     struct_type = is_arrow ? obj_type.as(Type::PtrType).target_type : obj_type
@@ -1367,6 +1306,11 @@ class Myc::Mycc::ASTBuilder
 
     if struct_type.is_a?(Type::EnumType)
       variant_type = typer.find("#{struct_type.id_name}::#{field_name}", location(cursor))
+
+      if is_arrow && obj.type.is_a?(Type::PtrType)
+        obj = TypedAST::Deref.new(obj, obj.type.as(Type::PtrType).target_type, location(cursor))
+      end
+
       casted = TypedAST::Cast.new(obj, variant_type, location(cursor))
       field_type = struct_type.data[variant_type.id_name]?.try(&.value_types.first?) || struct_type
       return TypedAST::FieldAccess.new(casted, field_name, 1, field_type, location(cursor))
@@ -1392,115 +1336,51 @@ class Myc::Mycc::ASTBuilder
 
   private def build_switch(cursor : Clang::Cursor) : TypedAST::Switch
     children_list = children(cursor)
-    value = build_node(children_list[0]).not_nil!
+    value = build_node(children_list[0])
     cases = [] of TypedAST::Case
+    switch_label_prefix = "__switch_#{@switch_counter}"
+    @switch_counter += 1
+    sw = TypedAST::Switch.new(value, cases, location(cursor), switch_label_prefix)
+    @break_stack << sw
 
     children(children_list[1]).each do |child|
       case child.kind
       when .case_stmt?
+        label = "#{switch_label_prefix}_#{cases.size}"
         values = [extract_case_value(child)]
         body = [] of TypedAST::Stmt
-        has_break = collect_case_values_and_body(child, values, body)
-        cases << TypedAST::Case.new(values, body, has_break, location(child))
+        collect_case_values_and_body(child, values, body)
+        cases << TypedAST::Case.new(values, body, location(child), label)
       when .default_stmt?
+        label = "#{switch_label_prefix}_#{cases.size}"
+        values = [] of Int64
         body = [] of TypedAST::Stmt
-        has_break = false
-        children(child).each do |child|
-          case child.kind
-          when .break_stmt?
-            has_break = true
-          when .null_stmt?
-          when .compound_stmt?
-            children(child).each do |inner|
-              case inner.kind
-              when .break_stmt?
-                has_break = true
-              else
-                if stmt = build_stmt(inner)
-                  body << stmt
-                else
-                  raise error("Unhandled child: #{inner.kind}", inner)
-                end
-              end
-            end
-          else
-            if stmt = build_stmt(child)
-              body << stmt
-            else
-              raise error("Unhandled child: #{child.kind}", child)
-            end
-          end
-        end
-        cases << TypedAST::Case.new([] of Int64, body, has_break, location(child))
-      when .break_stmt?
-        if last_case = cases.last?
-          last_case.has_break = true
-        end
-      when .compound_stmt?
-        children(child).each do |inner|
-          case inner.kind
-          when .break_stmt?
-            if last_case = cases.last?
-              last_case.has_break = true
-            end
-          else
-            if stmt = build_stmt(inner)
-              if last_case = cases.last?
-                last_case.body << stmt
-              end
-            else
-              raise error("Unhandled child: #{child.kind}", inner)
-            end
-          end
-        end
+        collect_case_values_and_body(child, values, body)
+        cases << TypedAST::Case.new(values, body, location(child), label)
       else
-        if stmt = build_stmt(child)
-          if last_case = cases.last?
-            last_case.body << stmt
-          end
+        if last_case = cases.last?
+          build_body(child, last_case.body)
         else
-          raise error("Unhandled child: #{child.kind}", child)
+          raise error("No cases: #{child.kind}", child)
         end
       end
     end
 
-    TypedAST::Switch.new(value, cases, location(cursor))
+    @break_stack.pop
+    sw
   end
 
-  private def collect_case_values_and_body(cursor, values, body) : Bool
-    has_break = false
+  private def collect_case_values_and_body(cursor : Clang::Cursor, values, body : Array(TypedAST::Stmt))
     children(cursor).each do |child|
       case child.kind
       when .case_stmt?
         values << extract_case_value(child)
-        nested_break = collect_case_values_and_body(child, values, body)
-        has_break = nested_break || has_break
-      when .break_stmt?
-        has_break = true
-      when .null_stmt?
-      when .compound_stmt?
-        children(child).each do |inner|
-          case inner.kind
-          when .break_stmt?
-            has_break = true
-          else
-            if stmt = build_stmt(inner)
-              body << stmt
-            else
-              raise error("Unhandled child: #{child.kind}", inner)
-            end
-          end
-        end
-      when .character_literal?, .integer_literal?, .first_expr?, .paren_expr?, .decl_ref_expr?
+        collect_case_values_and_body(child, values, body)
+      when .decl_ref_expr?, .integer_literal?, .character_literal?, .paren_expr?, .first_expr?
       else
-        if stmt = build_stmt(child)
-          body << stmt
-        else
-          raise error("Unhandled child: #{child.kind}", child)
-        end
+        build_body(child, body)
       end
     end
-    has_break
   end
 
   private def extract_case_value(cursor : Clang::Cursor) : Int64
@@ -1694,21 +1574,6 @@ class Myc::Mycc::ASTBuilder
 
   private def error(msg, cursor) : Myc::Error::ErrorLoc
     Myc::Error::ErrorLoc.new(msg, location(cursor))
-  end
-
-  private def is_function_pointer?(cursor : Clang::Cursor) : Bool
-    type = get_type(cursor, cursor.type)
-    _is_fn_type?(type)
-  end
-
-  private def _is_fn_type?(type : Type) : Bool
-    if type.is_a?(Type::Fn)
-      true
-    elsif type.is_a?(Type::PtrType)
-      _is_fn_type?(type.target_type)
-    else
-      false
-    end
   end
 
   private def is_variable_callee?(cursor : Clang::Cursor, func_name : String) : Bool
