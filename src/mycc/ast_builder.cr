@@ -162,24 +162,35 @@ class Myc::Mycc::ASTBuilder
     return_type = get_type(cursor, cursor.result_type)
     @current_return_type = return_type
 
+    param_names = [] of String
+    children(cursor).each do |child|
+      if child.kind.parm_decl?
+        param_name = child.spelling
+        param_name = "__param_#{param_names.size}" if param_name.empty?
+        param_names << param_name
+      end
+    end
+
+    if fn_type = func_type.as?(Type::Fn)
+      fn_type.args.each_with_index do |arg_type, i|
+        param_name = param_names[i]? || "__param_#{i}"
+        if arg_type.is_a?(Type::FlatType)
+          arg_type = typer.to_ptr(arg_type.target_type, location(cursor))
+        end
+        @current_function_params[param_name] = TypedAST::Function::ParamInfo.new(
+          param_name, arg_type, @current_function_params.size
+        )
+      end
+    end
+
     children(cursor).each do |child|
       case child.kind
-      when .parm_decl?
-        param_name = child.spelling
-        if param_name.empty?
-          param_name = "__param_#{@current_function_params.size}"
-        end
-        param_type = get_type(child, child.type)
-        if param_type.is_a?(Type::FlatType)
-          param_type = typer.to_ptr(param_type.target_type, location(child))
-        end
-
-        @current_function_params[param_name] = TypedAST::Function::ParamInfo.new(param_name, param_type, @current_function_params.size)
       when .compound_stmt?
         body = [] of TypedAST::Stmt
         children(child).each { |c| build_stmt(c, body) }
-      when .first_attr?, .type_ref?, .first_expr?, .warn_unused_result_attr?,
-           .const_attr?, .visibility_attr?, .pure_attr?, .asm_label_attr?
+      when .parm_decl?, .first_attr?, .type_ref?, .first_expr?,
+           .warn_unused_result_attr?, .const_attr?, .visibility_attr?,
+           .pure_attr?, .asm_label_attr?
       else
         raise error("Unhandled child: #{child.kind}", child)
       end
@@ -192,7 +203,16 @@ class Myc::Mycc::ASTBuilder
       @static_func_names_map[name] = name2
       name = name2
     end
-    TypedAST::Function.new(name, @current_function_params.dup, return_type, body, location(cursor), vaarg, is_static)
+
+    TypedAST::Function.new(
+      name,
+      @current_function_params.dup,
+      return_type,
+      body,
+      location(cursor),
+      vaarg,
+      is_static
+    )
   ensure
     @current_return_type = nil
     @current_function_name = old_name.not_nil!

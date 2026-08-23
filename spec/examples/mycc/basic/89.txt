@@ -1,0 +1,2 @@
+no old handler
+handler called with 10
