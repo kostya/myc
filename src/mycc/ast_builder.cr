@@ -549,6 +549,10 @@ class Myc::Mycc::ASTBuilder
         expr = build_cast(cursor)
         TypedAST::ExprStmt.new(expr, location(cursor))
       end
+    when .integer_literal?, .floating_literal?, .character_literal?
+      if node = build_node(cursor)
+        TypedAST::ExprStmt.new(node, location(cursor))
+      end
     when .null_stmt?
       TypedAST::Block.new([] of TypedAST::Stmt, location(cursor))
     end
@@ -564,11 +568,7 @@ class Myc::Mycc::ASTBuilder
         collect_comma_stmts(child, stmts)
       end
     else
-      if stmt = build_stmt(cursor)
-        stmts << stmt
-      else
-        raise error("Unhandled child: #{cursor.kind}", cursor)
-      end
+      build_body(cursor, stmts)
     end
   end
 
