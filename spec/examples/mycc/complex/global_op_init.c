@@ -1,4 +1,4 @@
-#include <stdio.h>
+int printf(const char *fmt, ...);
 
 static const int neg_val = -1;
 static const int bnot_val = ~0;

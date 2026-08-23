@@ -1,4 +1,4 @@
-#include <stdio.h>
+int printf(const char *fmt, ...);
 
 int global_c = 10;
 int *global_p = &global_c;

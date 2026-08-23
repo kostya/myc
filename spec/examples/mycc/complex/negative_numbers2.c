@@ -1,4 +1,4 @@
-#include <stdio.h>
+int printf(const char *fmt, ...);
 
 double global_neg_float = -2.23307578892655734e-01;
 double global_small = 1.5e-300;

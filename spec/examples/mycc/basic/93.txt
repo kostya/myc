@@ -1,0 +1,2 @@
+push integer: 42
+push integer: -1

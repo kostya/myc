@@ -1,4 +1,4 @@
-#include <stdio.h>
+int printf(const char *fmt, ...);
 
 struct Simple {
   char c;
