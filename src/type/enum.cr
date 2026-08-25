@@ -22,9 +22,23 @@ class Myc::Type::EnumType < Myc::Type
   end
 
   def generate_payload_type(mod : Mod, layout : Backend::Layout)
-    elements_count = layout.enum_payload_count(self)
-    t = Type::FlatType.new(loc, "flat<i32, #{elements_count}>")
-    t.target_type = mod.typer.i32
+    alignment, elements_count = layout.enum_payload_info(self)
+
+    flat_element_type = case alignment
+                        when 1
+                          mod.typer.i8
+                        when 2
+                          mod.typer.i16
+                        when 4
+                          mod.typer.i32
+                        when 8
+                          mod.typer.i64
+                        else
+                          raise Error::ErrorLoc.new("Bad enum alignment #{alignment}, bug", loc)
+                        end
+
+    t = Type::FlatType.new(loc, "flat<#{flat_element_type.id_name}, #{elements_count}>")
+    t.target_type = flat_element_type
     t.elements_count = elements_count
     t.hidden = true
     @payload_type = t

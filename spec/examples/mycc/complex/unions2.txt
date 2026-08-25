@@ -1,0 +1,15 @@
+40
+16
+24
+24
+4096
+8192
+12288
+16384
+20480
+42
+20480
+sizeof(UpVal): 8
+u.open.next:       0x9999
+u.open.next offset:     24 (expected: 24)
+u.open.previous offset: 32 (expected: 32)

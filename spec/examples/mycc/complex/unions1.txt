@@ -1,0 +1,14 @@
+Size of UpVal: 32 bytes
+v:              0
+tt:             8
+marked:         9
+u:              16
+u.value:        16
+u.open.next:    16
+u.open.previous:24
+sizeof(TValue):      16
+alignof(UpVal):      8
+sizeof(ptr):         8
+sizeof(unsigned char):1
+sizeof(union):       16
+sizeof(open struct): 16

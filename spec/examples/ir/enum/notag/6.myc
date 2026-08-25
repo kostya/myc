@@ -1,0 +1,19 @@
+ENUM :bla
+  TAG
+    SKIP
+  VARIANT :x
+    TYPE :i32
+    TYPE :i32
+  VARIANT :y
+    TYPE :i64
+ENDENUM
+
+FUNC :main
+  BODY
+    PUSH 20000000000
+    CREATE :bla::y
+    AS :bla
+    AS :bla::x
+    INSPECT
+ENDFUNC
+

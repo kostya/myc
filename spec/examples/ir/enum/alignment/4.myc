@@ -1,0 +1,63 @@
+STRUCT :S
+  TYPE :ptr<void>
+  TYPE :u8
+  TYPE :__inline_type_alignment_bug_c_3
+ENDSTRUCT
+
+ENUM :__inline_type_alignment_bug_c_3
+  TAG
+    SKIP
+  VARIANT :x
+    TYPE :i32
+ENDENUM
+
+FUNC :printf
+  ARGS
+    TYPE :ptr<u8>
+  RETURN
+    TYPE :i32
+  ATTRIBUTES
+    ATTR :vaarg
+ENDFUNC
+
+FUNC :calloc
+  ARGS
+    TYPE :u64
+    TYPE :u64
+  RETURN
+    TYPE :ptr<void>
+ENDFUNC
+
+FUNC :free
+  ARGS
+    TYPE :ptr<void>
+ENDFUNC
+
+FUNC :main
+  RETURN
+    TYPE :i32
+  BODY
+    SIZEOF :S
+    PUSH 1 :u64
+    CALL :calloc
+    AS :ptr<S>
+    LOCAL :__s0_s :ptr<S>
+    STORE
+    LOCAL :__s0_s
+    AS :ptr<u8>
+    LOCAL :__s0_s
+    DEREF
+    FIELD 2
+    ADDR
+    AS :ptr<u8>
+    BINARY :sub
+    PUSH "%td\n"
+    CALL :printf 1
+    STACK :drop
+    LOCAL :__s0_s
+    AS :ptr<void>
+    CALL :free
+    PUSH 0
+    RET
+ENDFUNC
+

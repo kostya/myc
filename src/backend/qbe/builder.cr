@@ -115,11 +115,13 @@ class Myc::Backend::QBE::Builder < Myc::Backend::AbstractBuilder
     when Type::FlatType
       type.elements_count.times { zero_flatten(res, type.target_type) }
     when Type::EnumType
+      _payload = type.payload_type.not_nil!
+      pcount = _payload.elements_count
       if index_type = type.index_type
         zero_flatten(res, index_type)
-        @layout.enum_payload_count(type).times { res << {qbe_data_type(index_type), "0"} }
+        pcount.times { res << {qbe_data_type(type.payload_type.not_nil!.target_type), "0"} }
       else
-        @layout.enum_payload_count(type).times { res << {qbe_data_type(type.payload_type.not_nil!.target_type), "0"} }
+        pcount.times { res << {qbe_data_type(type.payload_type.not_nil!.target_type), "0"} }
       end
     when Type::PtrType, Type::Fn, Type::IntType, Type::FloatType, Type::BoolType
       res << {qbe_data_type(type), "0"}

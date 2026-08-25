@@ -160,9 +160,10 @@ class Myc::Backend::Layout
     {tag_align, max_payload, 1_u64}.max
   end
 
-  def enum_payload_count(type : Type::EnumType) : UInt64
-    payload_size = size_of(type) - (type.index_type ? size_of(type.index_type.not_nil!) : 0_u64)
-    payload_size > 0 ? (payload_size + 3) // 4 : 0_u64
+  def enum_payload_info(type : Type::EnumType) : Tuple(UInt64, UInt64)
+    alignment = alignment_of(type)
+    payload_size = size_of(type) - (type.index_type ? align_to(size_of(type.index_type.not_nil!), alignment) : 0_u64)
+    {alignment, payload_size > 0 ? (payload_size + (alignment - 1)) // alignment : 0_u64}
   end
 
   def ptr_as_int_type(typer : Typer) : Type::IntType

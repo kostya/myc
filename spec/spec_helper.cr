@@ -175,13 +175,16 @@ class Examples
     headers = [] of Example
 
     main_files.each do |f|
+      basename = File.basename(f)
+
       if keywords
-        next unless keywords.any? { |k| f.includes?(k) }
+        if basename != "shared.myc"
+          next unless keywords.any? { |k| f.includes?(k) }
+        end
       end
 
       kind = f.ends_with?(".myc") ? Kind::MYC : Kind::C
       error = f.ends_with?(".err.myc") || f.ends_with?(".err.c")
-      basename = File.basename(f)
       dir = File.dirname(f)
       dirs << dir
       pend = f.includes?("/p-")

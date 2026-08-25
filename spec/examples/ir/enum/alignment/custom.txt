@@ -1,0 +1,1 @@
+Bad enum alignment 16, bug

@@ -54,19 +54,23 @@ class Myc::Backend::QBE::TypeTranslator
   end
 
   private def do_translate(type : Type::EnumType)
+    _payload = type.payload_type.not_nil!
+    ptype = _payload.target_type.not_nil!
+    pcount = _payload.elements_count
+
     name = ":" + type.backend_name
     if index_type = type.index_type
       tag_type = translate(index_type)
-      payload_count = @builder.layout.enum_payload_count(type)
-      if payload_count > 0
-        @builder.emit_type("type #{name} = { #{tag_type}, w #{payload_count} }\n")
+      if pcount > 0
+        ptype_s = translate(ptype)
+        @builder.emit_type("type #{name} = { #{tag_type}, #{ptype_s} #{pcount} }\n")
       else
         @builder.emit_type("type #{name} = { #{tag_type} }\n")
       end
     else
-      payload_count = @builder.layout.enum_payload_count(type)
-      if payload_count > 0
-        @builder.emit_type("type #{name} = { w #{payload_count} }\n")
+      if pcount > 0
+        ptype_s = translate(ptype)
+        @builder.emit_type("type #{name} = { #{ptype_s} #{pcount} }\n")
       else
         @builder.emit_type("type #{name} = { }\n")
       end

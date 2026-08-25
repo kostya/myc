@@ -53,12 +53,16 @@ class Myc::Backend::Llvm::TypeTranslator
   end
 
   private def do_translate(type : Type::EnumType)
+    _payload = type.payload_type.not_nil!
+    ptype = _payload.target_type.not_nil!
+    pcount = _payload.elements_count
+
     if index_type = type.index_type
       tag = translate(index_type)
-      payload = @context.int32.array(@layout.enum_payload_count(type))
+      payload = translate(ptype).array(pcount)
       @context.struct([tag, payload], type.id_name)
     else
-      payload = @context.int32.array(@layout.enum_payload_count(type))
+      payload = translate(ptype).array(pcount)
       @context.struct([payload], type.id_name)
     end
   end
