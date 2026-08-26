@@ -17,9 +17,8 @@ class Myc::Mycc::ASTBuilder
     @enum_values = {} of String => Int64
     @enum_types = {} of String => Type
     @called_functions = Set(String).new
-    @unnamed_counter = 0_u64
     @switch_counter = 0_u64
-    @unnamed_types = Hash(String, Type).new
+    @unnamed_types_map = Hash(String, String).new
     @static_func_names_map = Hash(String, String).new
     @break_stack = Deque(TypedAST::Stmt).new
   end
@@ -102,7 +101,7 @@ class Myc::Mycc::ASTBuilder
       end
     end
 
-    TypedAST::Program.new(functions, @structs.dup, @unions.dup, @globals)
+    TypedAST::Program.new(functions, @structs, @unions, @globals)
   end
 
   private def auto_cast(node : TypedAST::Node, target_type : Type, loc : Location) : TypedAST::Node
@@ -230,30 +229,45 @@ class Myc::Mycc::ASTBuilder
     Array(TypedAST::Stmt).new.tap { |body| build_body(cursor, body) }
   end
 
-  private def build_struct_decl(cursor : Clang::Cursor, name : String? = nil)
-    name ||= cursor.spelling
-    return if name.empty? || name.includes?("unnamed")
+  private def build_struct_decl(cursor : Clang::Cursor) : Type
+    name = cursor.spelling
+    raise error("No struct name", cursor) if name.blank?
 
-    struct_type = typer.map[name]? || mod.type_defs[name]?.try(&.type)
-    unless struct_type.is_a?(Type::StructType)
+    if name.includes?("unnamed")
+      if name2 = @unnamed_types_map[name]?
+        name = name2
+      else
+        name2 = "__inline_type_#{source.name}_#{@unnamed_types_map.size}"
+        @unnamed_types_map[name] = name2
+        name = name2
+      end
+    end
+
+    case struct_type = typer.map[name]? || mod.type_defs[name]?.try(&.type)
+    when Type::StructType
+    when Nil
       struct_type = Type::StructType.new(location(cursor), name)
       node = cursor_to_node(cursor)
       mod.type_defs[name] = Mod::TypeDef.new(@mod, node, struct_type)
       typer.map[name] = struct_type
+    else
+      raise error("Type #{name} already defined as #{struct_type.class}, but expected struct", cursor)
     end
 
-    return unless struct_type.data.empty?
+    return struct_type unless struct_type.data.empty?
 
     fields = [] of {String, Type}
     children(cursor).each do |child|
-      if child.kind.field_decl?
+      case child.kind
+      when .field_decl?
         field_name = child.spelling
         field_type = get_type(child, child.type)
         fields << {field_name, field_type}
-      elsif child.kind.union_decl?
+      when .union_decl?
         build_union(child)
-      elsif child.kind.packed_attr?
-      elsif child.kind.struct_decl?
+      when .packed_attr?
+        struct_type.explicit_alignment = 1_u64
+      when .struct_decl?
         build_struct_decl(child)
       else
         raise error("Unhandled child: #{child.kind}", child)
@@ -265,28 +279,44 @@ class Myc::Mycc::ASTBuilder
       @shared_types.struct_fields[name] = fields
     end
     struct_type.data = fields.map { |_, t| t }
+    struct_type
   end
 
-  private def build_union(cursor : Clang::Cursor, name : String? = nil)
-    name ||= cursor.spelling
-    return if name.empty? || name.includes?("unnamed")
+  private def build_union(cursor : Clang::Cursor) : Type
+    name = cursor.spelling || ""
+    raise error("No union name", cursor) if name.blank?
 
-    enum_type = typer.map[name]? || mod.type_defs[name]?.try(&.type)
-    unless enum_type.is_a?(Type::EnumType)
+    if name.includes?("unnamed")
+      if name2 = @unnamed_types_map[name]?
+        name = name2
+      else
+        name2 = "__inline_type_#{source.name}_#{@unnamed_types_map.size}"
+        @unnamed_types_map[name] = name2
+        name = name2
+      end
+    end
+
+    case enum_type = typer.map[name]? || mod.type_defs[name]?.try(&.type)
+    when Type::EnumType
+    when Nil
       enum_type = Type::EnumType.new(location(cursor), name, nil)
       node = cursor_to_node(cursor)
       mod.type_defs[name] = Mod::TypeDef.new(@mod, node, enum_type)
       typer.map[name] = enum_type
+    else
+      raise error("Type #{name} already defined as #{enum_type.class}, but expected union", cursor)
     end
 
-    return unless enum_type.data.empty?
+    return enum_type unless enum_type.data.empty?
 
     fields = [] of {String, Type}
 
     children(cursor).each do |child|
-      if child.kind.field_decl?
+      case child.kind
+      when .field_decl?
         field_name = child.spelling
         field_type = get_type(child, child.type)
+
         fields << {field_name, field_type}
 
         variant = Type::EnumVariantType.new(
@@ -305,15 +335,19 @@ class Myc::Mycc::ASTBuilder
         ct.hidden = true
         ct.data = [field_type]
         variant.composite_value_type = ct
-      elsif child.kind.struct_decl?
+      when .struct_decl?
         build_struct_decl(child)
-      elsif child.kind.packed_attr?
+      when .union_decl?
+        build_union(child)
+      when .packed_attr?
+        enum_type.explicit_alignment = 1_u64
       else
         raise error("Unhandled child: #{child.kind}", child)
       end
     end
 
     @unions[name] = fields
+    enum_type
   end
 
   private def build_enum(cursor : Clang::Cursor)
@@ -1500,39 +1534,27 @@ class Myc::Mycc::ASTBuilder
       spelling = spelling.sub("const ", "").sub("volatile ", "").sub("restrict ", "")
       name = spelling
 
-      if name.includes?("unnamed")
-        type_cursor = canonical.cursor
-        type_key = type_cursor.spelling
-
-        if cached = @unnamed_types[type_key]?
-          return cached
-        end
-        @unnamed_counter += 1
-        unique_name = "__inline_type_#{source.name}_#{@unnamed_counter}"
-
-        result_type = if type_cursor.kind.union_decl?
-                        build_union(type_cursor, unique_name)
-                        typer.map[unique_name]? || mod.type_defs[unique_name]?.try(&.type) || raise error("unknown type #{name}", cursor)
-                      elsif type_cursor.kind.struct_decl?
-                        build_struct_decl(type_cursor, unique_name)
-                        typer.map[unique_name]? || mod.type_defs[unique_name]?.try(&.type) || raise error("unknown type #{name}", cursor)
-                      else
-                        raise error("unknown type #{name}", cursor)
-                      end
-
-        @unnamed_types[type_key] = result_type
-        return result_type
-      end
-
       if name.starts_with?("union ")
-        name = name.sub("union ", "")
-        typer.find(name, location(cursor))
+        name2 = name.sub("union ", "")
+        if type = (typer.map[name2]? || mod.type_defs[name2]?.try(&.type))
+          return type
+        end
       elsif name.starts_with?("struct ")
-        name = name.sub("struct ", "")
-        typer.find(name, location(cursor))
-      else
-        typer.find(name, location(cursor))
+        name2 = name.sub("struct ", "")
+        if type = (typer.map[name2]? || mod.type_defs[name2]?.try(&.type))
+          return type
+        end
       end
+
+      type_cursor = canonical.cursor
+      case type_cursor.kind
+      when .union_decl?
+        return build_union(type_cursor)
+      when .struct_decl?
+        return build_struct_decl(type_cursor)
+      end
+
+      raise error("unknown type #{name} #{type_cursor.kind}", cursor)
     when .constant_array?
       type_name = "flat<#{get_type(cursor, canonical.array_element_type, count)}, #{canonical.array_size}>"
       typer.find(type_name, location(cursor))

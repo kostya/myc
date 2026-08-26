@@ -57,6 +57,10 @@ class Myc::Mycc::CodeGenerator
       fields.each do |_, field_type|
         emit("TYPE #{type_s(field_type)}")
       end
+      struct_type = typer.map[name].as(Type::StructType)
+      if ea = struct_type.explicit_alignment
+        emit("ALIGN #{ea}")
+      end
       @indent -= 1
       emit("ENDSTRUCT")
     end
@@ -70,6 +74,10 @@ class Myc::Mycc::CodeGenerator
         @indent += 1
         emit("TYPE #{type_s(field_type)}")
         @indent -= 1
+      end
+      enum_type = typer.map[name].as(Type::EnumType)
+      if ea = enum_type.explicit_alignment
+        emit("ALIGN #{ea}")
       end
       @indent -= 1
       emit("ENDENUM")
