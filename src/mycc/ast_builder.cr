@@ -267,6 +267,8 @@ class Myc::Mycc::ASTBuilder
         build_union(child)
       when .packed_attr?
         struct_type.explicit_alignment = 1_u64
+      when .aligned_attr?
+        puts "warning ignore aligned attr for #{name}"
       when .struct_decl?
         build_struct_decl(child)
       else
@@ -341,6 +343,8 @@ class Myc::Mycc::ASTBuilder
         build_union(child)
       when .packed_attr?
         enum_type.explicit_alignment = 1_u64
+      when .aligned_attr?
+        puts "warning ignore aligned attr for #{name}"
       else
         raise error("Unhandled child: #{child.kind}", child)
       end
