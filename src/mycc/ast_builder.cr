@@ -1420,7 +1420,6 @@ class Myc::Mycc::ASTBuilder
       when .case_stmt?
         values << extract_case_value(child)
         collect_case_values_and_body(child, values, body)
-      when .decl_ref_expr?, .integer_literal?, .character_literal?, .paren_expr?, .first_expr?
       else
         build_body(child, body)
       end
