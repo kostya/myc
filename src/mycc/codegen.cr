@@ -22,6 +22,7 @@ class Myc::Mycc::CodeGenerator
     @local_marks = Set(String).new
     @switch_count = 0
     @scope_counter = 0
+    @temp_counter = 0_u64
   end
 
   def current_vars : Hash(String, VarInfo)
@@ -499,7 +500,7 @@ class Myc::Mycc::CodeGenerator
     case expr.op
     when :store
     when :land
-      tmp = "__sc_and_#{@local_marks.size}"
+      tmp = tmp_name("__sc_and")
 
       generate_expr(expr.left)
       emit_local(tmp, typer.bool)
@@ -523,7 +524,7 @@ class Myc::Mycc::CodeGenerator
 
       emit_local(tmp, typer.bool)
     when :lor
-      tmp = "__sc_or_#{@local_marks.size}"
+      tmp = tmp_name("__sc_or")
 
       generate_expr(expr.left)
       emit_local(tmp, typer.bool)
@@ -579,7 +580,7 @@ class Myc::Mycc::CodeGenerator
         generate_expr(expr.operand)
         emit("STORE")
       else
-        tmp_name = "__tmp_#{@local_marks.size}"
+        tmp_name = tmp_name("__tmp")
         current_vars[tmp_name] = VarInfo.new(expr.type, tmp_name)
 
         generate_expr(expr.operand)
@@ -714,7 +715,7 @@ class Myc::Mycc::CodeGenerator
       @indent -= 1
       emit("ENDIF")
     else
-      tmp = "__ternary_#{@local_marks.size}"
+      tmp = tmp_name("__ternary")
 
       generate_expr(expr.condition)
       emit("IF")
@@ -751,6 +752,12 @@ class Myc::Mycc::CodeGenerator
     else
       ":#{type.id_name}"
     end
+  end
+
+  def tmp_name(prefix = "")
+    s = "#{prefix}_#{@temp_counter}"
+    @temp_counter += 1
+    s
   end
 
   private def emit_local(mangled_name : String, type : Type)
