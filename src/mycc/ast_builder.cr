@@ -608,57 +608,46 @@ class Myc::Mycc::ASTBuilder
 
     init = nil
 
-    is_global_context = @current_function_name.empty? || is_static
+    if !init && (literal = try_evaluate(cursor))
+      init = literal
+    end
 
-    if is_global_context && !is_vla && !is_extern
-      if literal = try_evaluate(cursor)
-        init = literal
-      else
-        if init_list_cursor = find_init_list(cursor)
-          init = build_global_init_list(init_list_cursor, var_type)
+    if is_vla
+      children(cursor).each do |child|
+        unless child.kind.parm_decl? || child.kind.type_ref?
+          size_node = build_node(child)
+          init = size_node
         end
       end
     end
 
     unless init
-      if is_vla
-        children(cursor).each do |child|
-          unless child.kind.parm_decl? || child.kind.type_ref?
-            size_node = build_node(child)
-            init = size_node
-          end
+      children(cursor).each do |child|
+        unless child.kind.parm_decl? || child.kind.type_ref? ||
+               child.kind.struct_decl? || child.kind.union_decl? ||
+               child.kind.enum_decl? || child.kind.visibility_attr? ||
+               child.kind.asm_label_attr?
+          node = build_node(child)
+          init = node
         end
       end
 
-      unless init
-        children(cursor).each do |child|
-          unless child.kind.parm_decl? || child.kind.type_ref? ||
-                 child.kind.struct_decl? || child.kind.union_decl? ||
-                 child.kind.enum_decl? || child.kind.visibility_attr? ||
-                 child.kind.asm_label_attr?
-            node = build_node(child)
-            init = node
+      if init
+        if init.is_a?(TypedAST::InitList) && init.elements.size > 0
+          all_zeros = init.elements.all? { |elem| elem.is_a?(TypedAST::IntLiteral) && elem.value == 0 }
+          if all_zeros
+            init = TypedAST::ZeroInitializer.new(var_type, location(cursor))
           end
         end
-
-        if init
-          if init.is_a?(TypedAST::InitList) && init.elements.size > 0
-            all_zeros = init.elements.all? { |elem| elem.is_a?(TypedAST::IntLiteral) && elem.value == 0 }
-            if all_zeros
-              init = TypedAST::ZeroInitializer.new(var_type, location(cursor))
-            end
-          end
-
-          if var_type.is_a?(Type::FlatType) && init.is_a?(TypedAST::IntLiteral)
-            init = nil
-          elsif var_type.is_a?(Type::FlatType) && init.is_a?(TypedAST::StringLiteral)
-          elsif init.is_a?(TypedAST::InitList)
-            init = resolve_init_list_types(init, var_type)
-            init = auto_cast(init, var_type, location(cursor)) if init.type != var_type
-          elsif init.is_a?(TypedAST::ZeroInitializer)
-          else
-            init = auto_cast(init, var_type, location(cursor))
-          end
+        if var_type.is_a?(Type::FlatType) && init.is_a?(TypedAST::IntLiteral)
+          init = nil
+        elsif var_type.is_a?(Type::FlatType) && init.is_a?(TypedAST::StringLiteral)
+        elsif init.is_a?(TypedAST::InitList)
+          init = resolve_init_list_types(init, var_type)
+          init = auto_cast(init, var_type, location(cursor)) if init.type != var_type
+        elsif init.is_a?(TypedAST::ZeroInitializer)
+        else
+          init = auto_cast(init, var_type, location(cursor))
         end
       end
     end
@@ -676,28 +665,13 @@ class Myc::Mycc::ASTBuilder
     if is_static
       func_name = @current_function_name.presence || "static_#{source.name}"
       unique_name = "#{func_name}_#{name}"
-      var = TypedAST::VarDecl.new(
-        unique_name,
-        var_type,
-        init,
-        location(cursor),
-        is_static: true,
-        is_vla: is_vla,
-        original_name: name
-      )
+      var = TypedAST::VarDecl.new(unique_name, var_type, init, location(cursor), is_static: true, is_vla: is_vla, original_name: name)
       unless @globals.any? { |g| g.name == unique_name }
         @globals << var
       end
       var
     elsif @current_function_name.empty?
-      var = TypedAST::VarDecl.new(
-        name,
-        var_type,
-        init,
-        location(cursor),
-        is_extern: is_extern && init.nil?,
-        is_vla: is_vla
-      )
+      var = TypedAST::VarDecl.new(name, var_type, init, location(cursor), is_extern: is_extern && init.nil?, is_vla: is_vla)
       if var_found = @globals.find { |g| g.name == var.name }
         if var_found.is_extern && !var.is_extern
           @globals.delete(var_found)
@@ -710,46 +684,6 @@ class Myc::Mycc::ASTBuilder
     else
       TypedAST::VarDecl.new(name, var_type, init, location(cursor), is_vla: is_vla)
     end
-  end
-
-  private def find_init_list(cursor : Clang::Cursor) : Clang::Cursor?
-    children(cursor).each do |child|
-      return child if child.kind.init_list_expr?
-    end
-    nil
-  end
-
-  private def build_global_init_list(cursor : Clang::Cursor, var_type : Type) : TypedAST::Node?
-    elements = [] of TypedAST::Node
-    field_types = get_field_types(var_type)
-
-    children(cursor).each do |child|
-      expected_type = field_types[elements.size]?
-
-      if literal = try_evaluate(child)
-        if expected_type
-          literal = auto_cast(literal, expected_type, location(child))
-        end
-        elements << literal
-      else
-        return nil
-      end
-    end
-
-    if var_type.is_a?(Type::FlatType)
-      flat_type = var_type.as(Type::FlatType)
-      total_elements = flat_type.elements_count.to_i
-
-      if elements.size < total_elements
-        elem_type = flat_type.target_type
-        (elements.size...total_elements).each do |idx|
-          zero = TypedAST::IntLiteral.new(0_i64, elem_type, location(cursor))
-          elements << zero
-        end
-      end
-    end
-
-    TypedAST::InitList.new(elements, var_type, location(cursor))
   end
 
   private def get_field_types(type : Type?) : Array(Type)
@@ -977,6 +911,10 @@ class Myc::Mycc::ASTBuilder
   end
 
   private def build_binary(cursor : Clang::Cursor) : TypedAST::Node
+    if literal = try_evaluate(cursor)
+      return literal
+    end
+
     op = cursor.spelling
     if op.empty?
       @tu.tokenize(cursor.extent) do |token|
@@ -1045,6 +983,10 @@ class Myc::Mycc::ASTBuilder
   end
 
   private def build_unary(cursor : Clang::Cursor, is_statement : Bool = false, known_op : String? = nil) : TypedAST::Node
+    if literal = try_evaluate(cursor)
+      return literal
+    end
+
     op = known_op || detect_unary_op(cursor)
 
     children_list = children(cursor)
