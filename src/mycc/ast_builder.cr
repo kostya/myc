@@ -1317,7 +1317,7 @@ class Myc::Mycc::ASTBuilder
                 when Type::FlatType then type.target_type
                 else                     array.type
                 end
-    index = auto_cast(index, typer.u64, location(cursor))
+    index = auto_cast(index, typer.i64, location(cursor))
     TypedAST::Subscript.new(array, index, elem_type, location(cursor))
   end
 
