@@ -1,0 +1,66 @@
+FUNC :printf
+  ARGS
+    TYPE :ptr<u8>
+  RETURN
+    TYPE :i32
+  ATTRIBUTES
+    ATTR :vaarg
+ENDFUNC
+
+FUNC :check
+  ARGS
+    TYPE :i32
+  RETURN
+    TYPE :i32
+  BODY
+    PUSH 0
+    PARAM 0
+    BINARY :more_eq
+    IF
+      THEN
+        PUSH 1
+        RET
+      ELSE
+        PUSH 0
+        RET
+    ENDIF
+ENDFUNC
+
+FUNC :check_prox
+  ARGS
+    TYPE :i32
+  RETURN
+    TYPE :i32
+  BODY
+    PARAM 0
+    UNARY :neg
+    CALL :check
+    RET
+ENDFUNC
+
+FUNC :test
+  BODY
+    PUSH 10
+    CALL :check_prox
+    LOCAL :__s0_a :i32
+    STORE
+    PUSH -1
+    CALL :check_prox
+    LOCAL :__s0_b :i32
+    STORE
+    LOCAL :__s0_b
+    LOCAL :__s0_a
+    PUSH "%d, %d\n"
+    CALL :printf 2
+    STACK :drop
+ENDFUNC
+
+FUNC :main
+  RETURN
+    TYPE :i32
+  BODY
+    CALL :test
+    PUSH 0
+    RET
+ENDFUNC
+
