@@ -1,9 +1,8 @@
 int printf(const char *fmt, ...);
 
 #define test_macro(n, p)                                                       \
-  ((n) >= (double)(-9223372036854775807LL - 1LL) &&                            \
-   (n) < -(double)(-9223372036854775807LL - 1LL) &&                            \
-   (*(p) = (long long)(n), 1))
+  ((n) >= (double)(-9223372036854775807LL) &&                                  \
+   (n) < -(double)(-9223372036854775807LL) && (*(p) = (long long)(n), 1))
 
 int main() {
   long long n;
