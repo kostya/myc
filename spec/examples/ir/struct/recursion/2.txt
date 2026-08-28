@@ -1,0 +1,1 @@
+C("abcdefgh", B(ptr<A>(0x0), ptr<B>(0x0)))

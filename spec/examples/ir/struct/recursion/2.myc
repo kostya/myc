@@ -1,0 +1,31 @@
+STRUCT :A
+  TYPE :ptr<B>
+  TYPE :C
+ENDSTRUCT
+
+STRUCT :B
+  TYPE :ptr<A>
+  TYPE :ptr<B>
+ENDSTRUCT
+
+STRUCT :C
+  TYPE :ptr<u8>
+  TYPE :B
+ENDSTRUCT
+
+FUNC :main
+  RETURN
+    TYPE :i32
+  BODY
+    PUSH 0
+    AS :ptr<B>
+    PUSH 0
+    AS :ptr<A>
+    CREATE :B
+    PUSH :abcdefgh
+    CREATE :C
+    INSPECT
+    PUSH 0
+    RET
+ENDFUNC
+

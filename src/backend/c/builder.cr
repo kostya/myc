@@ -1,5 +1,7 @@
 class Myc::Backend::C::Builder < Myc::Backend::AbstractBuilder
   @type_translator : TypeTranslator?
+  @type_sorter : TypeSorter?
+
   getter func_links : Hash(String, Type::Fn)
   getter global_links : Hash(String, Value)
 
@@ -11,14 +13,14 @@ class Myc::Backend::C::Builder < Myc::Backend::AbstractBuilder
     @label_counter = 0
     @funcs = Array(Func).new
     @data_io = IO::Memory.new
-    @typedef_io = IO::Memory.new
-    @typedef_forward_io = IO::Memory.new
-    @typedef_array_struct_io = IO::Memory.new
-    @typedef_array_simple_io = IO::Memory.new
   end
 
   def type_translator
     @type_translator ||= TypeTranslator.new(self)
+  end
+
+  def type_sorter
+    @type_sorter ||= TypeSorter.new
   end
 
   def new_temp(pref = "t") : String
@@ -122,13 +124,19 @@ class Myc::Backend::C::Builder < Myc::Backend::AbstractBuilder
       func_register(name, func_def)
     end
 
+    type_sorter.sort!
+
     File.open(filename, "w") do |f|
       add_shared_header(f)
 
-      copy_io(@typedef_forward_io, f)
-      copy_io(@typedef_array_simple_io, f)
-      copy_io(@typedef_io, f)
-      copy_io(@typedef_array_struct_io, f)
+      type_sorter.all_types.each do |weak_type|
+        f << type_translator.header(weak_type) << "\n"
+      end
+
+      type_sorter.order.each do |n|
+        f << type_translator.body(n) << "\n"
+      end
+
       copy_io(@data_io, f)
 
       @funcs.each do |fb|
@@ -164,34 +172,6 @@ class Myc::Backend::C::Builder < Myc::Backend::AbstractBuilder
   def copy_io(from : IO, to : IO)
     from.rewind
     IO.copy(from, to)
-  end
-
-  def forward_declare(name)
-    @typedef_forward_io << "typedef struct #{name} #{name};\n"
-  end
-
-  def forward_declare_array(name, elem_type : Type, count)
-    if elem_type.needs_blit?
-      @typedef_array_struct_io << "typedef #{c_type(elem_type)} #{name}[#{count}];\n"
-    else
-      @typedef_array_simple_io << "typedef #{c_type(elem_type)} #{name}[#{count}];\n"
-    end
-  end
-
-  def define_struct(name, fields)
-    @typedef_io << "typedef struct #{name} { #{fields} } #{name};\n"
-  end
-
-  def define_enum(name, tag_type, payload_str)
-    if tag_type
-      @typedef_io << "typedef struct #{name} { #{tag_type} field0; #{payload_str} } #{name};\n"
-    else
-      @typedef_io << "typedef struct #{name} { #{payload_str} } #{name};\n"
-    end
-  end
-
-  def define_alias(alias_name, struct_name)
-    @typedef_io << "typedef struct #{struct_name} #{alias_name};\n"
   end
 
   def func_head_str(name : String, type_fn : Type::Fn, static = false) : String
