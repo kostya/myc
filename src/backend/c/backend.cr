@@ -18,6 +18,7 @@ class Myc::Backend::C::Backend < Myc::Backend::AbstractBackend
     build(mod, header_mod, tmp)
     args = ["-c",
             "-fno-strict-aliasing",
+            "-w",
             "-Wno-main-return-type",
             "-Wno-pointer-sign",
             "-Wno-constant-conversion",
