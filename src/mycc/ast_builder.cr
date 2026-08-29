@@ -361,6 +361,11 @@ class Myc::Mycc::ASTBuilder
       variant.composite_value_type = ct
     end
 
+    if (f = @shared_types.struct_fields[name]?) && !f.empty?
+    else
+      @shared_types.struct_fields[name] = fields
+    end
+
     enum_type
   end
 
