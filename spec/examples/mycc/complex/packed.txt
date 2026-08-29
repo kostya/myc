@@ -1,6 +1,7 @@
 === Packed/Anon Tests ===
   packed: a=1 b=2 c=3
-  packed sizeof: 6 (expect < 12)
+  packed sizeof: 6
+  packed c offset: 5
   anon union: x=10 y=20
   anon union raw: x=10 y=5
   packed anon: header=11 a=2222 b=3333 footer=44

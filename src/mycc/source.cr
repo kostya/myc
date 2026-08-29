@@ -15,7 +15,7 @@ class Myc::Mycc::Source
 
     args = [
       "-x", "c",
-      "-std=gnu99",
+      "-std=gnu11",
       "-I#{File.dirname(filename)}",
       "-Wno-implicit-function-declaration",
       "-D_FORTIFY_SOURCE=0",

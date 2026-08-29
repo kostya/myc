@@ -12,7 +12,9 @@ int test_packed_struct() {
   s.b = 2;
   s.c = 3;
   printf("  packed: a=%d b=%d c=%d\n", s.a, s.b, s.c);
-  printf("  packed sizeof: %d (expect < 12)\n", sizeof(s));
+  printf("  packed sizeof: %d\n", sizeof(s));
+  struct PackedStruct *ptr = &s;
+  printf("  packed c offset: %d\n", (char *)&(ptr->c) - (char *)ptr);
   return 0;
 }
 

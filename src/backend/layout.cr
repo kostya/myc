@@ -47,14 +47,17 @@ class Myc::Backend::Layout
 
   private def compute_struct_size(type : Type::StructType) : UInt64
     offset = 0_u64
-    max_align = 1_u64
+    struct_alignment = type.explicit_alignment
+
     type.data.each do |field_type|
-      align = alignment_of(field_type)
-      max_align = align if align > max_align
+      align = struct_alignment || alignment_of(field_type)
       offset = align_to(offset, align)
       offset += size_of(field_type)
     end
-    align_to(offset, max_align)
+
+    final_alignment = struct_alignment ||
+                      (type.data.any? ? type.data.max_of { |t| alignment_of(t) } : 1_u64)
+    align_to(offset, final_alignment)
   end
 
   private def compute_struct_alignment(type : Type::StructType) : UInt64
@@ -72,12 +75,20 @@ class Myc::Backend::Layout
   def field_offset(type : Type::StructType, index : UInt64) : UInt64
     offset = 0_u64
     return offset if index == 0
+
+    struct_alignment = type.explicit_alignment
+
     0.upto(index - 1) do |i|
       field = type.data[i]
-      offset = align_to(offset, alignment_of(field))
+
+      align = struct_alignment || alignment_of(field)
+      offset = align_to(offset, align)
       offset += size_of(field)
     end
-    align_to(offset, alignment_of(type.data[index]))
+
+    field = type.data[index]
+    align = struct_alignment || alignment_of(field)
+    align_to(offset, align)
   end
 
   def field_offset(type : Type::FlatType, index : UInt64) : UInt64

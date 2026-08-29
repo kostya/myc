@@ -45,7 +45,7 @@ class Myc::Backend::Llvm::TypeTranslator
 
   private def do_translate(type : Type::StructType)
     field_types = type.data.map { |t| translate(t) }
-    @context.struct(field_types, type.id_name)
+    @context.struct(field_types, type.id_name, packed: type.explicit_alignment == 1)
   end
 
   private def do_translate(type : Type::FlatType)

@@ -88,7 +88,13 @@ struct Myc::Backend::C::TypeTranslator
     case type
     when Type::StructType
       fields = type.data.each_with_index.map { |ft, i| "  #{translate(ft)} field#{i};" }.join("\n")
-      "struct #{type.backend_name} {\n#{fields}\n};"
+      attr = ""
+      if type.explicit_alignment == 1
+        attr += "__attribute__((packed)) "
+      elsif ea = type.explicit_alignment
+        attr += "__attribute__((aligned(#{ea}))) "
+      end
+      "struct #{attr} #{type.backend_name} {\n#{fields}\n};"
     when Type::EnumType
       fields = ""
       if type.index_type
