@@ -1689,7 +1689,7 @@ class Myc::Mycc::ASTBuilder
   end
 
   private def error(msg, cursor) : Myc::Error::ErrorLoc
-    Myc::Error::ErrorLoc.new(msg, location(cursor))
+    Myc::Error::ErrorLoc.new(msg, location(cursor), offset_in_bytes: true)
   end
 
   private def is_variable_callee?(cursor : Clang::Cursor, func_name : String) : Bool

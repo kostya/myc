@@ -27,11 +27,11 @@ end
 class Myc::Error::ErrorLoc < Myc::Error
   property loc : Location
 
-  def initialize(@message, @loc)
+  def initialize(@message, @loc, @offset_in_bytes = false)
   end
 
   def print(io : IO)
-    lines, line_number, line_position = loc.load_info
+    lines, line_number, line_position = loc.load_info(@offset_in_bytes)
 
     code_show(io, lines, line_number, line_position)
 
