@@ -674,9 +674,6 @@ class Myc::Mycc::CodeGenerator
 
   def generate_expr(expr : TypedAST::FieldAccess)
     generate_expr(expr.obj)
-    if expr.obj.type.is_a?(Type::PtrType)
-      emit("DEREF")
-    end
     emit("FIELD #{expr.field_index}")
   end
 
