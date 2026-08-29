@@ -1,4 +1,4 @@
-## 0.10.0-dev
+## 0.10.0 (30.08.2026)
 * CLI: `header` command - create header for multiple *.myc files: `myc-llvm h proj/*.myc > header.myc`, and use it to compile object file with `--header` option: `myc-llvm o proj/1.myc --header header.myc`
 * inliner: fix recursion, fix goto and label, tuning params
 * BINARY: add 5 new commands (`rotl`, `rotr`, `min`, `max`, `copysign`)

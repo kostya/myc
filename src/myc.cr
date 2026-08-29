@@ -1,5 +1,5 @@
 module Myc
-  VERSION = "0.10.0-dev"
+  VERSION = "0.10.0"
   COMMIT  = {{ `git rev-parse --short HEAD 2>/dev/null || echo "unknown"`.chomp.stringify }}
   EXT     = ".myc"
 end
