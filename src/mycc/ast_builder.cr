@@ -233,7 +233,7 @@ class Myc::Mycc::ASTBuilder
     name = cursor.spelling
     raise error("No struct name", cursor) if name.blank?
 
-    if name.includes?("unnamed")
+    if name.includes?("unnamed") || name.includes?("anonymous")
       if name2 = @unnamed_types_map[name]?
         name = name2
       else
@@ -264,13 +264,17 @@ class Myc::Mycc::ASTBuilder
         field_type = get_type(child, child.type)
         fields << {field_name, field_type}
       when .union_decl?
-        build_union(child)
+        if child.spelling.includes?("anonymous")
+          fields << {"__mycc_anon_field__#{fields.size}", build_union(child)}
+        end
       when .packed_attr?
         struct_type.explicit_alignment = 1_u64
       when .aligned_attr?
         puts "warning ignore aligned attr for #{name}"
       when .struct_decl?
-        build_struct_decl(child)
+        if child.spelling.includes?("anonymous")
+          fields << {"__mycc_anon_field__#{fields.size}", build_struct_decl(child)}
+        end
       else
         raise error("Unhandled child: #{child.kind}", child)
       end
@@ -288,7 +292,7 @@ class Myc::Mycc::ASTBuilder
     name = cursor.spelling || ""
     raise error("No union name", cursor) if name.blank?
 
-    if name.includes?("unnamed")
+    if name.includes?("unnamed") || name.includes?("anonymous")
       if name2 = @unnamed_types_map[name]?
         name = name2
       else
@@ -318,29 +322,15 @@ class Myc::Mycc::ASTBuilder
       when .field_decl?
         field_name = child.spelling
         field_type = get_type(child, child.type)
-
         fields << {field_name, field_type}
-
-        variant = Type::EnumVariantType.new(
-          location(child),
-          "#{name}::#{field_name}",
-          field_name,
-          enum_type,
-          enum_type.data.size
-        )
-        variant.value_types << field_type
-        variant.hidden = true
-        enum_type.data[variant.id_name] = variant
-        typer.map[variant.id_name] = variant
-
-        ct = Type::StructType.new(location(cursor), variant.id_name + "::__value_type__")
-        ct.hidden = true
-        ct.data = [field_type]
-        variant.composite_value_type = ct
       when .struct_decl?
-        build_struct_decl(child)
+        if child.spelling.includes?("anonymous")
+          fields << {"__mycc_anon_field__#{fields.size}", build_struct_decl(child)}
+        end
       when .union_decl?
-        build_union(child)
+        if child.spelling.includes?("anonymous")
+          fields << {"__mycc_anon_field__#{fields.size}", build_union(child)}
+        end
       when .packed_attr?
         enum_type.explicit_alignment = 1_u64
       when .aligned_attr?
@@ -351,6 +341,26 @@ class Myc::Mycc::ASTBuilder
     end
 
     @unions[name] = fields
+
+    fields.each do |(field_name, field_type)|
+      variant = Type::EnumVariantType.new(
+        location(cursor),
+        "#{name}::#{field_name}",
+        field_name,
+        enum_type,
+        enum_type.data.size
+      )
+      variant.value_types << field_type
+      variant.hidden = true
+      enum_type.data[variant.id_name] = variant
+      typer.map[variant.id_name] = variant
+
+      ct = Type::StructType.new(location(cursor), variant.id_name + "::__value_type__")
+      ct.hidden = true
+      ct.data = [field_type]
+      variant.composite_value_type = ct
+    end
+
     enum_type
   end
 
@@ -375,18 +385,30 @@ class Myc::Mycc::ASTBuilder
 
   private def build_node(cursor : Clang::Cursor) : TypedAST::Node
     case cursor.kind
-    when .integer_literal?       then build_int_literal(cursor)
-    when .floating_literal?      then build_float_literal(cursor)
-    when .character_literal?     then build_char_literal(cursor)
-    when .string_literal?        then build_string_literal(cursor)
-    when .decl_ref_expr?         then build_var_ref(cursor)
-    when .call_expr?             then build_call(cursor)
-    when .unary_operator?        then build_unary(cursor)
-    when .c_style_cast_expr?     then build_cast(cursor)
-    when .array_subscript_expr?  then build_subscript(cursor)
-    when .unary_expr?            then build_sizeof(cursor)
-    when .init_list_expr?        then build_init_list(cursor)
-    when .member_ref_expr?       then build_field(cursor)
+    when .integer_literal?      then build_int_literal(cursor)
+    when .floating_literal?     then build_float_literal(cursor)
+    when .character_literal?    then build_char_literal(cursor)
+    when .string_literal?       then build_string_literal(cursor)
+    when .decl_ref_expr?        then build_var_ref(cursor)
+    when .call_expr?            then build_call(cursor)
+    when .unary_operator?       then build_unary(cursor)
+    when .c_style_cast_expr?    then build_cast(cursor)
+    when .array_subscript_expr? then build_subscript(cursor)
+    when .unary_expr?           then build_sizeof(cursor)
+    when .init_list_expr?       then build_init_list(cursor)
+    when .member_ref_expr?
+      field_name = cursor.spelling
+
+      if field_name.includes?("anonymous") || field_name.includes?("unnamed")
+        children_list = children(cursor)
+        if children_list.size > 0
+          build_node(children_list[0])
+        else
+          raise error("empty anonymous field", cursor)
+        end
+      else
+        build_field(cursor)
+      end
     when .conditional_operator?  then build_conditional(cursor)
     when .compound_literal_expr? then build_compound_literal(cursor)
     when .binary_operator?
@@ -1343,39 +1365,97 @@ class Myc::Mycc::ASTBuilder
     children_list = children(cursor)
     obj = build_node(children_list[0])
     obj_type = obj.type
-    is_arrow = obj_type.is_a?(Type::PtrType)
-    struct_type = is_arrow ? obj_type.as(Type::PtrType).target_type : obj_type
-    field_index = 0
-    field_type = struct_type
 
-    if struct_type.is_a?(Type::EnumType)
-      variant_type = typer.find("#{struct_type.id_name}::#{field_name}", location(cursor))
-
-      if is_arrow && obj.type.is_a?(Type::PtrType)
-        obj = TypedAST::Deref.new(obj, obj.type.as(Type::PtrType).target_type, location(cursor))
-      end
-
-      casted = TypedAST::Cast.new(obj, variant_type, location(cursor))
-      field_type = struct_type.data[variant_type.id_name]?.try(&.value_types.first?) || struct_type
-      return TypedAST::FieldAccess.new(casted, field_name, 1, field_type, location(cursor))
+    if obj_type.is_a?(Type::PtrType)
+      obj = TypedAST::Deref.new(obj, obj_type.as(Type::PtrType).target_type, location(cursor))
+      obj_type = obj.type
     end
 
-    if struct_type.is_a?(Type::StructType)
-      struct_name = struct_type.id_name
+    if result = find_field_path(obj, obj_type, field_name, location(cursor))
+      return result
+    end
 
-      if fields = @shared_types.struct_fields[struct_name]?
-        if idx = fields.index { |name, _| name == field_name }
-          field_index = idx
-          field_type = struct_type.data[idx]
+    raise error("field not found `#{field_name}` for type `#{obj_type.id_name}`", cursor)
+  end
+
+  private def find_field_path(obj : TypedAST::Node, obj_type : Type, field_name : String, loc : Location) : TypedAST::FieldAccess?
+    if direct = find_direct_field(obj, obj_type, field_name, loc)
+      return direct
+    end
+
+    anon_fields = get_anon_fields(obj_type)
+
+    anon_fields.each do |(anon_name, anon_type, anon_index)|
+      if obj_type.is_a?(Type::EnumType)
+        variant = obj_type.data.values.find { |v| v.original_name == anon_name }
+        if variant
+          casted = TypedAST::Cast.new(obj, variant, loc)
+          anon_obj = TypedAST::FieldAccess.new(casted, anon_name, 1, anon_type, loc)
         else
-          raise error("field not found `#{field_name}` for `#{struct_type.id_name}` #{fields.size}", cursor)
+          anon_obj = TypedAST::FieldAccess.new(obj, anon_name, anon_index, anon_type, loc)
         end
       else
-        raise error("field not found `#{field_name}` for `#{struct_type.id_name}`", cursor)
+        anon_obj = TypedAST::FieldAccess.new(obj, anon_name, anon_index, anon_type, loc)
+      end
+
+      if found = find_field_path(anon_obj, anon_type, field_name, loc)
+        return found
       end
     end
 
-    TypedAST::FieldAccess.new(obj, field_name, field_index, field_type, location(cursor))
+    nil
+  end
+
+  private def find_direct_field(obj : TypedAST::Node, obj_type : Type, field_name : String, loc : Location) : TypedAST::FieldAccess?
+    case obj_type
+    when Type::StructType
+      if fields = @shared_types.struct_fields[obj_type.id_name]?
+        if idx = fields.index { |name, _| name == field_name }
+          field_type = obj_type.data[idx]
+          return TypedAST::FieldAccess.new(obj, field_name, idx, field_type, loc)
+        end
+      end
+    when Type::EnumType
+      if variant = obj_type.data.values.find { |v| v.original_name == field_name }
+        casted = TypedAST::Cast.new(obj, variant, loc)
+        field_type = variant.value_types.first? || obj_type
+        return TypedAST::FieldAccess.new(casted, field_name, 1, field_type, loc)
+      end
+    when Type::EnumVariantType
+      if composite = obj_type.composite_value_type
+        if found = find_direct_field(obj, composite, field_name, loc)
+          return found
+        end
+      end
+    end
+
+    nil
+  end
+
+  private def get_anon_fields(obj_type : Type) : Array({String, Type, Int32})
+    result = [] of {String, Type, Int32}
+
+    case obj_type
+    when Type::StructType
+      if fields = @shared_types.struct_fields[obj_type.id_name]?
+        fields.each_with_index do |(name, type), index|
+          if name.starts_with?("__mycc_anon_field__")
+            result << {name, type, index}
+          end
+        end
+      end
+    when Type::EnumType
+      obj_type.data.each do |variant_name, variant|
+        if variant.original_name.starts_with?("__mycc_anon_field__")
+          anon_type = variant.value_types.first? || obj_type
+
+          index = variant.position
+          result << {variant.original_name, anon_type, index}
+        end
+      end
+    end
+
+    result
   end
 
   private def build_switch(cursor : Clang::Cursor) : TypedAST::Switch

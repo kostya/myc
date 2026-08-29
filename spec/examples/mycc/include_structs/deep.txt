@@ -1,0 +1,8 @@
+data.direct.first = 136
+data.direct.second = 1432748151
+data.direct.third.a = 13124
+data.direct.third.b[0] = 34
+data.direct.third.b[1] = 17
+data.main_struct.middle.alt.r = 136
+data.main_struct.middle.alt.s[0] = 0
+data.dbl = 24639225623614584110211518994783825528837185985360457713628937208528932560967573326526023922207021858816.000000

@@ -1,0 +1,11 @@
+obj.x = 10
+obj.y = 20, obj.z = A
+After obj.x = 100: obj.x = 100, obj.y = 100
+obj.w = 30
+obj.q = 3.140000
+After obj.w = 40: obj.w = 40, obj.q = 0.000000
+sizeof(struct Outer) = 12
+p->x = 50
+p->y = 60, p->z = B
+p->w = 70
+p->q = 2.710000

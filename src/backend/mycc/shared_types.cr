@@ -3,6 +3,6 @@ class Myc::Backend::Mycc::SharedTypes
   getter struct_fields
 
   def initialize(@typer)
-    @struct_fields = Hash(String, Array({String, Myc::Type})).new
+    @struct_fields = Hash(String, Array({String, Type})).new
   end
 end

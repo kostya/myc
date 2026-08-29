@@ -1,0 +1,8 @@
+width=800, height=0
+x=800, y=0
+flags=0x5
+enabled=5, visible=0, focus=0
+After change: width=100, height=200
+x=100, y=200
+flags=0x10001
+enabled=1, visible=0, focus=1

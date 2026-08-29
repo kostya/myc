@@ -3,6 +3,8 @@
 * inliner: fix recursion, tune
 * BINARY: add 5 new commands (rotl, rotr, min, max, copysign)
 * UNARY: add 9 new commands (clz, ctz, popcnt, abs, ceil, floor, trunc, nearest, sqrt)
+* mycc: many fixes
+* mycc: add C11 anonymous structs and unions support
 
 ## 0.9.1 (28.07.2026)
 * add --debug option to disable inliner

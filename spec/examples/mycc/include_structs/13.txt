@@ -1,0 +1,8 @@
+Node 0: type=1, int=42
+Node 1: type=2, float=3.140000
+Node 2: type=3, str=hello
+Node 0: long=123456789, short=7
+Node 1: double=2.718280
+Node 2: name=test, count=99
+sizeof(struct Node) = 64
+sizeof(nodes) = 192
