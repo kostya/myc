@@ -24,7 +24,7 @@ class Myc::Backend::QBE::Backend < Myc::Backend::AbstractBackend
       run_cmd(QBE, ["-o", tmp2, tmp])
     end
     Myc.measure("backend:asm2obj") do
-      run_cmd(AS, ["-c", tmp2, "-o", output])
+      run_cmd(AS, ["-W", "-c", tmp2, "-o", output])
     end
   end
 
