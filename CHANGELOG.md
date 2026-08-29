@@ -1,10 +1,11 @@
 ## 0.10.0-dev
 * CLI: `header` command - create header for multiple *.myc files: `myc-llvm h proj/*.myc > header.myc`, and use it to compile object file with `--header` option: `myc-llvm o proj/1.myc --header header.myc`
-* inliner: fix recursion, tune
-* BINARY: add 5 new commands (rotl, rotr, min, max, copysign)
-* UNARY: add 9 new commands (clz, ctz, popcnt, abs, ceil, floor, trunc, nearest, sqrt)
+* inliner: fix recursion, fix goto and label, tuning params
+* BINARY: add 5 new commands (`rotl`, `rotr`, `min`, `max`, `copysign`)
+* UNARY: add 9 new commands (`clz`, `ctz`, `popcnt`, `abs`, `ceil`, `floor`, `trunc`, `nearest`, `sqrt`)
 * mycc: many fixes
-* mycc: add C11 anonymous structs and unions support
+* mycc: add C11 anonymous structs and unions support, closing to c11 standard
+* c backend: fix topological types sort
 
 ## 0.9.1 (28.07.2026)
 * add --debug option to disable inliner

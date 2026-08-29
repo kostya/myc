@@ -11,7 +11,7 @@
 * Compiles to native code via LLVM, QBE, or C. 
 * Fast compilation, "zero" overhead (I hope). 
 * ~8000 lines in Crystal.
-* Includes mycc: a C99-subset compiler built on myc in 3 weeks (POC, 2900 lines).
+* Includes mycc: a C11-like compiler built on myc (3000 lines).
 
 ### Why?
 
@@ -27,7 +27,7 @@
 * Alpha, but already powerful.
 * All 3 backends work smoothly.
 * 4400 tests pass.
-* Mycc compiles [LangArena](https://github.com/kostya/LangArena) benchmark - 50 tests, 9,000 lines of production-like C (json, base64, neural net, compression, maze A*, and more). 
+* Mycc compiles [LangArena](https://github.com/kostya/LangArena) benchmark - 50 tests, 9,000 lines of production-like C (json, base64, neural net, compression, maze A*, and more) and 20/34 files of Lua. 
 * Two modes: default (fast, Go-like) and final (slow compile, ~5-15% faster runtime).
 
 ## How it looks like?
@@ -108,15 +108,15 @@ python3 bf2myc.py mandel.bf | ../../myc-llvm run
 cd ../../
 ```
 
-# mycc - an alternative C compiler, implemented as a POC.
+# mycc - an alternative C compiler.
 
-As a proof of concept, over 3 weeks and 2900 lines of code, I built mycc: a compiler for a subset of C (roughly C99) on top of myc. This proves that creating languages is easy. For parsing, I used libclang - it adds overhead, but it's the simplest solution for a POC.
+As a proof of concept, I built mycc: a compiler for a subset of C (roughly C11) on top of myc. This proves that creating languages is easy. For parsing, I used libclang - it adds overhead, but it's the simplest solution for a POC. It is only 3000 lines of code and already compiles complex and production-like C, like: LangArena and part of Lua.
 
 ## How it works:
 
 `C source -> SyntaxTree(libclang/clang.cr) -> TypedAST(mycc) -> IR(myc) -> [LLVM/QBE/C] -> binary`
 
-The most challenging part was `SyntaxTree -> TypedAST`. In the file [ast_builder.cr](https://github.com/kostya/myc/blob/master/src/mycc/ast_builder.cr) which contains 1700 lines of code. libclang returns a non-normalized Tree with many edge cases that need to be transformed into a consistent form. Additionally, C has a ton of implicit behavior. Only the edge cases necessary for compiling LangArena are implemented here; there's likely still a lot uncovered.
+The most challenging part was `SyntaxTree -> TypedAST`. In the file [ast_builder.cr](https://github.com/kostya/myc/blob/master/src/mycc/ast_builder.cr) which contains 1700 lines of code. libclang returns a non-normalized Tree with many edge cases that need to be transformed into a consistent form. Additionally, C has a ton of implicit behavior.
 
 The `TypedAST(mycc) -> IR(myc)` stage as expected, is one of the simplest ([codegen.cr](https://github.com/kostya/myc/blob/master/src/mycc/codegen.cr), 700 lines) - a single-pass generation of stack-based IR directly from the AST.
 
@@ -128,7 +128,7 @@ mycc: `C -> Parse(libclang) -> mycc CodeGen -> IR(myc) -> [LLVM/QBE/C] -> binary
 
 ### Limitations: 
 
-Rare features are not implemented: 2D vla, complex numbers, longjmp, bitfields, asm, volatile, and anonymous nested structs. I wouldn't try building Linux or sqlite with it. It has only been tested on arm64 and linux64.
+Rare features are not implemented: va_list, 2d vla, complex numbers, longjmp, bitfields, asm. I wouldn't try building Linux or sqlite with it. It has only been tested on arm64 and linux64.
 
 ## mycc: build compiler.
 
