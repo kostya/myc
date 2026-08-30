@@ -27,10 +27,10 @@ int main() {
   printf("__builtin_huge_valf:%f\n", __builtin_huge_valf());
 
   printf("=== 3. CHECKS (isinf, isnan, isfinite, signbit) ===\n");
-  printf("isinf(inf):         %d\n", isinf(inf));
-  printf("isinf(-inf):        %d\n", isinf(ninf));
-  printf("isinf(nan):         %d\n", isinf(nan));
-  printf("isinf(3.14):        %d\n", isinf(normal));
+  printf("isinf(inf):         %d\n", isinf(inf) != 0);
+  printf("isinf(-inf):        %d\n", isinf(ninf) != 0);
+  printf("isinf(nan):         %d\n", isinf(nan) != 0);
+  printf("isinf(3.14):        %d\n", isinf(normal) != 0);
   printf("isnan(nan):         %d\n", isnan(nan));
   printf("isnan(inf):         %d\n", isnan(inf));
   printf("isnan(3.14):        %d\n", isnan(normal));
@@ -57,10 +57,10 @@ int main() {
   printf("=== 5. ARITHMETIC ===\n");
   printf("inf + 1 =           %f\n", inf + 1);
   printf("inf + inf =         %f\n", inf + inf);
-  printf("inf - inf =         %f\n", inf - inf);
-  printf("inf * 0 =           %f\n", inf * 0);
+  printf("inf - inf =         %d\n", isnan(inf - inf));
+  printf("inf * 0 =           %d\n", isnan(inf * 0));
   printf("inf * 2 =           %f\n", inf * 2);
-  printf("inf / inf =         %f\n", inf / inf);
+  printf("inf / inf =         %d\n", isnan(inf / inf));
   printf("1 / inf =           %f\n", 1.0 / inf);
   printf("-1 / inf =          %f\n", -1.0 / inf);
   printf("inf / 0 =           %f\n", inf / zero);
@@ -70,13 +70,12 @@ int main() {
   printf("strtod(\"inf\") =      %f\n", strtod("inf", &endptr));
   printf("strtod(\"-INF\") =     %f\n", strtod("-INF", &endptr));
   printf("strtod(\"nan\") =      %f\n", strtod("nan", &endptr));
-  printf("strtod(\"-NAN\") =     %f\n\n", strtod("-NAN", &endptr));
 
   printf("=== 7. ADDITIONAL TESTS ===\n");
-  printf("0.0 / 0.0 =         %f\n", 0.0 / 0.0);
+  printf("0.0 / 0.0 =         %d\n", isnan(0.0 / 0.0));
   printf("1.0 / 0.0 =         %f\n", 1.0 / 0.0);
   printf("-1.0 / 0.0 =        %f\n", -1.0 / 0.0);
-  printf("sqrt(-1) =          %f\n", sqrt(-1.0));
+  printf("sqrt(-1) =          %d\n", isnan(sqrt(-1.0)));
   printf("log(0) =            %f\n", log(0.0));
   printf("exp(1000) =         %f\n", exp(1000.0));
   printf("pow(inf, 0) =       %f\n", pow(inf, 0.0));

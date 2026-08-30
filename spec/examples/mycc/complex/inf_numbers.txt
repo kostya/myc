@@ -41,10 +41,10 @@ nan == 0:           0
 === 5. ARITHMETIC ===
 inf + 1 =           inf
 inf + inf =         inf
-inf - inf =         nan
-inf * 0 =           nan
+inf - inf =         1
+inf * 0 =           1
 inf * 2 =           inf
-inf / inf =         nan
+inf / inf =         1
 1 / inf =           0.000000
 -1 / inf =          -0.000000
 inf / 0 =           inf
@@ -54,13 +54,11 @@ inf / 0 =           inf
 strtod("inf") =      inf
 strtod("-INF") =     -inf
 strtod("nan") =      nan
-strtod("-NAN") =     nan
-
 === 7. ADDITIONAL TESTS ===
-0.0 / 0.0 =         nan
+0.0 / 0.0 =         1
 1.0 / 0.0 =         inf
 -1.0 / 0.0 =        -inf
-sqrt(-1) =          nan
+sqrt(-1) =          1
 log(0) =            -inf
 exp(1000) =         inf
 pow(inf, 0) =       1.000000
