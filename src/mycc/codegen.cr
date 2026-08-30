@@ -465,7 +465,21 @@ class Myc::Mycc::CodeGenerator
   end
 
   def generate_expr(expr : TypedAST::FloatLiteral)
-    emit("PUSH #{expr.value} #{type_s(expr.type)}")
+    val_str = case val = expr.value
+              when Float64::INFINITY
+                "+inf"
+              when -Float64::INFINITY
+                "-inf"
+              when .nan?
+                "+nan"
+              else
+                val.to_s
+              end
+    if expr.type.eq?(typer.f64)
+      emit("PUSH #{val_str}")
+    else
+      emit("PUSH #{val_str} #{type_s(expr.type)}")
+    end
   end
 
   def generate_expr(expr : TypedAST::CharLiteral)
@@ -625,26 +639,40 @@ class Myc::Mycc::CodeGenerator
       generate_expr(callee)
       emit("INVOKE#{expr.vaargs_count > 0 ? " #{expr.vaargs_count}" : ""}")
     else
-      case expr.func_name
-      when "__builtin_expect"
-        generate_expr(expr.args[0])
-        return
-      when "__builtin_constant_p"
-        case expr.args[0]
-        when TypedAST::IntLiteral, TypedAST::FloatLiteral
-          emit("PUSH 1")
-        else
-          emit("PUSH 0")
-        end
-        return
-      end
-
       fname = expr.func_name
-      if fname2 = @builder.@static_func_names_map[fname]?
-        fname = fname2
+      if fname.starts_with?("__builtin")
+        case fname
+        when "__builtin_expect"
+          generate_expr(expr.args[0])
+        when "__builtin_constant_p"
+          case expr.args[0]
+          when TypedAST::IntLiteral, TypedAST::FloatLiteral
+            emit("PUSH 1")
+          else
+            emit("PUSH 0")
+          end
+        when "__builtin_huge_val", "__builtin_inf", "__builtin_infl"
+          emit("PUSH +inf")
+        when "__builtin_huge_valf", "__builtin_inff"
+          emit("PUSH +inf :f32")
+        when "__builtin_fabs", "__builtin_fabsf", "__builtin_fabsl"
+          generate_expr(expr.args[0])
+          emit("UNARY :abs")
+        when "__builtin_nan"
+          emit("PUSH +nan")
+        when "__builtin_nanf"
+          emit("PUSH +nan :f32")
+        else
+          expr.args.reverse.each { |arg| generate_expr(arg) }
+          emit("CALL :#{fname}#{expr.vaargs_count > 0 ? " #{expr.vaargs_count}" : ""}")
+        end
+      else
+        if fname2 = @builder.@static_func_names_map[fname]?
+          fname = fname2
+        end
+        expr.args.reverse.each { |arg| generate_expr(arg) }
+        emit("CALL :#{fname}#{expr.vaargs_count > 0 ? " #{expr.vaargs_count}" : ""}")
       end
-      expr.args.reverse.each { |arg| generate_expr(arg) }
-      emit("CALL :#{fname}#{expr.vaargs_count > 0 ? " #{expr.vaargs_count}" : ""}")
     end
   end
 

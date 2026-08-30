@@ -244,4 +244,13 @@ context "Myc::Source::Tokenizer" do
       PUSH 18446744073709551615
     SRC
   end
+
+  it "PUSH special float" do
+    tokenize(<<-SRC).inspect.should eq "[O:PUSH:2, V:-Infinity:7, O:PUSH:14, V:Infinity:19, O:PUSH:26, V:NaN:31, O:PUSH:38, V:NaN:43]"
+      PUSH -Inf
+      PUSH +Inf
+      PUSH +nan
+      PUSH -NAN
+    SRC
+  end
 end

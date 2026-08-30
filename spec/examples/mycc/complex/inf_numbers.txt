@@ -1,0 +1,67 @@
+=== 1. CONSTANTS & MACROS ===
+INFINITY:       inf
+-INFINITY:      -inf
+NAN:            nan
+-NAN:           nan
+HUGE_VAL:       inf
+HUGE_VALF:      inf
+=== 2. BUILTINS ===
+__builtin_inf:      inf
+__builtin_inff:     inf
+__builtin_huge_val: inf
+__builtin_huge_valf:inf
+=== 3. CHECKS (isinf, isnan, isfinite, signbit) ===
+isinf(inf):         1
+isinf(-inf):        1
+isinf(nan):         0
+isinf(3.14):        0
+isnan(nan):         1
+isnan(inf):         0
+isnan(3.14):        0
+isfinite(inf):      0
+isfinite(3.14):     1
+isfinite(0):        1
+signbit(-inf):      1
+signbit(inf):       0
+signbit(-0.0):      1
+
+=== 4. COMPARISONS ===
+inf == inf:         1
+inf == -inf:        0
+inf > 1e308:        1
+inf > inf:          0
+-inf < inf:         1
+inf < 1e308:        0
+nan == nan:         0
+nan != nan:         1
+nan > 0:            0
+nan < 0:            0
+nan == 0:           0
+
+=== 5. ARITHMETIC ===
+inf + 1 =           inf
+inf + inf =         inf
+inf - inf =         nan
+inf * 0 =           nan
+inf * 2 =           inf
+inf / inf =         nan
+1 / inf =           0.000000
+-1 / inf =          -0.000000
+inf / 0 =           inf
+(-inf) * (-inf) =   inf
+
+=== 6. strtod CONVERSION ===
+strtod("inf") =      inf
+strtod("-INF") =     -inf
+strtod("nan") =      nan
+strtod("-NAN") =     nan
+
+=== 7. ADDITIONAL TESTS ===
+0.0 / 0.0 =         nan
+1.0 / 0.0 =         inf
+-1.0 / 0.0 =        -inf
+sqrt(-1) =          nan
+log(0) =            -inf
+exp(1000) =         inf
+pow(inf, 0) =       1.000000
+pow(inf, -1) =      0.000000

@@ -80,9 +80,27 @@ class Myc::Backend::C::Builder < Myc::Backend::AbstractBuilder
     when InitValue::Boolval
       io << (init.val ? 1 : 0)
     when InitValue::F32
-      io << init.val
+      case val = init.val
+      when Float32::INFINITY
+        io << "__builtin_inff()"
+      when -Float32::INFINITY
+        io << "-__builtin_inff()"
+      when .nan?
+        io << "__builtin_nanf(\"\")"
+      else
+        io << val
+      end
     when InitValue::F64
-      io << init.val
+      case val = init.val
+      when Float64::INFINITY
+        io << "__builtin_inf()"
+      when -Float64::INFINITY
+        io << "-__builtin_inf()"
+      when .nan?
+        io << "__builtin_nan(\"\")"
+      else
+        io << val
+      end
     when InitValue::Str
       io << '"' << AbstractBuilder.escaped_string(init.str) << '"'
     when InitValue::Zero

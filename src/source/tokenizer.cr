@@ -139,7 +139,8 @@ class Myc::Source::Tokenizer
       end
     when '-'
       move_next
-      if current_char.ascii_number?
+      case current_char
+      when .ascii_number?
         value = extract_int_or_float(true)
 
         unless separator?(current_char)
@@ -155,7 +156,36 @@ class Myc::Source::Tokenizer
           raise "unreachable"
         end
       else
-        raise error("unexpected symbol '-'")
+        if f = parse_special_float
+          Token::FloatValue.new(-f)
+        else
+          raise error("unexpected symbol '-'")
+        end
+      end
+    when '+'
+      move_next
+      case current_char
+      when .ascii_number?
+        value = extract_int_or_float(false)
+
+        unless separator?(current_char)
+          raise error("expected separator after number")
+        end
+
+        case value
+        when Int64, UInt64
+          Token::IntValue.new(value)
+        when Float64
+          Token::FloatValue.new(value)
+        else
+          raise "unreachable"
+        end
+      else
+        if f = parse_special_float
+          Token::FloatValue.new(f)
+        else
+          raise error("unexpected symbol '-'")
+        end
       end
     else
       raise error("unexpected symbol #{cc.inspect}")
@@ -417,6 +447,41 @@ class Myc::Source::Tokenizer
     if c == ch
       move_next
       ch
+    end
+  end
+
+  private def parse_special_float : Float64?
+    case current_char
+    when 'i', 'I'
+      move_next
+      case current_char
+      when 'n', 'N'
+        move_next
+        case current_char
+        when 'f', 'F'
+          move_next
+          Float64::INFINITY
+        else
+          raise error("unexpected symbol")
+        end
+      else
+        raise error("unexpected symbol")
+      end
+    when 'n', 'N'
+      move_next
+      case current_char
+      when 'a', 'A'
+        move_next
+        case current_char
+        when 'n', 'N'
+          move_next
+          Float64::NAN
+        else
+          raise error("unexpected symbol")
+        end
+      else
+        raise error("unexpected symbol")
+      end
     end
   end
 end

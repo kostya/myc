@@ -1,0 +1,6 @@
+isnan(nan): 1
+nan == nan: 0
+nan != nan: 1
+isnan(nan): 1
+nan == nan: 0
+nan != nan: 1
