@@ -86,7 +86,7 @@ class Myc::Backend::Mycc::Backend < Myc::Backend::AbstractBackend
       p ast
     end
 
-    io = Myc.measure("mycc:codegen") do
+    io, io2 = Myc.measure("mycc:codegen") do
       c = ::Myc::Mycc::CodeGenerator.new(builder.mod.typer, builder)
       c.generate(ast)
     end
@@ -97,7 +97,7 @@ class Myc::Backend::Mycc::Backend < Myc::Backend::AbstractBackend
 
     path = new_tmp_path("mycc", "myc")
     Myc.measure("mycc:store") do
-      File.open(path, "w") { |f| IO.copy(io, f) }
+      File.open(path, "w") { |f| IO.copy(io, f); IO.copy(io2, f) }
     end
 
     path

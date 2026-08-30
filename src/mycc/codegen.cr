@@ -16,6 +16,7 @@ class Myc::Mycc::CodeGenerator
   def initialize(@typer, @builder)
     @indent = 0
     @io = IO::Memory.new
+    @additional_io = IO::Memory.new
     @vars_stack = [Hash(String, VarInfo).new]
     @params = Hash(String, Int32).new
     @globals = Hash(String, TypedAST::VarDecl).new
@@ -51,7 +52,7 @@ class Myc::Mycc::CodeGenerator
     "__s#{@scope_counter}_#{name}"
   end
 
-  def generate(program : TypedAST::Program) : IO
+  def generate(program : TypedAST::Program) : Tuple(IO, IO)
     program.structs.each do |name, fields|
       emit("STRUCT :#{name}")
       @indent += 1
@@ -106,7 +107,8 @@ class Myc::Mycc::CodeGenerator
       generate_function(f)
     end
     io.rewind
-    io
+    @additional_io.rewind
+    {io, @additional_io}
   end
 
   private def emit_init_element(elem)
@@ -150,7 +152,7 @@ class Myc::Mycc::CodeGenerator
     when TypedAST::AddrOf
       emit_init_element(elem.operand)
     else
-      raise "Unsupported init element: #{elem.class}"
+      raise error("Unsupported init element: #{elem.class}", elem)
     end
   end
 
@@ -641,38 +643,15 @@ class Myc::Mycc::CodeGenerator
     else
       fname = expr.func_name
       if fname.starts_with?("__builtin")
-        case fname
-        when "__builtin_expect"
-          generate_expr(expr.args[0])
-        when "__builtin_constant_p"
-          case expr.args[0]
-          when TypedAST::IntLiteral, TypedAST::FloatLiteral
-            emit("PUSH 1")
-          else
-            emit("PUSH 0")
-          end
-        when "__builtin_huge_val", "__builtin_inf", "__builtin_infl"
-          emit("PUSH +inf")
-        when "__builtin_huge_valf", "__builtin_inff"
-          emit("PUSH +inf :f32")
-        when "__builtin_fabs", "__builtin_fabsf", "__builtin_fabsl"
-          generate_expr(expr.args[0])
-          emit("UNARY :abs")
-        when "__builtin_nan"
-          emit("PUSH +nan")
-        when "__builtin_nanf"
-          emit("PUSH +nan :f32")
-        else
-          expr.args.reverse.each { |arg| generate_expr(arg) }
-          emit("CALL :#{fname}#{expr.vaargs_count > 0 ? " #{expr.vaargs_count}" : ""}")
+        if generate_builtin(fname, expr.type, expr.args)
+          return
         end
-      else
-        if fname2 = @builder.@static_func_names_map[fname]?
-          fname = fname2
-        end
-        expr.args.reverse.each { |arg| generate_expr(arg) }
-        emit("CALL :#{fname}#{expr.vaargs_count > 0 ? " #{expr.vaargs_count}" : ""}")
       end
+      if fname2 = @builder.@static_func_names_map[fname]?
+        fname = fname2
+      end
+      expr.args.reverse.each { |arg| generate_expr(arg) }
+      emit("CALL :#{fname}#{expr.vaargs_count > 0 ? " #{expr.vaargs_count}" : ""}")
     end
   end
 
@@ -792,5 +771,9 @@ class Myc::Mycc::CodeGenerator
       emit("LOCAL :#{mangled_name} #{type_s(type)}")
       @local_marks << mangled_name
     end
+  end
+
+  private def error(msg : String, node : TypedAST::Node | TypedAST::Stmt)
+    Error::ErrorLoc.new(msg, node.location)
   end
 end
