@@ -1,0 +1,29 @@
+GLOBAL :static_1_c_Output
+  TYPE "flat<u8, 3>"
+  INITIAL :bla
+  PRIVATE
+ENDGLOBAL
+
+FUNC :printf
+  ARGS
+    TYPE :ptr<u8>
+  RETURN
+    TYPE :i32
+  ATTRIBUTES
+    ATTR :vaarg
+ENDFUNC
+
+FUNC :main
+  RETURN
+    TYPE :i32
+  BODY
+    GLOBAL :static_1_c_Output
+    ADDR
+    AS :ptr<u8>
+    PUSH "%s\n"
+    CALL :printf 1
+    STACK :drop
+    PUSH 0
+    RET
+ENDFUNC
+

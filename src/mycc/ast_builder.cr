@@ -666,9 +666,18 @@ class Myc::Mycc::ASTBuilder
             init = TypedAST::ZeroInitializer.new(var_type, location(cursor))
           end
         end
+
         if var_type.is_a?(Type::FlatType) && init.is_a?(TypedAST::IntLiteral)
           init = nil
         elsif var_type.is_a?(Type::FlatType) && init.is_a?(TypedAST::StringLiteral)
+        elsif var_type.is_a?(Type::FlatType) && init.is_a?(TypedAST::InitList)
+          if init.elements.size == 1 && init.elements[0].is_a?(TypedAST::StringLiteral) && var_type.as(Type::FlatType).target_type.eq?(typer.u8)
+            init = init.elements[0]
+            init.type = var_type
+          else
+            init = resolve_init_list_types(init, var_type)
+            init = auto_cast(init, var_type, location(cursor)) if init.type != var_type
+          end
         elsif init.is_a?(TypedAST::InitList)
           init = resolve_init_list_types(init, var_type)
           init = auto_cast(init, var_type, location(cursor)) if init.type != var_type
@@ -678,7 +687,6 @@ class Myc::Mycc::ASTBuilder
         end
       end
     end
-
     if (is_static || @current_function_name.empty?) && !is_extern
       if init.nil? || (init.is_a?(TypedAST::Cast) && is_zero_cast?(init))
         if var_type.is_a?(Type::FlatType) || var_type.is_a?(Type::StructType)

@@ -1,6 +1,6 @@
 module Myc::Mycc::TypedAST
   abstract class Node
-    getter type : Type
+    property type : Type
     getter location : Location
 
     def initialize(@type, @location)

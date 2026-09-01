@@ -1,0 +1,41 @@
+1. Output: bla
+2. output: bla
+3. sizeof(Output)=4
+4. sizeof(output)=8
+5. sizeof(const_output)=8
+6. Output == output: 1
+7. &Output == &output: 0
+8. &Output[0] == output: 1
+9. Output == &Output: 1
+10. *output = b
+11. output[1] = l
+12. *Output = b
+13. Output[1] = l
+14. output+1 = la
+15. Output+1 = la
+16. (char*)&Output+1 = la
+17. output - (char*)Output = 0
+18. (char*)(&Output+1) - Output = 4
+19. *arr_ptr = bla
+20. sizeof(*arr_ptr) = 4
+func1: bla
+func1 sizeof(arr)=8
+func1: bla
+func1 sizeof(arr)=8
+func2: bla
+func2: bla
+21. output before: bla
+22. output after: extra
+23. Output unchanged: bla
+24. chosen: bla
+25. **pp = e
+26. *pp = extra
+27. 2[Output] = a
+28. 1[output] = x
+29. STR(Output) = Output
+30. CONCAT(out, put) = extra
+31. Individual chars: bla
+32. sizes: 4 8 8 8
+33. 0 1
+34. After modification: Xla
+35. readonly[0]=b
