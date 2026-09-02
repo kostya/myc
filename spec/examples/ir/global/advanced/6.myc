@@ -1,0 +1,32 @@
+GLOBAL :static_2_c_Output
+  TYPE "flat<u8, 5>"
+  INITIAL 98 108 97 50 0
+  PRIVATE
+ENDGLOBAL
+
+GLOBAL :static_2_c_output
+  TYPE :ptr<u8>
+  INITIAL :static_2_c_Output
+  PRIVATE
+ENDGLOBAL
+
+FUNC :printf
+  ARGS
+    TYPE :ptr<u8>
+  RETURN
+    TYPE :i32
+  ATTRIBUTES
+    ATTR :vaarg
+ENDFUNC
+
+FUNC :main
+  RETURN
+    TYPE :i32
+  BODY
+    GLOBAL :static_2_c_output
+    PUSH "%s\n"
+    CALL :printf 1
+    STACK :drop
+    PUSH 0
+    RET
+ENDFUNC

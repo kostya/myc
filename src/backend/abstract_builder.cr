@@ -135,6 +135,8 @@ abstract class Myc::Backend::AbstractBuilder
           if g = mod.global_defs[value.val]?
             if g.type.eq?(type.target_type)
               return InitValue::GlobalRef.new(type, value.val)
+            elsif g.type.is_a?(Type::FlatType) && (g.type.as(Type::FlatType).target_type.eq?(type.target_type))
+              return InitValue::GlobalRef.new(type, value.val)
             else
               raise error("global #{value.val} have type #{g.type}, but expected #{type}")
             end

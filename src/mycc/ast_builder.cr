@@ -20,6 +20,7 @@ class Myc::Mycc::ASTBuilder
     @switch_counter = 0_u64
     @unnamed_types_map = Hash(String, String).new
     @static_func_names_map = Hash(String, String).new
+    @static_globals_names_map = Hash(String, String).new
     @break_stack = Deque(TypedAST::Stmt).new
   end
 
@@ -700,6 +701,7 @@ class Myc::Mycc::ASTBuilder
     if is_static
       func_name = @current_function_name.presence || "static_#{source.name}"
       unique_name = "#{func_name}_#{name}"
+      @static_globals_names_map[name] = unique_name
       var = TypedAST::VarDecl.new(unique_name, var_type, init, location(cursor), is_static: true, is_vla: is_vla, original_name: name)
       unless @globals.any? { |g| g.name == unique_name }
         @globals << var
