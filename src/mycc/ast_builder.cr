@@ -996,6 +996,7 @@ class Myc::Mycc::ASTBuilder
 
       left = auto_cast(left, typer.i32, loc) if left.type.is_a?(Type::BoolType)
       right = auto_cast(right, typer.i32, loc) if right.type.is_a?(Type::BoolType)
+
       if left.type.is_a?(Type::PtrType) && right.type.is_a?(Type::PtrType) && op_name == :sub
         TypedAST::BinaryOp.new(:sub, left, right, typer.i64, loc)
       elsif left.type.is_a?(Type::PtrType) && right.type.is_a?(Type::IntType)
@@ -1003,13 +1004,19 @@ class Myc::Mycc::ASTBuilder
         TypedAST::BinaryOp.new(op_name, left, right, left.type, loc)
       elsif right.type.is_a?(Type::PtrType) && left.type.is_a?(Type::IntType)
         left = auto_cast(left, typer.u64, loc)
-        TypedAST::BinaryOp.new(op_name, left, right, right.type, loc)
+        TypedAST::BinaryOp.new(op_name, right, left, right.type, loc)
       elsif left.type.is_a?(Type::FlatType) && right.type.is_a?(Type::IntType)
         elem_type = left.type.as(Type::FlatType).target_type
         ptr_type = typer.to_ptr(elem_type, loc)
         left = auto_cast(left, ptr_type, loc)
         right = auto_cast(right, typer.u64, loc)
         TypedAST::BinaryOp.new(op_name, left, right, ptr_type, loc)
+      elsif right.type.is_a?(Type::FlatType) && left.type.is_a?(Type::IntType)
+        elem_type = right.type.as(Type::FlatType).target_type
+        ptr_type = typer.to_ptr(elem_type, loc)
+        right = auto_cast(right, ptr_type, loc)
+        left = auto_cast(left, typer.u64, loc)
+        TypedAST::BinaryOp.new(op_name, right, left, ptr_type, loc)
       else
         common = common_type(left.type, right.type)
         left = auto_cast(left, common, loc)
@@ -1347,13 +1354,25 @@ class Myc::Mycc::ASTBuilder
 
   private def build_subscript(cursor : Clang::Cursor) : TypedAST::Subscript
     children_list = children(cursor)
-    array = build_node(children_list[0])
-    index = build_node(children_list[1])
+    first = build_node(children_list[0])
+    second = build_node(children_list[1])
+
+    first = auto_decay(first)
+    second = auto_decay(second)
+
+    array, index = if first.type.is_a?(Type::PtrType)
+                     {first, second}
+                   elsif second.type.is_a?(Type::PtrType)
+                     {second, first}
+                   else
+                     {first, second}
+                   end
+
     elem_type = case type = array.type
-                when Type::PtrType  then type.target_type
-                when Type::FlatType then type.target_type
-                else                     array.type
+                when Type::PtrType then type.target_type
+                else                    array.type
                 end
+
     index = auto_cast(index, typer.i64, location(cursor))
     TypedAST::Subscript.new(array, index, elem_type, location(cursor))
   end

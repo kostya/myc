@@ -1,0 +1,12 @@
+arr[2] = 30
+2[arr] = 30
+*(arr + 2) = 30
+*(2 + arr) = 30
+arr[2] == *(arr + 2): 1
+2[arr] == *(2 + arr): 1
+*(arr + 2) == *(2 + arr): 1
+ptr[3] = 40
+*(ptr + 3) = 40
+*(3 + ptr) = 40
+3[ptr] = 40
+All commutative accesses match!
