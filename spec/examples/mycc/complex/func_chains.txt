@@ -1,0 +1,16 @@
+=== Crazy Function Result Usage Tests ===
+  get_array()[2] = 30
+  get_array()[0] + get_array()[4] = 60
+  get_struct().data[3] = 400
+  get_struct().data[1] * 2 = 400
+  get_ptr_to_array()[0][1] = 2
+  get_ptr_to_array()[1][2] = 6
+  get_ptr_to_array()[0][0] + get_ptr_to_array()[1][1] = 6
+  get_wrapper().ptr[2] = 9
+  get_wrapper().ptr[0] + get_wrapper().ptr[3] = 17
+  get_array_getter()()[1] = 22
+  get_array_getter()()[0] + get_array_getter()()[2] = 44
+  get_inner()()[2] = 333
+  get_array_getter()()[get_array()[1] / 10] = 33
+  get_inner()()[get_array()[0] / 10] = 222
+=== DONE ===

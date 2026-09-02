@@ -1,0 +1,106 @@
+========== HEAVY COMPILER TEST ==========
+
+=== Recursion ===
+  fibonacci(10) = 55 (expect 55)
+  fibonacci(20) = 6765 (expect 6765)
+  factorial(5) = 120 (expect 120)
+  factorial(10) = 3628800 (expect 3628800)
+  gcd(48, 18) = 6 (expect 6)
+  gcd(100, 75) = 25 (expect 25)
+  is_prime(17) = 1 (expect 1)
+  is_prime(100) = 0 (expect 0)
+
+=== Pointers and Arrays ===
+  array sum: 95 (expect 95)
+  reversed array: 14 13 12 11 10 9 8 7 6 5 (expect 14 13 12 11 10 9 8 7 6 5)
+  sorted array: 0 1 2 3 4 5 6 7 8 9 (expect 0 1 2 3 4 5 6 7 8 9)
+  binary_search(5) = 5 (expect 5)
+  binary_search(100) = -1 (expect -1)
+
+=== Linked List ===
+  list size: 5 (expect 5)
+  list sum: 150 (expect 150)
+  element 0: 50 (expect 50)
+  element 4: 10 (expect 10)
+  element 100: -1 (expect -1)
+  after remove, size: 4 (expect 4)
+  after remove, element 0: 40 (expect 40)
+  after clear, size: 0 (expect 0)
+
+=== Binary Tree ===
+  tree sum: 45 (expect 45)
+  tree depth: 4 (expect 4)
+  inorder traversal: 1 2 3 4 5 6 7 8 9 (expect 1 2 3 4 5 6 7 8 9)
+
+=== String Operations ===
+  copied string: Hello, World! (expect Hello, World!)
+  compare: 0
+  compare: 253
+  compare: 23
+  reversed: esrever (expect esrever)
+
+=== Matrix Operations ===
+  Matrix A:
+    1 2 3 
+    4 5 6 
+    7 8 9 
+  Matrix B:
+    9 8 7 
+    6 5 4 
+    3 2 1 
+  A * B:
+    30 24 18 
+    84 69 54 
+    138 114 90 
+
+=== Bit Operations ===
+  count_bits(0xFF) = 8 (expect 8)
+  count_bits(0xF0F0) = 8 (expect 8)
+  count_bits(0) = 0 (expect 0)
+  reverse_bits(0x80000000) = 0x1 (expect 0x1)
+  rotate_left(0x80000000, 1) = 0x1 (expect 0x1)
+
+=== Function Pointers ===
+  10 + 20 = 30 (expect 30)
+  10 * 20 = 200 (expect 200)
+  array[0]: 30 (expect 30)
+  array[1]: 200 (expect 200)
+
+=== Complex Expressions ===
+  complex expression result: -1694
+  max of three: 30 (expect 30)
+  complex condition: true
+  chain assignment: 42 42 42 (expect 42 42 42)
+
+=== Edge Cases ===
+  overflow: -2147483648
+  negative: -42
+  unary minus: 42
+  multiple declarations: 1 2 3 4
+  nested calls: 15
+
+=== Memory Management ===
+  ptr1 sum: 4950 (expect 4950)
+  ptr2 sum: 9900 (expect 9900)
+  ptr3 sum: 14850 (expect 14850)
+  cycle 0: sum=45
+  cycle 1: sum=145
+  cycle 2: sum=245
+  cycle 3: sum=345
+  cycle 4: sum=445
+  cycle 5: sum=545
+  cycle 6: sum=645
+  cycle 7: sum=745
+  cycle 8: sum=845
+  cycle 9: sum=945
+
+=== Nested Structs ===
+  inner1: a=10 b=20 name=first
+  inner2: a=30 b=40 name=second
+  values: 0 100 200 300 400 
+
+=== Recursive Structures ===
+  tree sum: 210 (expect 210)
+
+========== TEST COMPLETE ==========
+Final stress test result: 1585

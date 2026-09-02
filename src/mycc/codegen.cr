@@ -8,8 +8,9 @@ class Myc::Mycc::CodeGenerator
     getter is_static : Bool
     getter unique_name : String?
     getter mangled_name : String
+    getter var_decl : TypedAST::VarDecl?
 
-    def initialize(@type, @mangled_name, @is_static = false, @unique_name = nil)
+    def initialize(@type, @mangled_name, @is_static = false, @unique_name = nil, @var_decl : TypedAST::VarDecl? = nil)
     end
   end
 
@@ -24,6 +25,7 @@ class Myc::Mycc::CodeGenerator
     @switch_count = 0
     @scope_counter = 0
     @temp_counter = 0_u64
+    @current_function_name = ""
   end
 
   def current_vars : Hash(String, VarInfo)
@@ -100,6 +102,7 @@ class Myc::Mycc::CodeGenerator
 
       emit("ENDGLOBAL")
 
+      @globals[var.name] = var
       @globals[var.original_name] = var
     end
 
@@ -166,6 +169,7 @@ class Myc::Mycc::CodeGenerator
     @params.clear
     @local_marks.clear
 
+    @current_function_name = func.name
     emit("FUNC :#{func.name}")
     @indent += 1
 
@@ -214,6 +218,7 @@ class Myc::Mycc::CodeGenerator
     end
 
     emit("ENDFUNC")
+    @current_function_name = ""
     @indent -= 1
   end
 
@@ -239,13 +244,10 @@ class Myc::Mycc::CodeGenerator
   end
 
   def generate_stmt(stmt : TypedAST::VarDecl)
-    if stmt.is_vla
-      generate_expr(stmt.init.not_nil!)
-      emit("ALLOCA #{type_s(stmt.var_type.as(Type::PtrType).target_type)}")
+    if vs = stmt.vla_sizes
       m_name = mangled_name(stmt.name)
-      current_vars[stmt.name] = VarInfo.new(stmt.var_type, m_name)
-      emit_local(m_name, stmt.var_type)
-      emit("STORE")
+      current_vars[stmt.name] = VarInfo.new(stmt.var_type, m_name, var_decl: stmt)
+      generate_vla_alloca(vs.dup, stmt.var_type, m_name)
     elsif stmt.is_static
     elsif stmt.init.is_a?(TypedAST::ZeroInitializer)
       m_name = mangled_name(stmt.name)
@@ -282,6 +284,52 @@ class Myc::Mycc::CodeGenerator
           emit_local(m_name, stmt.var_type)
           emit("STORE")
         end
+      end
+    end
+  end
+
+  private def generate_vla_alloca(nodes : Array(TypedAST::Node), type : Type, name : String?)
+    if first = nodes.shift?
+      generate_expr(first)
+      first_slot = tmp_name("first_slot")
+      emit("SLOT #{first_slot}")
+      emit("SLOT #{first_slot}")
+      target_type = type.as(Type::PtrType).target_type
+      emit("ALLOCA #{type_s(target_type)}")
+      alloca_slot = tmp_name("alloca_slot")
+      emit("SLOT #{alloca_slot}")
+      if name
+        emit("SLOT #{alloca_slot}")
+        emit_local(name, type)
+        emit("STORE")
+      else
+        emit("SLOT #{alloca_slot}")
+      end
+
+      if node = nodes.first?
+        index_var = tmp_name("vla_index")
+        emit("PUSH 0")
+        emit("LOCAL #{index_var} :i32")
+        emit("STORE")
+        emit("LOOP")
+        emit("COND")
+        emit("SLOT #{first_slot}")
+        emit("LOCAL #{index_var}")
+        emit("BINARY :less")
+        emit("BODY")
+        generate_vla_alloca(nodes, target_type, nil)
+        emit("LOCAL #{index_var}")
+        emit("SLOT #{alloca_slot}")
+        emit("BINARY :add")
+        emit("DEREF")
+        emit("STORE")
+        emit("STEP")
+        emit("PUSH 1")
+        emit("LOCAL #{index_var}")
+        emit("BINARY :add")
+        emit("LOCAL #{index_var}")
+        emit("STORE")
+        emit("ENDLOOP")
       end
     end
   end
@@ -501,7 +549,7 @@ class Myc::Mycc::CodeGenerator
       emit_local(var.mangled_name, expr.type)
     elsif param = @params[name]?
       emit("PARAM #{param}")
-    elsif g = @globals[name]?
+    elsif g = @globals["#{@current_function_name}_#{expr.name}"]? || @globals[expr.name]?
       emit("GLOBAL :#{g.name}")
     elsif expr.type.is_a?(Type::Fn)
       if name2 = @builder.@static_func_names_map[name]?
@@ -695,6 +743,29 @@ class Myc::Mycc::CodeGenerator
 
   def generate_expr(expr : TypedAST::SizeOf)
     emit("SIZEOF #{type_s(expr.target_type)}")
+  end
+
+  def generate_expr(expr : TypedAST::SizeOfVla)
+    elem_type = get_vla_leaf_type(expr.var_ref.type)
+    emit("SIZEOF #{type_s(elem_type)}")
+    if (var = find_var(expr.var_ref.name)) && (var_decl = var.var_decl) && (vla_sizes = var_decl.vla_sizes)
+      vla_sizes.each do |sz|
+        generate_expr(sz)
+        emit("AS :u64")
+        emit("BINARY :mul")
+      end
+    else
+      raise error("not find_var", expr)
+    end
+  end
+
+  private def get_vla_leaf_type(type : Type) : Type
+    current = type
+
+    while current.is_a?(Type::PtrType)
+      current = current.target_type
+    end
+    current
   end
 
   def generate_expr(expr : TypedAST::InitList)

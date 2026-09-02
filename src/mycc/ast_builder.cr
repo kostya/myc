@@ -640,11 +640,12 @@ class Myc::Mycc::ASTBuilder
       init = literal
     end
 
+    vla_sizes = nil
     if is_vla
+      vla_sizes = [] of TypedAST::Node
       children(cursor).each do |child|
         unless child.kind.parm_decl? || child.kind.type_ref?
-          size_node = build_node(child)
-          init = size_node
+          vla_sizes << build_node(child)
         end
       end
     end
@@ -702,13 +703,13 @@ class Myc::Mycc::ASTBuilder
       func_name = @current_function_name.presence || "static_#{source.name}"
       unique_name = "#{func_name}_#{name}"
       @static_globals_names_map[name] = unique_name
-      var = TypedAST::VarDecl.new(unique_name, var_type, init, location(cursor), is_static: true, is_vla: is_vla, original_name: name)
+      var = TypedAST::VarDecl.new(unique_name, var_type, init, location(cursor), is_static: true, vla_sizes: vla_sizes, original_name: name)
       unless @globals.any? { |g| g.name == unique_name }
         @globals << var
       end
       var
     elsif @current_function_name.empty?
-      var = TypedAST::VarDecl.new(name, var_type, init, location(cursor), is_extern: is_extern && init.nil?, is_vla: is_vla)
+      var = TypedAST::VarDecl.new(name, var_type, init, location(cursor), is_extern: is_extern && init.nil?, vla_sizes: vla_sizes)
       if var_found = @globals.find { |g| g.name == var.name }
         if var_found.is_extern && !var.is_extern
           @globals.delete(var_found)
@@ -719,7 +720,7 @@ class Myc::Mycc::ASTBuilder
       end
       var
     else
-      TypedAST::VarDecl.new(name, var_type, init, location(cursor), is_vla: is_vla)
+      TypedAST::VarDecl.new(name, var_type, init, location(cursor), vla_sizes: vla_sizes)
     end
   end
 
@@ -810,32 +811,94 @@ class Myc::Mycc::ASTBuilder
     func_name = cursor.spelling
     children_list = children(cursor)
 
-    callee = children_list.find do |c|
-      if c.kind.decl_ref_expr?
-        c.spelling == func_name
-      elsif c.kind.member_ref_expr?
-        c.spelling == func_name
-      elsif c.kind.first_expr?
-        children(c).any? { |inner|
-          (inner.kind.decl_ref_expr? || inner.kind.member_ref_expr?) && inner.spelling == func_name
-        }
-      else
-        false
+    is_invoke = false
+
+    if children_list.size > 0
+      first_child = children_list[0]
+
+      if first_child.kind.call_expr?
+        is_invoke = true
+      elsif first_child.kind.decl_ref_expr?
+        referenced = first_child.referenced
+        if referenced.kind.var_decl? || referenced.kind.parm_decl?
+          is_invoke = true
+        elsif referenced.kind.function_decl?
+          is_invoke = false
+        end
+      elsif first_child.kind.first_expr?
+        inner_children = children(first_child)
+        if inner_children.size > 0
+          inner = inner_children[0]
+
+          if inner.kind.member_ref_expr?
+            member_type = get_type(inner, inner.type)
+            if member_type.is_a?(Type::Fn) ||
+               (member_type.is_a?(Type::PtrType) && member_type.target_type.is_a?(Type::Fn))
+              is_invoke = true
+            end
+          elsif inner.kind.decl_ref_expr?
+            referenced = inner.referenced
+            if referenced.kind.var_decl? || referenced.kind.parm_decl?
+              is_invoke = true
+            elsif referenced.kind.function_decl?
+              is_invoke = false
+            end
+          elsif inner.kind.call_expr?
+            is_invoke = true
+          end
+        end
+      elsif first_child.kind.member_ref_expr?
+        member_type = get_type(first_child, first_child.type)
+        if member_type.is_a?(Type::Fn) ||
+           (member_type.is_a?(Type::PtrType) && member_type.target_type.is_a?(Type::Fn))
+          is_invoke = true
+        end
       end
     end
-    is_invoke = !!(func_name.empty? || (callee && is_variable_callee?(callee, func_name)))
+
+    is_invoke ||= func_name.empty?
+
+    callee = nil
+    unless is_invoke
+      callee = children_list.find do |c|
+        if c.kind.decl_ref_expr?
+          c.spelling == func_name
+        elsif c.kind.member_ref_expr?
+          c.spelling == func_name
+        elsif c.kind.first_expr?
+          children(c).any? { |inner|
+            (inner.kind.decl_ref_expr? || inner.kind.member_ref_expr?) && inner.spelling == func_name
+          }
+        else
+          false
+        end
+      end
+    end
 
     param_types = get_param_types(cursor, func_name, is_invoke)
 
     if is_invoke
       args = [] of TypedAST::Node
-      callee_node = if func_name.empty?
+
+      callee_node = if children_list[0].kind.call_expr?
                       node = build_node(children_list[0])
                       args = children_list[1..].map { |c| build_node(c) }
                       node
-                    elsif callee
-                      node = build_node(callee)
-                      args = children_list.reject { |c| c == callee }.map { |c| build_node(c) }
+                    elsif children_list[0].kind.first_expr?
+                      node = build_node(children_list[0])
+                      args = children_list[1..].map { |c| build_node(c) }
+                      node
+                    elsif children_list[0].kind.member_ref_expr?
+                      node = build_node(children_list[0])
+                      args = children_list[1..].map { |c| build_node(c) }
+                      node
+                    elsif func_name.empty?
+                      node = build_node(children_list[0])
+                      args = children_list[1..].map { |c| build_node(c) }
+                      node
+                    elsif children_list[0].kind.decl_ref_expr?
+                      node = build_node(children_list[0])
+                      args = children_list[1..].map { |c| build_node(c) }
                       node
                     else
                       raise error("bad invoke", cursor)
@@ -843,26 +906,28 @@ class Myc::Mycc::ASTBuilder
       ret_type = get_type(cursor, cursor.type)
 
       if param_types
-        all_args = [callee_node] + args
         param_types.each_with_index do |pt, i|
-          all_args[i + 1] = auto_cast(all_args[i + 1], pt, location(cursor))
+          break if i >= args.size
+          args[i] = auto_cast(args[i], pt, location(cursor))
         end
-
-        args = all_args[1..]
-        callee_node = all_args[0]
       end
 
       args.each_with_index do |arg, i|
         args[i] = auto_decay(arg)
       end
 
-      vaargs_count = param_types ? args.size - param_types.size : 0
-      TypedAST::Call.new("", [callee_node] + args, ret_type, location(cursor), is_invoke: true, vaargs_count: vaargs_count)
+      vaargs_count = param_types ? [args.size - param_types.size, 0].max : 0
+      TypedAST::Call.new("", [callee_node] + args, ret_type, location(cursor),
+        is_invoke: true, vaargs_count: vaargs_count)
     else
       args = [] of TypedAST::Node
 
       children(cursor).each do |child|
+        next if child == callee
         next if child.kind.decl_ref_expr? && child.spelling == func_name
+        next if child.kind.first_expr? && children(child).any? { |inner|
+                  inner.kind.decl_ref_expr? && inner.spelling == func_name
+                }
         node = build_node(child)
         next if node.is_a?(TypedAST::VarRef) && node.name == func_name
         args << node
@@ -870,6 +935,7 @@ class Myc::Mycc::ASTBuilder
 
       if param_types
         param_types.each_with_index do |pt, i|
+          break if i >= args.size
           args[i] = auto_cast(args[i], pt, location(cursor))
         end
       end
@@ -879,8 +945,8 @@ class Myc::Mycc::ASTBuilder
         args[i] = auto_decay(arg)
       end
 
-      vaargs_count = param_types ? args.size - param_types.size : 0
-      @called_functions << func_name
+      vaargs_count = param_types ? [args.size - param_types.size, 0].max : 0
+      @called_functions << func_name unless func_name.empty?
       TypedAST::Call.new(func_name, args, ret_type, location(cursor), vaargs_count: vaargs_count)
     end
   end
@@ -893,10 +959,16 @@ class Myc::Mycc::ASTBuilder
       callee = children_list[0]?
       if callee
         callee_type = get_type(callee, callee.type)
-        if callee_type.is_a?(Type::PtrType) && callee_type.target_type.is_a?(Type::Fn)
-          return callee_type.target_type.as(Type::Fn).args
-        elsif callee_type.is_a?(Type::Fn)
+
+        if callee_type.is_a?(Type::Fn)
           return callee_type.args
+        elsif callee_type.is_a?(Type::PtrType) && callee_type.target_type.is_a?(Type::Fn)
+          return callee_type.target_type.as(Type::Fn).args
+        elsif callee_type.is_a?(Type::PtrType) && callee_type.target_type.is_a?(Type::PtrType)
+          inner = callee_type.target_type.as(Type::PtrType).target_type
+          if inner.is_a?(Type::Fn)
+            return inner.args
+          end
         end
       end
       return nil
@@ -907,6 +979,8 @@ class Myc::Mycc::ASTBuilder
       func_type = get_type(callee_cursor, callee_cursor.type)
       if func_type.is_a?(Type::Fn)
         return func_type.args
+      elsif func_type.is_a?(Type::PtrType) && func_type.target_type.is_a?(Type::Fn)
+        return func_type.target_type.as(Type::Fn).args
       end
     end
 
@@ -915,13 +989,16 @@ class Myc::Mycc::ASTBuilder
 
   private def find_callee_decl(cursor : Clang::Cursor, func_name : String) : Clang::Cursor?
     children(cursor).each do |child|
-      if child.kind.decl_ref_expr? && child.spelling == func_name
-        return child.referenced
-      elsif child.kind.first_expr?
+      case child.kind
+      when .decl_ref_expr?
+        return child.referenced if child.spelling == func_name
+      when .first_expr?
         found = find_callee_decl(child, func_name)
         return found if found
+      when .call_expr?
+        found = find_callee_decl(child, child.spelling)
+        return found if found
       else
-        raise error("Unhandled child: #{child.kind}", child)
       end
     end
     nil
@@ -1390,8 +1467,17 @@ class Myc::Mycc::ASTBuilder
       children_list = children(cursor)
       if children_list.size > 0
         child = children_list[0]
-        target_type = get_type(child, child.type)
-        TypedAST::SizeOf.new(target_type, typer.u64, location(cursor))
+        if child.type.kind.variable_array?
+          case node = build_node(child)
+          when TypedAST::VarRef
+            TypedAST::SizeOfVla.new(node, node.type, location(child))
+          else
+            raise error("unknown vla child", child)
+          end
+        else
+          target_type = get_type(child, child.type)
+          TypedAST::SizeOf.new(target_type, typer.u64, location(cursor))
+        end
       else
         target_type = get_type(cursor, cursor.type)
         TypedAST::SizeOf.new(target_type, typer.u64, location(cursor))

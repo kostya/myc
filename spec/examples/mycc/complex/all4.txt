@@ -1,0 +1,73 @@
+=== Pointer Hell ===
+  quintuple pointer: 42 (expect 42)
+  ptr_array[1][2]: 6 (expect 6)
+  *(*(ptr_array + 2) + 1): 8 (expect 8)
+
+=== Bit Twiddling ===
+  XOR swap: a=20 b=10 (expect 20 10)
+  round up to power of 2: 128 (expect 128)
+  trailing zeros: 31 (expect 31)
+
+=== Insane Expressions ===
+  nested ternary: result=10 a=2 c=4 e=10
+  comma operator: x=11
+  3[p]: 3 (expect 3)
+  *(3 + p): 3 (expect 3)
+  p[3]: 3 (expect 3)
+
+=== Crazy Structs ===
+  union as int: 0x12345678
+  union shorts: a=0x5678 b=0x1234
+  union as float: 3.140000
+  union as string: Hi
+  self-reference: 1 (expect 1)
+
+=== Deep Recursion ===
+  ackermann(2, 3): 9 (expect 9)
+  ackermann(3, 2): 29 (expect 29)
+  ackermann(3, 3): 61 (expect 61)
+
+=== Multiple Inheritance ===
+  base1: a=1 b=2 (expect 1 2)
+  base2: c=3 d=4 (expect 3 4)
+
+=== Function Pointer Abuse ===
+  unary ops: 10 25 (expect 10 25)
+  binary ops: 12 35 (expect 12 35)
+  get_unary_op(0)(10): 20 (expect 20)
+  get_unary_op(1)(10): 100 (expect 100)
+  func_matrix[1][0](10, 20): 30 (expect 30)
+
+=== Side Effects ===
+  sum of side effects: 6 (expect 6)
+  counter: 3 (expect 3)
+  nested calls: 106
+
+=== Overflow Hell ===
+  max + 1: -2147483648 (expect -2147483648)
+  min - 1: 2147483647 (expect 2147483647)
+  -min: -2147483648 (expect -2147483648)
+  max * 2: -2 (expect -2)
+  umax + 1: 0 (expect 0)
+  0 - 1: 4294967295 (expect 4294967295)
+
+=== Complex Recursion ===
+  tree size: 31 (expect 31)
+
+=== String Abuse ===
+  concatenated: Hello World! (expect Hello World!)
+
+=== Type Puzzles ===
+  (*ptr_to_arr)[2]: 3 (expect 3)
+  ptr_to_arr[1][2]: 7 (expect 7)
+  func_ptr_arr[0](10, 20): 30 (expect 30)
+  func_ptr_arr[1](10, 20): 200 (expect 200)
+
+=== Struct Pointer Offsets ===
+  c via offset: A (expect A)
+  i via offset: 42 (expect 42)
+  d via offset: 3.140000 (expect 3.14)
+  sizeof(struct Test): 16
+  offset of i: 4
+  offset of d: 8
+

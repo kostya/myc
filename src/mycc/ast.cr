@@ -208,6 +208,18 @@ module Myc::Mycc::TypedAST
     end
   end
 
+  class SizeOfVla < Node
+    getter var_ref : VarRef
+
+    def initialize(@var_ref, @type, @location); end
+
+    private def inspect_fields(io : IO)
+      io << "ref("
+      var_ref.inspect(io)
+      io << ")"
+    end
+  end
+
   class InitList < Node
     getter elements : Array(Node)
 
@@ -279,10 +291,10 @@ module Myc::Mycc::TypedAST
     getter init : Node?
     getter is_static : Bool
     property is_extern : Bool
-    getter is_vla : Bool
+    getter vla_sizes : Array(Node)?
     getter original_name : String
 
-    def initialize(@name, @var_type, @init, @location, @is_static = false, @is_extern = false, @is_vla = false, @original_name = name)
+    def initialize(@name, @var_type, @init, @location, @is_static = false, @is_extern = false, @original_name = name, @vla_sizes = nil)
     end
 
     private def inspect_fields(io : IO)
@@ -296,8 +308,13 @@ module Myc::Mycc::TypedAST
         io << ", "
         io << "static(#{original_name})"
       end
-      if is_vla
-        io << ", vla"
+      if vs = vla_sizes
+        io << ", vla("
+        vs.each_with_index do |v, i|
+          io << "," if i != 0
+          v.inspect(io)
+        end
+        io << ")"
       end
       if i = init
         io << ", "
