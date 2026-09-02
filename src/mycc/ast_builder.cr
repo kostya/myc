@@ -1303,9 +1303,14 @@ class Myc::Mycc::ASTBuilder
     condition = ensure_bool(build_node(children_list[0]))
     then_expr = build_node(children_list[1])
     else_expr = build_node(children_list[2])
+
+    then_expr = auto_decay(then_expr)
+    else_expr = auto_decay(else_expr)
+
     common = common_type(then_expr.type, else_expr.type)
     then_expr2 = auto_cast(then_expr, common, location(cursor))
     else_expr2 = auto_cast(else_expr, common, location(cursor))
+
     TypedAST::Conditional.new(condition, then_expr2, else_expr2, common, location(cursor))
   end
 

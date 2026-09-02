@@ -1,0 +1,8 @@
+1. chosen1: bla
+2. chosen2: bla
+3. chosen3: yes
+4. chosen4: bla
+5. chosen5: fallback
+6. chosen6: hello
+7. Output: bla
+8. Output2: hello
