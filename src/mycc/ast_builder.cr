@@ -648,6 +648,7 @@ class Myc::Mycc::ASTBuilder
           vla_sizes << build_node(child)
         end
       end
+      vla_sizes.reverse!
     end
 
     unless init
