@@ -1,0 +1,62 @@
+FUNC :main
+  BODY
+    PUSH "Hello\nWorld"
+    INSPECT
+    PUSH "Tab\tseparated"
+    INSPECT
+    PUSH "Backslash: \\"
+    INSPECT
+    PUSH "Quote: \"test\""
+    INSPECT
+    PUSH "Hex bytes: Hello"
+    INSPECT
+    PUSH "Hex bytes: ABC"
+    INSPECT
+    PUSH "Hex braces: HI"
+    INSPECT
+    PUSH "Mixed: Hello\nWorld!"
+    INSPECT
+    PUSH "Octal: ABC"
+    INSPECT
+    PUSH "Octal braces: DE"
+    INSPECT
+    PUSH "Octal space:  Hello!"
+    INSPECT
+    PUSH "Octal two: HI"
+    INSPECT
+    PUSH "Unicode: Привет"
+    INSPECT
+    PUSH "Unicode short: Hello"
+    INSPECT
+    PUSH "Unicode omega: Ω"
+    INSPECT
+    PUSH "Unicode arrow: →"
+    INSPECT
+    PUSH "Unicode braces: ABC"
+    INSPECT
+    PUSH "Emoji: 😀"
+    INSPECT
+    PUSH "Chinese: 你好"
+    INSPECT
+    PUSH "Complex: 👋 Hello 👋"
+    INSPECT
+    PUSH "Clef: 𝄞"
+    INSPECT
+    PUSH "MAX: 􏿿"
+    INSPECT
+    PUSH "Mixed: Hello! World?\nNew line\n"
+    INSPECT
+    PUSH "JSON: {\"key\": \"value\"}"
+    INSPECT
+    PUSH "Path: C:\\Users\\Name\\file.txt"
+    INSPECT
+    PUSH "Tabbed:\tcol1\tcol2\tcol3"
+    INSPECT
+    PUSH "Single: A"
+    INSPECT
+    PUSH "Digits: 123"
+    INSPECT
+    PUSH "Space:  "
+    INSPECT
+ENDFUNC
+

@@ -1,0 +1,6 @@
+=== Triple Call Chain ()()() ===
+  get_factory()(1)(10) = 20
+  get_factory()(2)(10) = 30
+  get_factory()(3)(10) = 100
+  get_factory()(1)(get_factory()(2)(10)) = 60
+=== DONE ===

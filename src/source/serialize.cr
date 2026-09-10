@@ -87,6 +87,17 @@ class Myc::Source::Serialize
         io << ':'
         io << v
       end
+    when Token::FloatValue
+      case val = v.val
+      when Float64::INFINITY
+        io << "+inf"
+      when -Float64::INFINITY
+        io << "-inf"
+      when .nan?
+        io << "+nan"
+      else
+        io << val
+      end
     else
       io << v.val
     end

@@ -1,0 +1,2 @@
+  VLA matrix[2][3]: 11 (expect 11)
+  size = 48

@@ -1,0 +1,19 @@
+=== Triple Function Pointer Tests ===
+  double(10) = 20
+  triple(10) = 30
+  square(10) = 100
+
+=== Nested Triple Call ===
+  double(triple(square(2))) = 24
+
+=== With temp variables ===
+  f1(f2(f3(3))) = 54
+
+=== Triple chain with 5 ===
+  double(triple(square(5))) = 150
+
+=== Individual calls ===
+  double(7) = 14
+  triple(7) = 21
+  square(7) = 49
+=== DONE ===

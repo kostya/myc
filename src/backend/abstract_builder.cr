@@ -28,14 +28,6 @@ abstract class Myc::Backend::AbstractBuilder
   abstract def new_func(func_def : Mod::FuncDef, header_mod : Mod) : AbstractFunc
   abstract def func_register(name : String, func_def : Mod::FuncDef)
 
-  def self.escaped_string(s : String)
-    s.gsub("\\", "\\\\")
-      .gsub("\"", "\\\"")
-      .gsub("\n", "\\n")
-      .gsub("\t", "\\t")
-      .gsub("\r", "\\r")
-  end
-
   abstract struct InitValue
     record Intval < InitValue, type : Type, val : Int64 | UInt64
     record Boolval < InitValue, type : Type, val : Bool
@@ -134,6 +126,8 @@ abstract class Myc::Backend::AbstractBuilder
         when Source::Token::StringValue
           if g = mod.global_defs[value.val]?
             if g.type.eq?(type.target_type)
+              return InitValue::GlobalRef.new(type, value.val)
+            elsif g.type.is_a?(Type::FlatType) && (g.type.as(Type::FlatType).target_type.eq?(type.target_type))
               return InitValue::GlobalRef.new(type, value.val)
             else
               raise error("global #{value.val} have type #{g.type}, but expected #{type}")

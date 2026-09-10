@@ -955,4 +955,24 @@ context "Validate" do
     ENDGLOBAL
     _____________________________res
   end
+
+  it "inf" do
+    validate(<<-'_____________________________src').should eq <<-'_____________________________res'
+    FUNC :bla
+      BODY
+        PUSH +inF
+        PUSH -Inf
+        PUSH +NAN
+        STACK :drop
+    ENDFUNC
+    _____________________________src
+    FUNC :bla
+      BODY
+        PUSH +inf
+        PUSH -inf
+        PUSH +nan
+        STACK :drop
+    ENDFUNC
+    _____________________________res
+  end
 end

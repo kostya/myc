@@ -166,7 +166,7 @@ class Myc::Backend::Llvm::BB < Myc::Backend::AbstractBB
       when Type::IntType, Type::BoolType, Type::PtrType, Type::Fn
         wrap_res(@llvm_builder.icmp(LLVM::IntPredicate::NE, l, r), typer.bool, lhs.pp)
       when Type::FloatType
-        wrap_res(@llvm_builder.fcmp(LLVM::RealPredicate::ONE, l, r), typer.bool, lhs.pp)
+        wrap_res(@llvm_builder.fcmp(LLVM::RealPredicate::UNE, l, r), typer.bool, lhs.pp)
       end
     in .less?
       case t = ltype

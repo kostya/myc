@@ -1,0 +1,16 @@
+FUNC :main
+  BODY
+    PUSH +inf
+    INSPECT
+    PUSH -inf
+    INSPECT
+    PUSH +nan
+    INSPECT
+    PUSH +inf :f32
+    INSPECT
+    PUSH -inf :f32
+    INSPECT
+    PUSH +nan :f32
+    INSPECT
+ENDFUNC
+

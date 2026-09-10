@@ -2,7 +2,11 @@
   basic: arr[0]=0 arr[2]=20 arr[4]=40
   expr size: arr[6]=6
   decay sum: 21
-  sizeof: arr=8 n*4=40
+  sizeof: arr=40 n*4=40
+  2d: matrix[0][0]=0 matrix[2][3]=11 (sizeof=48)
+  2d in arg: matrix[0][0]=0 matrix[2][3]=11 (sizeof=8)
+  3d: cube[0][0][0]=0 cube[1][2][3]=23 (sizeof=96)
+  3d in arg: cube[0][0][0]=0 cube[1][2][3]=23 (sizeof=8)
   in loop: arr[3]=3
   ptr: 0 20
   cast: 42

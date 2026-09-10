@@ -1,0 +1,60 @@
+=== Function Pointer Casts ===
+  int func: 30 (expect 30)
+
+=== Complex Typedefs ===
+  typedef func: 30 (expect 30)
+  typedef array: 5 (expect 5)
+
+=== Member Pointers ===
+  members: 1 2 3 (expect 1 2 3)
+  offset access: 1 2 3 (expect 1 2 3)
+
+=== Complex Trees ===
+  tree sum: 280 (expect 280)
+
+=== Pointer Arithmetic ===
+  p2 - p1: 5 (expect 5)
+  p1 < p2: 1 (expect 1)
+  p1 == p2: 0 (expect 0)
+  **ptrs: 0 (expect 0)
+  *ptrs[1]: 3 (expect 3)
+  ptrs[2][2]: 9 (expect 9)
+  void ptr arithmetic: 3 (expect 3)
+
+=== Conditional Expressions ===
+  chained ternary: 3 (expect 3)
+  assignment in condition: x=15
+  complex logical: true
+  ternary pointers: 10 (expect 10)
+
+=== Nested Calls ===
+  deep nesting: 23 (expect 23)
+  chain calls: 36 (expect 36)
+  fibonacci(5): 7 (expect 5)
+
+=== Struct Methods ===
+  method add: 30 (expect 30)
+  method multiply: 200 (expect 200)
+  method subtract: 10 (expect 10)
+  method chain: 11 (expect 11)
+
+=== Type Conversions ===
+  char to double: 65.000000 (expect 65.0)
+  explicit casts: 3 3 3.000000
+  pointer casts: 42 *
+  float division: 2.500000 (expect 2.5)
+
+=== Array of Arrays ===
+  array_of_arrays[0][1]: 2 (expect 2)
+  array_of_arrays[1][2]: 6 (expect 6)
+  array_of_arrays[2][0]: 7 (expect 7)
+  ptr_to_first[1][1]: 5 (expect 5)
+
+=== Float Calls ===
+  add_float: 30.000000 (expect 30.0)
+  add_double: 30.000000 (expect 30.0)
+
+=== Variable Length Arrays ===
+  VLA sum: 194 (expect 285)
+  VLA matrix[2][3]: 11 (expect 11)
+

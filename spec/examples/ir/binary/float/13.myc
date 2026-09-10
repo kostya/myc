@@ -1,0 +1,24 @@
+FUNC :main
+  BODY
+    PUSH +nan
+    PUSH +nan
+    BINARY :eq
+    INSPECT
+    PUSH +nan
+    PUSH +nan
+    BINARY :eq
+    INSPECT
+    PUSH +inf
+    PUSH +inf
+    BINARY :eq
+    INSPECT
+    PUSH -inf
+    PUSH -inf
+    BINARY :eq
+    INSPECT
+    PUSH -inf
+    PUSH +inf
+    BINARY :eq
+    INSPECT
+ENDFUNC
+

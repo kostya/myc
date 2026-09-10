@@ -1,0 +1,11 @@
+GLOBAL :Bla
+  TYPE :ptr<u8>
+  INITIAL :😀
+ENDGLOBAL
+
+FUNC :main
+  BODY
+    GLOBAL :Bla
+    INSPECT
+ENDFUNC
+
