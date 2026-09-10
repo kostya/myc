@@ -1,0 +1,16 @@
+1. if: x=4 (else)
+2. final: x=4
+3. final: x=4
+4. do-while: x=100
+4. final: x=4
+5. switch: x=4
+6. ternary: result=-1, x=4
+8. final: x=4
+9. ||: x=5
+9. final: x=5
+10. arg: x=4
+10. final: x=4
+11. index: arr[x &= y]=0, x=100
+13. nested: x=255, y=15, z=255, result=127
+14. complex: x=6, result=7
+15. else if: x=5

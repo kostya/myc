@@ -468,7 +468,9 @@ class Myc::Mycc::ASTBuilder
 
       base_op = op.ends_with?('=') ? op[0..-2] : op
       bin_op = BINARY_MAP[base_op]? || raise error("Unknown op: #{base_op}", cursor)
-      TypedAST::BinaryOp.new(bin_op, left, right, left.type, location(cursor))
+
+      value = TypedAST::BinaryOp.new(bin_op, left.dup, right, left.type, location(cursor))
+      TypedAST::AssignExpr.new(left, value, location(cursor))
     else
       raise error("Unknown node #{cursor.kind}", cursor)
     end
