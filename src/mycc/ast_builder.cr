@@ -234,6 +234,14 @@ class Myc::Mycc::ASTBuilder
     name = cursor.spelling
     raise error("No struct name", cursor) if name.blank?
 
+    if parent = cursor.semantic_parent
+      if parent.kind.function_decl?
+        loc = cursor.location
+        offset = loc.try { |l| l.file_location[3] } || 0
+        name = "#{parent.spelling}_#{name}_#{offset}"
+      end
+    end
+
     if name.includes?("unnamed") || name.includes?("anonymous")
       if name2 = @unnamed_types_map[name]?
         name = name2
@@ -292,6 +300,14 @@ class Myc::Mycc::ASTBuilder
   private def build_union(cursor : Clang::Cursor) : Type
     name = cursor.spelling || ""
     raise error("No union name", cursor) if name.blank?
+
+    if parent = cursor.semantic_parent
+      if parent.kind.function_decl?
+        loc = cursor.location
+        offset = loc.try { |l| l.file_location[3] } || 0
+        name = "#{parent.spelling}_#{name}_#{offset}"
+      end
+    end
 
     if name.includes?("unnamed") || name.includes?("anonymous")
       if name2 = @unnamed_types_map[name]?
@@ -404,7 +420,6 @@ class Myc::Mycc::ASTBuilder
     when .init_list_expr?       then build_init_list(cursor)
     when .member_ref_expr?
       field_name = cursor.spelling
-
       if field_name.includes?("anonymous") || field_name.includes?("unnamed")
         children_list = children(cursor)
         if children_list.size > 0
@@ -1749,6 +1764,17 @@ class Myc::Mycc::ASTBuilder
       spelling = canonical.spelling
       spelling = spelling.sub("const ", "").sub("volatile ", "").sub("restrict ", "")
       name = spelling
+
+      type_cursor = canonical.cursor
+      if parent = type_cursor.semantic_parent
+        if parent.kind.function_decl?
+          if name.starts_with?("struct ")
+            name = "struct #{parent.spelling}_#{name.sub("struct ", "")}"
+          elsif name.starts_with?("union ")
+            name = "union #{parent.spelling}_#{name.sub("union ", "")}"
+          end
+        end
+      end
 
       if name.starts_with?("union ")
         name2 = name.sub("union ", "")

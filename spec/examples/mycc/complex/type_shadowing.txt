@@ -1,0 +1,25 @@
+=== Test 1: Shadow both struct and union ===
+shadow_both: d.local_x=1, d.local_y=2, d.local_z=3
+shadow_both: v.big=1311768467463790320
+=== Test 2: Shadow struct only ===
+shadow_struct: d.a=10, d.b=20
+=== Test 3: Shadow union only ===
+shadow_union: v.a=42, v.b=42, v.c=42
+=== Test 4: Shadow with different size ===
+shadow_size: d.c1=A, d.c2=B, d.c8=Z
+=== Test 5: Shadow with nested union ===
+shadow_nested: o.id=999, o.n1=0x11223344
+=== Test 6: Use global types ===
+global: d.global_x=1000, d.global_y=2000
+global: v.i=12345
+=== Test 7: Shadow in different function ===
+shadow_different: d.different_x=100, d.different_y=200, d.different_z=300, d.different_w=400
+=== Test 8: Shadow with array ===
+shadow_array: d.arr[0]=0, d.arr[4]=40, d.size=5
+=== Test 9: Shadow with pointer ===
+shadow_ptr: *d.ptr=42, d.value=100
+=== Test 10: Shadow with function pointer ===
+shadow_fnptr: d.result=30
+=== Test 11: Shadow inner ===
+test_inner_shadow: 10, 20
+test_inner_shadow: 1, 2, 10, 20
