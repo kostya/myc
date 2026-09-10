@@ -80,7 +80,7 @@ int test_vla_3d(int d1, int d2, int d3) {
     }
   }
 
-  printf("  3d: cube[0][0][0]=%d cube[%d][%d][%d]=%d (sizeof=%zu)\n",
+  printf("  3d: cube[0][0][0]=%d cube[%d][%d][%d]=%d (sizeof=%d)\n",
          cube[0][0][0], d1 - 1, d2 - 1, d3 - 1, cube[d1 - 1][d2 - 1][d3 - 1],
          sizeof(cube));
 
@@ -88,7 +88,7 @@ int test_vla_3d(int d1, int d2, int d3) {
 }
 
 int test_vla_3d_arg_(int d1, int d2, int d3, int cube[d1][d2][d3]) {
-  printf("  3d in arg: cube[0][0][0]=%d cube[%d][%d][%d]=%d (sizeof=%zu)\n",
+  printf("  3d in arg: cube[0][0][0]=%d cube[%d][%d][%d]=%d (sizeof=%d)\n",
          cube[0][0][0], d1 - 1, d2 - 1, d3 - 1, cube[d1 - 1][d2 - 1][d3 - 1],
          sizeof(cube));
 
