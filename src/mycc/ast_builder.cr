@@ -463,6 +463,7 @@ class Myc::Mycc::ASTBuilder
       op = cursor.spelling
       children_list = children(cursor)
       left = build_node(children_list[0])
+      mark_param_changed(left)
       right = build_node(children_list[1])
       right = auto_cast(right, left.type, location(cursor))
 
