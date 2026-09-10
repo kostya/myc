@@ -49,8 +49,9 @@ abstract class Myc::Backend::AbstractBuilder
     getter mod : Mod
     getter loc : Location
     getter pos : Int32
+    getter called_for_global : Bool
 
-    def initialize(@values, @type, @mod, @loc)
+    def initialize(@values, @type, @mod, @loc, @called_for_global = true)
       @pos = 0
     end
 
@@ -124,13 +125,15 @@ abstract class Myc::Backend::AbstractBuilder
 
         case value
         when Source::Token::StringValue
-          if g = mod.global_defs[value.val]?
-            if g.type.eq?(type.target_type)
-              return InitValue::GlobalRef.new(type, value.val)
-            elsif g.type.is_a?(Type::FlatType) && (g.type.as(Type::FlatType).target_type.eq?(type.target_type))
-              return InitValue::GlobalRef.new(type, value.val)
-            else
-              raise error("global #{value.val} have type #{g.type}, but expected #{type}")
+          if @called_for_global
+            if g = mod.global_defs[value.val]?
+              if g.type.eq?(type.target_type)
+                return InitValue::GlobalRef.new(type, value.val)
+              elsif g.type.is_a?(Type::FlatType) && (g.type.as(Type::FlatType).target_type.eq?(type.target_type))
+                return InitValue::GlobalRef.new(type, value.val)
+              else
+                raise error("global #{value.val} have type #{g.type}, but expected #{type}")
+              end
             end
           end
         when Source::Token::IntValue

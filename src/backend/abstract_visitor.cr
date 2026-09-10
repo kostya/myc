@@ -123,7 +123,7 @@ abstract class Myc::Backend::AbstractVisitor
 
     raise error("type for value #{op.value.inspect} not found") unless type
 
-    vp = AbstractBuilder::ValuesParser.new([value], type, mod, Location.new(mod.filename, op.offset))
+    vp = AbstractBuilder::ValuesParser.new([value], type, mod, Location.new(mod.filename, op.offset), false)
     self << builder.init_value(vp.parse)
   end
 

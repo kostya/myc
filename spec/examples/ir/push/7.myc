@@ -1,0 +1,31 @@
+GLOBAL :blah
+  TYPE :i32
+  INITIAL 10
+ENDGLOBAL
+
+FUNC :printf
+  ARGS
+    TYPE :ptr<u8>
+  RETURN
+    TYPE :i32
+  ATTRIBUTES
+    ATTR :vaarg
+ENDFUNC
+
+FUNC :main
+  RETURN
+    TYPE :i32
+  BODY
+    PUSH :blah
+    CALL :printf
+    STACK :drop
+    PUSH "\n"
+    CALL :printf
+    STACK :drop
+    GLOBAL :blah
+    PUSH "global = %d\n"
+    CALL :printf 1
+    STACK :drop
+    PUSH 0
+    RET
+ENDFUNC
