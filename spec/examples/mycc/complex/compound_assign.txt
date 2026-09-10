@@ -10,7 +10,7 @@
 9. final: x=5
 10. arg: x=4
 10. final: x=4
-11. index: arr[x &= y]=0, x=100
+11. index: arr[x &= y]=4, x=4
 13. nested: x=255, y=15, z=255, result=127
 14. complex: x=6, result=7
 15. else if: x=5

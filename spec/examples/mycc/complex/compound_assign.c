@@ -83,12 +83,12 @@ int main() {
   printf("10. arg: x=%d\n", (x &= y));
   printf("10. final: x=%d\n", x);
 
-  int arr[20];
+  int arr[20] = {0};
   for (int i = 0; i < 20; i++)
     arr[i] = i;
   x = 100;
   y = 15;
-  printf("11. index: arr[x &= y]=%d, x=%d\n", arr[x], x);
+  printf("11. index: arr[x &= y]=%d, x=%d\n", arr[x &= y], x);
 
   x = 100;
   y = 15;
