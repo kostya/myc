@@ -1490,6 +1490,7 @@ class Myc::Mycc::ASTBuilder
     field_name = cursor.spelling
     children_list = children(cursor)
     obj = build_node(children_list[0])
+    obj = auto_decay(obj)
     obj_type = obj.type
 
     if obj_type.is_a?(Type::PtrType)
