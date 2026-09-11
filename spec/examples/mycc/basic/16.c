@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 void test_arrays() {
   int *arr = (int *)malloc(8 * sizeof(int));
 

@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 union Union {
   int x;
   struct Bla {

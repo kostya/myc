@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 int bla(int x) { return x + 1; }
 
 int main() {

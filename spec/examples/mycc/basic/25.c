@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 int add(int a, int b) { return a + b; }
 
 int apply(int (*fp)(int, int), int x, int y) { return fp(x, y); }

@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 #define NESTED_MACRO 0xABCDEFu
 
 #define OUTER_MACRO                                                            \

@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 static const char LUT[6] = {'.', '-', '+', '*', 'X', 'M'};
 
 void test_lut(void) {

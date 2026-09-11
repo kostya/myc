@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 void test_union_in_func(void) {
   union {
     int x;

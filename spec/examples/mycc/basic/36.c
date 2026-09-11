@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 typedef unsigned long long size_t;
 
 int main() {

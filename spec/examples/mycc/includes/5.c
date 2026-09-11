@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 static int bla() { return 1; }
 int external_bla();
 

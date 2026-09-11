@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 int main() {
   unsigned i, j, k;
   i = j = 42;

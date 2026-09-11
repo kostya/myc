@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 static int glob = 43;
 
 static int bla() { return 2; }

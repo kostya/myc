@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 void foo(char *s) { printf("foo: %s\n", s); }
 
 char *bar(void) {

@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 int main() {
   char bla[] = {1, 2, 254};
   printf("bla %d\n", bla[2]);

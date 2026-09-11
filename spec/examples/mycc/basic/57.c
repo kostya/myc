@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 void bla(int x) {
   int values[x];
   values[0] = 1;

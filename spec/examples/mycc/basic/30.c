@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 union Mixed {
   char c;
   int i;

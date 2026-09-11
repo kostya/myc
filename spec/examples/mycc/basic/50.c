@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 unsigned int helper(unsigned int max);
 
 unsigned int helper(unsigned int max) { return max + 1; }

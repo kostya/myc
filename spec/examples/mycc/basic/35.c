@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 typedef signed long long int64_t;
 
 void test() {

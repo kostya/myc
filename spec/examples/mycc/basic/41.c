@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 int main() {
   int x[] = {1, 2, 3, 4, 5};
   printf("%llu\n", (&x[4]) - (x + 1));

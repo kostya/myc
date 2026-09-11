@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 int main() {
   int *arr = (int *)malloc(10 * sizeof(int));
   ((int (*)[10])arr)[0][5] = 5;

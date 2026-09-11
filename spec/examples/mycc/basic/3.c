@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 int check1() {
   if (1)
     return 1;

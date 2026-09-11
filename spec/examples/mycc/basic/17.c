@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 void test_pointers() {
   int x = 42;
   int *p = &x;

@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 #include <stdbool.h>
 #include <stdint.h>
 

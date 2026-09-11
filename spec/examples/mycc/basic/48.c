@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 #include <stdbool.h>
 
 bool check1(bool x, bool y) { return (x == y) && (x != y); }

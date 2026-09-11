@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 #include "bug2.h"
 
 int main() {
