@@ -13,6 +13,7 @@ class Myc::Mycc::ASTBuilder
     @unions = {} of String => Array({String, Type})
     @current_function_name = ""
     @current_function_params = Hash(String, TypedAST::Function::ParamInfo).new
+    @current_function_addr_labels = Array(String).new
     @globals = [] of TypedAST::VarDecl
     @enum_values = {} of String => Int64
     @enum_types = {} of String => Type
@@ -156,6 +157,7 @@ class Myc::Mycc::ASTBuilder
     old_name = @current_function_name
     @current_function_name = name
     @current_function_params.clear
+    @current_function_addr_labels.clear
     body = nil
 
     func_type = get_type(cursor, cursor.type)
@@ -211,7 +213,8 @@ class Myc::Mycc::ASTBuilder
       body,
       location(cursor),
       vaarg,
-      is_static
+      is_static,
+      @current_function_addr_labels.any? ? @current_function_addr_labels.dup : nil,
     )
   ensure
     @current_return_type = nil
@@ -472,6 +475,15 @@ class Myc::Mycc::ASTBuilder
 
       value = TypedAST::BinaryOp.new(bin_op, left.dup, right, left.type, location(cursor))
       TypedAST::AssignExpr.new(left, value, location(cursor))
+    when .addr_label_expr?
+      children_list = children(cursor)
+      if children_list.size > 0 && children_list[0].kind.label_ref?
+        label_name = children_list[0].spelling
+        @current_function_addr_labels << label_name
+        TypedAST::AddrLabel.new(label_name, typer.indirect, location(cursor))
+      else
+        raise error("AddrLabelExpr without LabelRef", cursor)
+      end
     else
       raise error("Unknown node #{cursor.kind}", cursor)
     end
@@ -614,6 +626,14 @@ class Myc::Mycc::ASTBuilder
     when .var_decl?
       body << build_var_decl(cursor)
     when .label_ref?
+    when .indirect_goto_stmt?
+      children_list = children(cursor)
+      if children_list.size > 0
+        target = build_node(children_list[0])
+        body << TypedAST::IndirectGoto.new(target, location(cursor))
+      else
+        raise error("IndirectGotoStmt without target", cursor)
+      end
     else
       raise error("Unhandled stmt #{cursor.kind}", cursor)
     end

@@ -1007,9 +1007,16 @@ abstract class Myc::Backend::AbstractVisitor
     when 1
       @bb.jmp find_or_create_label(op.labels[0])
     else
-      bb_addr = pop_rhs
-      raise error("indirect goto expect type :indirect, not #{bb_addr.type}") unless bb_addr.type.eq?(mod.typer.indirect)
-      @bb.indirect_jmp(bb_addr, op.labels.map { |label| find_or_create_label(label) })
+      rhs = pop_rhs
+      unless rhs.type.eq?(mod.typer.indirect)
+        if (rhs2 = @bb.to?(rhs, rhs.type, mod.typer.indirect))
+          rhs = rhs2
+        else
+          raise error("indirect goto expect type :indirect, not #{rhs.type}")
+        end
+      end
+
+      @bb.indirect_jmp(rhs, op.labels.map { |label| find_or_create_label(label) })
     end
     @bb = fake_bb
   end

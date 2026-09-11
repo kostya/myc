@@ -1,0 +1,5 @@
+OP_LOADI r0 = 5
+OP_LOADI r1 = 3
+OP_ADD r0 = r0 + r1
+OP_RETURN
+r0 = 8, r1 = 3

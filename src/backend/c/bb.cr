@@ -329,6 +329,14 @@ class Myc::Backend::C::BB < Myc::Backend::AbstractBB
         emit "#{c_to} #{temp} = (#{c_to})(#{val});"
         wrap_res(temp, to_type, value.pp)
       end
+    when {Type::IndirectType, Type::PtrType}
+      if to_type.target_type.is_a?(Type::VoidType)
+        wrap_res(val, to_type, value.pp)
+      end
+    when {Type::PtrType, Type::IndirectType}
+      if from_type.target_type.is_a?(Type::VoidType)
+        wrap_res(val, to_type, value.pp)
+      end
     end
   end
 

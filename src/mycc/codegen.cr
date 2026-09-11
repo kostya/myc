@@ -14,6 +14,8 @@ class Myc::Mycc::CodeGenerator
     end
   end
 
+  @current_function : TypedAST::Function?
+
   def initialize(@typer, @builder)
     @indent = 0
     @io = IO::Memory.new
@@ -26,6 +28,7 @@ class Myc::Mycc::CodeGenerator
     @scope_counter = 0
     @temp_counter = 0_u64
     @current_function_name = ""
+    @current_function = nil
   end
 
   def current_vars : Hash(String, VarInfo)
@@ -170,6 +173,7 @@ class Myc::Mycc::CodeGenerator
     @local_marks.clear
 
     @current_function_name = func.name
+    @current_function = func
     emit("FUNC :#{func.name}")
     @indent += 1
 
@@ -219,6 +223,7 @@ class Myc::Mycc::CodeGenerator
 
     emit("ENDFUNC")
     @current_function_name = ""
+    @current_function = nil
     @indent -= 1
   end
 
@@ -814,6 +819,25 @@ class Myc::Mycc::CodeGenerator
   end
 
   def generate_expr(expr : TypedAST::ZeroInitializer)
+  end
+
+  def generate_expr(expr : TypedAST::AddrLabel)
+    emit("ADDR :#{expr.label}")
+  end
+
+  def generate_stmt(stmt : TypedAST::IndirectGoto)
+    generate_expr(stmt.target)
+    if (f = @current_function) && (l = f.addr_labels)
+      if l.size == 1
+        emit("STACK :drop")
+      elsif l.size == 0
+        raise error("indirect labels not found", stmt)
+      end
+
+      emit("GOTO :#{l.join(" :")}")
+    else
+      raise error("indirect labels not found", stmt)
+    end
   end
 
   private def returns_void?(call : TypedAST::Call) : Bool

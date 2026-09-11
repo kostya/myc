@@ -115,6 +115,14 @@ class Myc::Backend::Linter::BB < Myc::Backend::AbstractBB
       if to_type.target_type.is_a?(Type::VoidType)
         wrap_res(FAKE_VAL, to_type, value.pp)
       end
+    when {Type::IndirectType, Type::PtrType}
+      if to_type.target_type.is_a?(Type::VoidType)
+        wrap_res(FAKE_VAL, to_type, value.pp)
+      end
+    when {Type::PtrType, Type::IndirectType}
+      if from_type.target_type.is_a?(Type::VoidType)
+        wrap_res(FAKE_VAL, to_type, value.pp)
+      end
     end
   end
 

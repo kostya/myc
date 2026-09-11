@@ -251,6 +251,16 @@ module Myc::Mycc::TypedAST
     end
   end
 
+  class AddrLabel < Node
+    getter label : String
+
+    def initialize(@label, @type, @location); end
+
+    private def inspect_fields(io : IO)
+      io << label
+    end
+  end
+
   abstract class Stmt
     getter location : Location
 
@@ -478,6 +488,16 @@ module Myc::Mycc::TypedAST
     end
   end
 
+  class IndirectGoto < Stmt
+    getter target : Node
+
+    def initialize(@target, @location); end
+
+    private def inspect_fields(io : IO)
+      target.inspect(io)
+    end
+  end
+
   class Case
     getter values : Array(Int64)
     getter body : Array(Stmt)
@@ -505,8 +525,9 @@ module Myc::Mycc::TypedAST
     getter location : Location
     getter vaarg : Bool
     getter is_static : Bool
+    getter addr_labels : Array(String)?
 
-    def initialize(@name, @params, @return_type, @body, @location, @vaarg, @is_static); end
+    def initialize(@name, @params, @return_type, @body, @location, @vaarg, @is_static, @addr_labels = nil); end
 
     def inspect(io : IO)
       io << "Function " << name << "("
