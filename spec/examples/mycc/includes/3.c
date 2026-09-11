@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 #include "3.h"
 
 int bla = 10;

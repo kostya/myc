@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 void test1() {
   int i = 0;
   printf("do-while: ");

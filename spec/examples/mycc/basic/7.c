@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 void test_arithmetic() {
   int a = 10, b = 3;
 

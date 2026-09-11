@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 int counter() {
   static int count = 0;
   count = count + 1;

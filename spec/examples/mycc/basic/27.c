@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 int bla(int x) { return x > 5 ? x + 10 : x * 2; }
 
 int main() {

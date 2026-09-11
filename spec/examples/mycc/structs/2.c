@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 struct Point {
   int x;
   int y;

@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 void bla(int x) {
   x++;
   printf("x = %d\n", x);

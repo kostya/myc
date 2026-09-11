@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 union Value {
   int i;
   float f;

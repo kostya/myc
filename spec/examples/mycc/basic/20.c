@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 int global_var = 42;
 
 void test_globals() {

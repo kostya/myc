@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 void test_bitwise() {
   int a = 0b1010, b = 0b1100;
 

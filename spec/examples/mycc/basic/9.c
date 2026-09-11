@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 void test_logic() {
   int a = 1, b = 0;
 

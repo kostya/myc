@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 void test_types() {
   char c = 'A';
   int i = 42;

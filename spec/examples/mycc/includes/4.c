@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 #include "4.h"
 
 static int glob = 42;

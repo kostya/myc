@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 int main() {
   int a[256] = {0};
   a[1] = 1;

@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 typedef enum {
   RED = 0,
   GREEN = 1,

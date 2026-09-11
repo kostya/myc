@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 void test_comparisons() {
   int a = 5, b = 10;
 

@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 #include "1.h"
 
 int main() {

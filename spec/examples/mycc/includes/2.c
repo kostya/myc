@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 extern int Bla;
 
 int main() {

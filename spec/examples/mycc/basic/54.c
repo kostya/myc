@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 #define MY_MACRO (42)
 #define MY_MACRO2 (0xABCDu)
 #define MY_MACRO3 (3.14)

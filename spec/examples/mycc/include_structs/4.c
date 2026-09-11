@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 struct Bla {
   struct {
     int y;

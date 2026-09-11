@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 void test_control_flow() {
   int x = 10;
   if (x > 5) {

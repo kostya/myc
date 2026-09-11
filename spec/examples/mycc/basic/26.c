@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 int main() {
   int i = 0;
 

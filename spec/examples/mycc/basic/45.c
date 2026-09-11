@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 void modify_ptr(const char **p) { (*p)++; }
 
 void modify_ptr2(const char **p) { ++(*p); }

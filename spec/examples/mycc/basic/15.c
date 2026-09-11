@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 void test_switch(int x) {
   switch (x) {
   case 1:

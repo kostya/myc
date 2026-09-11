@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 #define NULL ((void *)0)
 
 int bla(int x) { return x + 1; }

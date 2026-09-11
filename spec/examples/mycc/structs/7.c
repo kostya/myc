@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 typedef struct Bla Bla;
 
 struct Bla {

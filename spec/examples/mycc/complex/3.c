@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 void bla(unsigned int x) { printf("bla = %d\n", x); }
 
 void blaf(float x) { printf("blaf = %d\n", (int)x); }

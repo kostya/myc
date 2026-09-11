@@ -1,3 +1,5 @@
+int printf(const char *fmt, ...);
+
 void test_strings() {
   char *s = "Hello";
   char *t = "World";
