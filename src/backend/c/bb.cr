@@ -31,6 +31,10 @@ class Myc::Backend::C::BB < Myc::Backend::AbstractBB
     emit "goto #{other.name};"
   end
 
+  def indirect_jmp(bb_addr : Value, bbs : Array(AbstractBB))
+    emit "goto *(#{c_val(bb_addr)});"
+  end
+
   def ret(val : Value?)
     if val
       emit "_result = #{c_val(val)};"
@@ -77,15 +81,14 @@ class Myc::Backend::C::BB < Myc::Backend::AbstractBB
     wrap_val(name, type_fn, Value::PP::FnAddress.new(name))
   end
 
-  def cond(cond : Value, then_bb : AbstractBB, else_bb : AbstractBB)
-    emit "if (#{c_val(cond)}) goto #{then_bb.name}; else goto #{else_bb.name};"
+  def bb_addr(bb : AbstractBB) : Value
+    t = builder.new_temp
+    emit "#{c_type(typer.indirect)} #{t} = &&#{bb.name};"
+    wrap_val(t, typer.indirect, Value::PP::LabelAddress.new(bb.name))
   end
 
-  def next(name : String) : AbstractBB
-    label = builder.new_label(name)
-    bb = BB.new(label, builder, @func, @func_def)
-    func.register_block(bb)
-    bb
+  def cond(cond : Value, then_bb : AbstractBB, else_bb : AbstractBB)
+    emit "if (#{c_val(cond)}) goto #{then_bb.name}; else goto #{else_bb.name};"
   end
 
   def select(cond : Value, arg_true : Value, arg_false : Value) : Value

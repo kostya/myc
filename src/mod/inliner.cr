@@ -99,7 +99,7 @@ class Myc::Mod::Inliner
         @calls[op.name] += 1
         @private_dependency = true if (f = mod.func_defs[op.name]?) && f.private?
       when Opcode::Addr
-        @private_dependency = true if (func_name = op.func_name) && (f = mod.func_defs[func_name]?) && f.private?
+        @private_dependency = true if (name = op.name) && (f = mod.func_defs[name]?) && f.private?
       when Opcode::Ret
         @ret_count += 1
       when Opcode::Global
@@ -224,7 +224,7 @@ class Myc::Mod::Inliner
         when Opcode::Label
           new_list << Opcode::Label.new("#{inline_prefix}_#{op.label}")
         when Opcode::Goto
-          new_list << Opcode::Goto.new("#{inline_prefix}_#{op.label}")
+          new_list << Opcode::Goto.new(op.labels.map { |label| "#{inline_prefix}_#{label}" })
         when Opcode::Ret
           if @inline_func_def.inline_stats.@ret_count == 0
             raise "unreachable"
@@ -233,11 +233,11 @@ class Myc::Mod::Inliner
             end
           else
             if @inline_func_def.type_fn.ret.eq?(@mod.typer.void)
-              new_list << Opcode::Goto.new("#{inline_prefix}_end")
+              new_list << Opcode::Goto.new(["#{inline_prefix}_end"])
             else
               new_list << Opcode::Local.new("#{inline_prefix}_result", @inline_func_def.type_fn.ret)
               new_list << Opcode::Store.new
-              new_list << Opcode::Goto.new("#{inline_prefix}_end")
+              new_list << Opcode::Goto.new(["#{inline_prefix}_end"])
             end
           end
         when Opcode::Param

@@ -6,12 +6,15 @@ abstract class Myc::Backend::AbstractFunc
   getter! alloca_bb : AbstractBB?
   getter! body_bb : AbstractBB?
   getter! ret_bb : AbstractBB?
+
+  getter bbs : Hash(String, AbstractBB)
   getter result : Value?
 
   def initialize(@builder, @func_def, @header_mod)
-    @alloca_bb = new_bb("alloca")
-    @body_bb = new_bb("body")
-    @ret_bb = new_bb("ret")
+    @bbs = Hash(String, AbstractBB).new
+    @alloca_bb = new_raw_bb("alloca")
+    @body_bb = new_raw_bb("body")
+    @ret_bb = new_raw_bb("ret")
 
     if func_def.have_ret?
       name = "__myc_result"
@@ -33,6 +36,22 @@ abstract class Myc::Backend::AbstractFunc
     ret_bb.ret(result.try &.to_rhs(v))
   end
 
-  abstract def new_bb(name : String) : AbstractBB
-  abstract def new_visitor : AbstractVisitor
+  def new_bb(name : String) : AbstractBB
+    name = builder.new_label(name)
+    @bbs[name] = new_raw_bb(name, @bbs.size)
+  end
+
+  def new_raw_bb(name : String, number : Int32 = 0) : AbstractBB
+    bb = bb_class.new(name, @builder, self, @func_def)
+    bb.number = number
+    bb
+  end
+
+  def new_visitor : AbstractVisitor
+    visitor_class.new(@builder, self, body_bb, func_def, func_def.mod, @header_mod, params)
+  end
+
+  abstract def bb_class : AbstractBB.class
+  abstract def visitor_class : AbstractVisitor.class
+  abstract def params : Array(Value)
 end

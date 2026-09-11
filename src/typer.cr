@@ -8,6 +8,8 @@ class Myc::Typer
     getter {{tp.id}}p : Type
   {% end %}
 
+  getter indirect : Type
+
   def initialize
     @map = Hash(String, Type).new
 
@@ -47,6 +49,9 @@ class Myc::Typer
       map[{{tp}}] = {{tp.id}}
       map["ptr<" + {{tp}} + ">"] = @{{tp.id}}p
     {% end %}
+
+    @indirect = Type::IndirectType.new(std_loc, "indirect").finished!
+    map["indirect"] = @indirect
 
     map.rehash
   end

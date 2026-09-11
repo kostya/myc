@@ -22,12 +22,12 @@ class Myc::Backend::Llvm::Func < Myc::Backend::AbstractFunc
     super
   end
 
-  def new_bb(name : String) : AbstractBB
-    BB.new(name, @builder, self, @func_def)
+  def bb_class : AbstractBB.class
+    BB
   end
 
-  def new_visitor : AbstractVisitor
-    Visitor.new(@builder, self, body_bb, func_def, func_def.mod, @header_mod, params)
+  def visitor_class : AbstractVisitor.class
+    Visitor
   end
 
   def finish(v : AbstractVisitor)

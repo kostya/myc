@@ -1,0 +1,44 @@
+FUNC :main
+  BODY
+    PUSH 0
+    LOCAL :i :i32
+    STORE
+    LOOP
+      COND
+        PUSH 10
+        LOCAL :i
+        BINARY :less
+      BODY
+        PUSH 2
+        LOCAL :i
+        BINARY :rem
+        PUSH 1
+        BINARY :eq
+        IF
+          THEN
+            ADDR :print1
+            LOCAL :label :indirect
+            STORE
+          ELSE
+            ADDR :print2
+            LOCAL :label :indirect
+            STORE
+        ENDIF
+        LOCAL :label
+        GOTO :print1 :print2
+        LABEL :print1
+        PUSH "in print1"
+        INSPECT
+        NEXT
+        LABEL :print2
+        PUSH "in print2"
+        INSPECT
+      STEP
+        PUSH 1
+        LOCAL :i
+        BINARY :add
+        LOCAL :i
+        STORE
+    ENDLOOP
+ENDFUNC
+

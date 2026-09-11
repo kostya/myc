@@ -22,6 +22,7 @@ class Myc::Backend::Value
       in PP::Local              then "Lo"
       in PP::CallResult         then "Ca"
       in PP::FnAddress          then "Fa"
+      in PP::LabelAddress       then "La"
       in PP::Vla                then "Vl"
       in PP::Unknown, PP        then "??"
       end
@@ -36,6 +37,7 @@ class Myc::Backend::Value
     record LocalUninitialized < PP, name : String
     record CallResult < PP, name : String
     record FnAddress < PP, name : String
+    record LabelAddress < PP, name : String
     record Vla < PP
   end
 

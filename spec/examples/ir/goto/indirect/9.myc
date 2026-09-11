@@ -1,0 +1,44 @@
+FUNC :main
+  BODY
+    PUSH 2
+    LOCAL :choice :i32
+    STORE
+    LOCAL :choice
+    PUSH 0
+    BINARY :eq
+    IF
+      THEN
+        ADDR :case0
+        LOCAL :label :indirect
+        STORE
+      ELSE
+        LOCAL :choice
+        PUSH 1
+        BINARY :eq
+        IF
+          THEN
+            ADDR :case1
+            LOCAL :label :indirect
+            STORE
+          ELSE
+            ADDR :case2
+            LOCAL :label :indirect
+            STORE
+        ENDIF
+    ENDIF
+    LOCAL :label
+    GOTO :case0 :case1 :case2
+    LABEL :case0
+    PUSH :case0
+    INSPECT
+    GOTO :case1
+    LABEL :case1
+    PUSH :case1
+    INSPECT
+    GOTO :case2
+    LABEL :case2
+    PUSH :case2
+    INSPECT
+    LABEL :end
+ENDFUNC
+

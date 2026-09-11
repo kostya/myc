@@ -25,7 +25,7 @@ abstract class Myc::Backend::AbstractVisitor
     @was_ret = false
     @pending_labels = Hash(String, AbstractBB).new
     @labels = Hash(String, AbstractBB).new
-    @fake_bb = @bb.class.new("__myc_fake_bb__", @builder, @func, @func_def)
+    @fake_bb = func.new_raw_bb("__myc_fake_bb__")
     @slots = Deque(Hash(String, Value)).new
     @all_slots = Hash(String, Value).new
     @instruction_id = 0_u32
@@ -36,6 +36,10 @@ abstract class Myc::Backend::AbstractVisitor
 
     if func_def.have_ret? && !@was_ret
       raise error("FUNC :#{func_def.name} expected ret #{func_def.type_fn.ret}, but no RET was found")
+    end
+
+    if @pending_labels.any?
+      raise error("missing label: #{@pending_labels.keys.join(", ")}")
     end
 
     self
@@ -155,9 +159,9 @@ abstract class Myc::Backend::AbstractVisitor
     raise error("IF expect bool value on stack, but got #{cond.type}") unless cond.type.eq?(mod.typer.bool)
 
     if op.else_seq.list.any?
-      then_bb = @bb.next("then")
-      else_bb = @bb.next("else")
-      endif_bb = @bb.next("endif")
+      then_bb = func.new_bb("then")
+      else_bb = func.new_bb("else")
+      endif_bb = func.new_bb("endif")
       @bb.cond(cond, then_bb, else_bb)
 
       @bb = then_bb
@@ -170,8 +174,8 @@ abstract class Myc::Backend::AbstractVisitor
 
       @bb = endif_bb
     else
-      then_bb = @bb.next("then")
-      endif_bb = @bb.next("endif")
+      then_bb = func.new_bb("then")
+      endif_bb = func.new_bb("endif")
       @bb.cond(cond, then_bb, endif_bb)
 
       @bb = then_bb
@@ -312,6 +316,9 @@ abstract class Myc::Backend::AbstractVisitor
       end
     when Type::Fn
       body << push("#{type.id_name}(?)")
+      body << Opcode::Printf.new(0)
+    when Type::IndirectType
+      body << push("indirect")
       body << Opcode::Printf.new(0)
     when Type::StructType
       body << push("#{type.id_name}(")
@@ -478,11 +485,11 @@ abstract class Myc::Backend::AbstractVisitor
   end
 
   def visit(op : Opcode::Loop)
-    init_bb = @bb.next("init")
-    cond_bb = @bb.next("cond")
-    body_bb = @bb.next("body")
-    step_bb = @bb.next("step")
-    finish_bb = @bb.next("endloop")
+    init_bb = func.new_bb("init")
+    cond_bb = func.new_bb("cond")
+    body_bb = func.new_bb("body")
+    step_bb = func.new_bb("step")
+    finish_bb = func.new_bb("endloop")
 
     loop_finish_stack << finish_bb
     loop_step_stack << step_bb
@@ -841,9 +848,9 @@ abstract class Myc::Backend::AbstractVisitor
       builder.init_value(AbstractBuilder::InitValue::Intval.new(index.type, value))
     end
 
-    case_bbs = op.cases_seq.map { @bb.next("switch_case") }
-    default_bb = @bb.next("switch_default")
-    end_bb = @bb.next("switch_end")
+    case_bbs = op.cases_seq.map { func.new_bb("switch_case") }
+    default_bb = func.new_bb("switch_default")
+    end_bb = func.new_bb("switch_end")
 
     @bb.switch(index, case_values, case_bbs, default_bb)
 
@@ -900,11 +907,11 @@ abstract class Myc::Backend::AbstractVisitor
   end
 
   def visit(op : Opcode::Addr)
-    if fn = op.func_name
-      if (func_def = mod.func_defs[fn]?) || (func_def = @header_mod.func_defs[fn]?)
-        self << @bb.fn_addr(fn, func_def.type_fn)
+    if name = op.name
+      if (func_def = mod.func_defs[name]?) || (func_def = @header_mod.func_defs[name]?)
+        self << @bb.fn_addr(name, func_def.type_fn)
       else
-        raise error("`#{fn}` not found")
+        self << @bb.bb_addr(find_or_create_label(name))
       end
     else
       self << pop._to_ref(self).addr(self)
@@ -989,16 +996,28 @@ abstract class Myc::Backend::AbstractVisitor
 
   def visit(op : Opcode::Label)
     raise error("label already defined `#{op.label}`") if @labels[op.label]?
-    new_bb = @pending_labels.delete(op.label) || @bb.next(op.label)
+    new_bb = @pending_labels.delete(op.label) || func.new_bb(op.label)
     @labels[op.label] = new_bb
     @bb.jmp(new_bb)
     @bb = new_bb
   end
 
   def visit(op : Opcode::Goto)
-    goto_bb = @labels[op.label]? || @pending_labels[op.label]? || (@pending_labels[op.label] = @bb.next(op.label))
-    @bb.jmp(goto_bb)
+    case op.labels.size
+    when 1
+      @bb.jmp find_or_create_label(op.labels[0])
+    else
+      bb_addr = pop_rhs
+      raise error("indirect goto expect type :indirect, not #{bb_addr.type}") unless bb_addr.type.eq?(mod.typer.indirect)
+      @bb.indirect_jmp(bb_addr, op.labels.map { |label| find_or_create_label(label) })
+    end
     @bb = fake_bb
+  end
+
+  private def find_or_create_label(label : String) : AbstractBB
+    @labels[label]? ||
+      @pending_labels[label]? ||
+      (@pending_labels[label] = func.new_bb(label))
   end
 
   def visit(op : Opcode::Slot)

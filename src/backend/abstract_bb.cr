@@ -3,6 +3,7 @@ abstract class Myc::Backend::AbstractBB
   getter builder : AbstractBuilder
   getter func : AbstractFunc
   getter func_def : Mod::FuncDef
+  property number : Int32 = 0
 
   def initialize(@name, @builder, @func, @func_def)
   end
@@ -11,11 +12,12 @@ abstract class Myc::Backend::AbstractBB
   abstract def call(name : String, type_fn : Type::Fn, args : Array(Value)) : Value?
   abstract def store(lhs : Value, rhs : Value)
   abstract def fn_addr(name : String, type_fn : Type::Fn) : Value
+  abstract def bb_addr(bb : AbstractBB) : Value
   abstract def invoke(fn : Value, type_fn : Type::Fn, args : Array(Value)) : Value?
   abstract def vla(type : Type, ptr_type : Type, size : Value) : Value
 
-  abstract def next(name : String) : AbstractBB
   abstract def jmp(other : AbstractBB)
+  abstract def indirect_jmp(bb_addr : Value, bbs : Array(AbstractBB))
   abstract def cond(cond : Value, then_bb : AbstractBB, else_bb : AbstractBB)
   abstract def switch(index : Value, case_values : Array(Value), case_bbs : Array(AbstractBB), default_bb : AbstractBB)
   abstract def ret(val : Value?)

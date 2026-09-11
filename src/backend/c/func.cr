@@ -3,7 +3,6 @@ class Myc::Backend::C::Func < Myc::Backend::AbstractFunc
 
   def initialize(@builder, @func_def, @header_mod)
     super(@builder, @func_def, @header_mod)
-    @blocks = Array(BB).new
     @body_io = IO::Memory.new
   end
 
@@ -11,12 +10,12 @@ class Myc::Backend::C::Func < Myc::Backend::AbstractFunc
     @builder.as(Builder)
   end
 
-  def new_bb(name : String) : AbstractBB
-    BB.new(name, @builder, self, @func_def)
+  def bb_class : AbstractBB.class
+    BB
   end
 
-  def new_visitor : AbstractVisitor
-    Visitor.new(@builder, self, body_bb, func_def, func_def.mod, @header_mod, params)
+  def visitor_class : AbstractVisitor.class
+    Visitor
   end
 
   def params : Array(Value)
@@ -53,12 +52,14 @@ class Myc::Backend::C::Func < Myc::Backend::AbstractFunc
     v = new_visitor
     v.visit
 
-    @alloca_bb.as(BB).copy_data(body_io, false)
+    alloca_bb.as(BB).copy_data(body_io, false)
 
     v.bb.as(BB).emit "goto ret;"
 
-    @body_bb.as(BB).copy_data(body_io, false)
-    @blocks.each &.copy_data(body_io, true)
+    body_bb.as(BB).copy_data(body_io, false)
+    @bbs.each do |name, bb|
+      bb.as(BB).copy_data(body_io, true)
+    end
 
     emit("")
     emit("ret:;")
@@ -70,9 +71,5 @@ class Myc::Backend::C::Func < Myc::Backend::AbstractFunc
     end
 
     emit("}")
-  end
-
-  def register_block(bb : BB)
-    @blocks << bb
   end
 end

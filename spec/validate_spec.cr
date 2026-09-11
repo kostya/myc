@@ -975,4 +975,18 @@ context "Validate" do
     ENDFUNC
     _____________________________res
   end
+
+  it "goto indirect" do
+    validate(<<-'_____________________________src').should eq <<-'_____________________________res'
+    FUNC :bla
+      BODY
+        GOTO :a :b :_C
+    ENDFUNC
+    _____________________________src
+    FUNC :bla
+      BODY
+        GOTO :a :b :_C
+    ENDFUNC
+    _____________________________res
+  end
 end

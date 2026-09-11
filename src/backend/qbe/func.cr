@@ -1,21 +1,19 @@
 class Myc::Backend::QBE::Func < Myc::Backend::AbstractFunc
   getter temp_counter : Int32
-  getter blocks : Array(BB)
   getter body_io : IO::Memory
 
   def initialize(@builder : Builder, @func_def : Mod::FuncDef, @header_mod : Mod)
     super(@builder, @func_def, @header_mod)
     @temp_counter = 0
-    @blocks = Array(BB).new
     @body_io = IO::Memory.new
   end
 
-  def new_bb(name : String) : AbstractBB
-    BB.new(name, @builder, self, @func_def)
+  def bb_class : AbstractBB.class
+    BB
   end
 
-  def new_visitor : AbstractVisitor
-    Visitor.new(@builder, self, body_bb, func_def, func_def.mod, @header_mod, params)
+  def visitor_class : AbstractVisitor.class
+    Visitor
   end
 
   def builder
@@ -50,14 +48,16 @@ class Myc::Backend::QBE::Func < Myc::Backend::AbstractFunc
     v = new_visitor
     v.visit
 
-    @alloca_bb.as(BB).copy_data(body_io, false)
+    alloca_bb.as(BB).copy_data(body_io, false)
 
     emit "  jmp @body\n"
 
     v.bb.as(BB).emit "jmp @ret"
 
-    @body_bb.as(BB).copy_data(body_io, true)
-    @blocks.each &.copy_data(body_io, true)
+    body_bb.as(BB).copy_data(body_io, true)
+    @bbs.each do |name, bb|
+      bb.as(BB).copy_data(body_io, true)
+    end
 
     emit "@ret\n"
     if @func_def.have_ret?
@@ -88,9 +88,5 @@ class Myc::Backend::QBE::Func < Myc::Backend::AbstractFunc
   def new_temp : String
     @temp_counter += 1
     "%t#{@temp_counter}"
-  end
-
-  def register_block(bb : BB)
-    @blocks << bb
   end
 end

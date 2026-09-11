@@ -1,0 +1,16 @@
+FUNC :main
+  BODY
+    GOTO :end
+    LABEL :enter
+    PUSH "in jmp1"
+    INSPECT
+    GOTO :finish
+    LABEL :end
+    ADDR :enter
+    LOCAL :label :indirect
+    STORE
+    LOCAL :label
+    GOTO :enter :finish
+    LABEL :finish
+ENDFUNC
+

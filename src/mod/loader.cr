@@ -37,6 +37,17 @@ class Myc::Mod::Loader
     end
   end
 
+  private def get_string_values(node) : Array(String)
+    node.values.not_nil!.map do |v|
+      case v
+      when Source::Token::StringValue
+        v.val
+      else
+        raise error("#{node.code} expect string value, not #{v.inspect}", node)
+      end
+    end
+  end
+
   private def get_string_value(node, value) : String
     case v = value
     when Source::Token::StringValue
@@ -265,7 +276,12 @@ class Myc::Mod::Loader
     when Opcode::Code::TO
       Opcode::To.new(find_type(get_only_one_string_value(node), node)).with_position(node)
     when Opcode::Code::GOTO
-      Opcode::Goto.new(get_only_one_string_value(node)).with_position(node)
+      values = node.values
+      if values && values.size > 0
+        Opcode::Goto.new(get_string_values(node)).with_position(node)
+      else
+        raise error("#{node.code} expected > 0 values", node)
+      end
     when Opcode::Code::LABEL
       Opcode::Label.new(get_only_one_string_value(node)).with_position(node)
     when Opcode::Code::SLOT

@@ -1,0 +1,29 @@
+FUNC :main
+  BODY
+    ADDR :outer1
+    LOCAL :outer :indirect
+    STORE
+    LOCAL :outer
+    GOTO :outer1 :outer2
+    LABEL :outer1
+    PUSH "in outer1"
+    INSPECT
+    ADDR :inner1
+    LOCAL :inner :indirect
+    STORE
+    LOCAL :inner
+    GOTO :inner1 :inner2
+    LABEL :inner1
+    PUSH "in inner1"
+    INSPECT
+    GOTO :end
+    LABEL :inner2
+    PUSH "in inner2"
+    INSPECT
+    GOTO :end
+    LABEL :outer2
+    PUSH "in outer2"
+    INSPECT
+    LABEL :end
+ENDFUNC
+

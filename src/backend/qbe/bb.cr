@@ -8,7 +8,9 @@ class Myc::Backend::QBE::BB < Myc::Backend::AbstractBB
   def alloca(name : String, type : Type) : Value
     name2 = "%" + name
     size = @builder.layout.size_of(type)
-    emit "#{name2} =l alloc8 #{size}"
+    alignment = @builder.layout.alignment_of(type)
+    alignment = 4 if alignment < 4
+    emit "#{name2} =l alloc#{alignment} #{size}"
     wrap_ref(name2, type, Value::PP::LocalUninitialized.new(name))
   end
 
@@ -17,8 +19,11 @@ class Myc::Backend::QBE::BB < Myc::Backend::AbstractBB
     elem_size = @builder.layout.size_of(type)
 
     bytes = new_temp
+    alignment = @builder.layout.alignment_of(type)
+    alignment = 4 if alignment < 4
+
     emit "#{bytes} =l mul #{qbe_val(size)}, #{elem_size}"
-    emit "#{temp} =l alloc8 #{bytes}"
+    emit "#{temp} =l alloc#{alignment} #{bytes}"
     wrap_val(temp, ptr_type, Value::PP::Vla.new)
   end
 
@@ -49,6 +54,21 @@ class Myc::Backend::QBE::BB < Myc::Backend::AbstractBB
 
   def jmp(other : AbstractBB)
     emit "jmp @#{other.name}"
+  end
+
+  def indirect_jmp(bb_addr : Value, bbs : Array(AbstractBB))
+    bbs[0..-2].each_with_index do |bb, index|
+      t = new_temp
+      emit "#{t} =w ceql #{qbe_val(bb_addr)}, #{bb.number}"
+      pred_last = index == bbs.size - 2
+      else_label = if pred_last
+                     bbs[-1].name
+                   else
+                     builder.new_label("else_label")
+                   end
+      emit "jnz #{t}, @#{bb.name}, @#{else_label}"
+      emit_label else_label unless pred_last
+    end
   end
 
   def ret(val : Value?)
@@ -111,15 +131,12 @@ class Myc::Backend::QBE::BB < Myc::Backend::AbstractBB
     wrap_val(val, type_fn, Value::PP::FnAddress.new(name))
   end
 
-  def cond(cond : Value, then_bb : AbstractBB, else_bb : AbstractBB)
-    emit "jnz #{qbe_val(cond)}, @#{then_bb.name}, @#{else_bb.name}"
+  def bb_addr(bb : AbstractBB) : Value
+    wrap_val(bb.number.to_s, typer.indirect, Value::PP::LabelAddress.new(bb.name))
   end
 
-  def next(name : String) : AbstractBB
-    label = builder.new_label(name)
-    bb = BB.new(label, builder, @func, @func_def)
-    func.register_block(bb)
-    bb
+  def cond(cond : Value, then_bb : AbstractBB, else_bb : AbstractBB)
+    emit "jnz #{qbe_val(cond)}, @#{then_bb.name}, @#{else_bb.name}"
   end
 
   def select(cond : Value, arg_true : Value, arg_false : Value) : Value
@@ -302,7 +319,7 @@ class Myc::Backend::QBE::BB < Myc::Backend::AbstractBB
           emit "#{sign_temp} =w and #{r}, -2147483648"
           emit "#{int_result} =w or #{abs_temp}, #{sign_temp}"
           tmp_ptr = new_temp
-          emit "#{tmp_ptr} =l alloc8 4"
+          emit "#{tmp_ptr} =l alloc4 4"
           emit "storew #{int_result}, #{tmp_ptr}"
           emit "#{t} =s loads #{tmp_ptr}"
         end

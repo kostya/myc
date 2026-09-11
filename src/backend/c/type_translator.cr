@@ -45,6 +45,10 @@ struct Myc::Backend::C::TypeTranslator
     "void*"
   end
 
+  private def do_translate(type : Type::IndirectType)
+    "void*"
+  end
+
   private def do_translate(type : Type::PtrType) : String
     @builder.type_sorter.add(type.target_type)
     translate(type.target_type) + "*"

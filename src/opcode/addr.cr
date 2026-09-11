@@ -18,8 +18,8 @@
 #   INVOKE               ; add(10, 20)
 #
 class Myc::Opcode::Addr < Myc::Opcode
-  getter func_name : String?
+  getter name : String?
 
-  def initialize(@func_name = nil)
+  def initialize(@name = nil)
   end
 end

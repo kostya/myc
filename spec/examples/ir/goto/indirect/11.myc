@@ -1,0 +1,30 @@
+FUNC :main
+  BODY
+    ADDR :a1
+    LOCAL :pa :indirect
+    STORE
+    ADDR :b1
+    LOCAL :pb :indirect
+    STORE
+    LOCAL :pa
+    GOTO :a1 :a2
+    LABEL :a1
+    PUSH "in a1"
+    INSPECT
+    LOCAL :pb
+    GOTO :b1 :b2
+    LABEL :b1
+    PUSH "in b1"
+    INSPECT
+    GOTO :end
+    LABEL :a2
+    PUSH "in a2"
+    INSPECT
+    GOTO :end
+    LABEL :b2
+    PUSH "in b2"
+    INSPECT
+    GOTO :end
+    LABEL :end
+ENDFUNC
+

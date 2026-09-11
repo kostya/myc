@@ -231,12 +231,15 @@ class Myc::Mod::Saver
            when Opcode::Stack  then op.val ? opcode(Opcode::Code::STACK, op.shift.to_s.underscore, op.val.not_nil!) : opcode(Opcode::Code::STACK, op.shift.to_s.underscore)
            when Opcode::Select then opcode(Opcode::Code::SELECT)
            when Opcode::Create then opcode(Opcode::Code::CREATE, op.type.id_name)
-           when Opcode::Addr   then op.func_name ? opcode(Opcode::Code::ADDR, op.func_name.not_nil!) : opcode(Opcode::Code::ADDR)
+           when Opcode::Addr   then op.name ? opcode(Opcode::Code::ADDR, op.name.not_nil!) : opcode(Opcode::Code::ADDR)
            when Opcode::Invoke then op.vaargs_count > 0 ? opcode(Opcode::Code::INVOKE, op.vaargs_count.to_i64) : opcode(Opcode::Code::INVOKE)
-           when Opcode::Goto   then opcode(Opcode::Code::GOTO, op.label)
-           when Opcode::Label  then opcode(Opcode::Code::LABEL, op.label)
-           when Opcode::Slot   then opcode(Opcode::Code::SLOT, op.name)
-           else                     raise "unknown opcode #{op.class}"
+           when Opcode::Goto
+             res = opcode(Opcode::Code::GOTO)
+             res.values = op.labels.map { |v| value_to_token(v).as Source::Token::Value }
+             res
+           when Opcode::Label then opcode(Opcode::Code::LABEL, op.label)
+           when Opcode::Slot  then opcode(Opcode::Code::SLOT, op.name)
+           else                    raise "unknown opcode #{op.class}"
            end
 
     if note = @notes[op]?

@@ -1,0 +1,67 @@
+FUNC :main
+  BODY
+    PUSH 0
+    LOCAL :i :i32
+    STORE
+    LOOP
+      COND
+        PUSH 3
+        LOCAL :i
+        BINARY :less
+      BODY
+        PUSH 0
+        LOCAL :j :i32
+        STORE
+        LOOP
+          COND
+            PUSH 3
+            LOCAL :j
+            BINARY :less
+          BODY
+            PUSH 2
+            LOCAL :i
+            LOCAL :j
+            BINARY :add
+            BINARY :rem
+            PUSH 0
+            BINARY :eq
+            IF
+              THEN
+                ADDR :even
+                LOCAL :label :indirect
+                STORE
+              ELSE
+                ADDR :odd
+                LOCAL :label :indirect
+                STORE
+            ENDIF
+            LOCAL :label
+            GOTO :even :odd
+            LABEL :even
+            LOCAL :i
+            INSPECT
+            LOCAL :j
+            INSPECT
+            GOTO :next
+            LABEL :odd
+            LOCAL :j
+            INSPECT
+            LOCAL :i
+            INSPECT
+            LABEL :next
+          STEP
+            PUSH 1
+            LOCAL :j
+            BINARY :add
+            LOCAL :j
+            STORE
+        ENDLOOP
+      STEP
+        PUSH 1
+        LOCAL :i
+        BINARY :add
+        LOCAL :i
+        STORE
+    ENDLOOP
+ENDFUNC
+

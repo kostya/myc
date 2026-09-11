@@ -10,7 +10,6 @@ class Myc::Backend::C::Builder < Myc::Backend::AbstractBuilder
     @func_links = Hash(String, Type::Fn).new
     @global_links = Hash(String, Value).new
     @temp_counter = 0
-    @label_counter = 0
     @funcs = Array(Func).new
     @data_io = IO::Memory.new
   end
@@ -26,11 +25,6 @@ class Myc::Backend::C::Builder < Myc::Backend::AbstractBuilder
   def new_temp(pref = "t") : String
     @temp_counter += 1
     "#{pref}#{@temp_counter}"
-  end
-
-  def new_label(prefix : String) : String
-    @label_counter += 1
-    "#{prefix}_#{@label_counter}"
   end
 
   def c_type(type : Type) : String

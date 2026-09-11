@@ -27,6 +27,10 @@ class Myc::Backend::Llvm::BB < Myc::Backend::AbstractBB
     @llvm_builder.br(other.as(BB).llvm_bb)
   end
 
+  def indirect_jmp(bb_addr : Value, bbs : Array(AbstractBB))
+    @llvm_builder.indirect_br(llvm_val(bb_addr), bbs.map &.as(BB).llvm_bb)
+  end
+
   def ret(val : Value?)
     if val
       @llvm_builder.ret(llvm_val(val))
@@ -60,12 +64,13 @@ class Myc::Backend::Llvm::BB < Myc::Backend::AbstractBB
     wrap_val(val, type_fn, Value::PP::FnAddress.new(name))
   end
 
-  def cond(cond : Value, then_bb : AbstractBB, else_bb : AbstractBB)
-    @llvm_builder.cond(llvm_val(cond), then_bb.as(BB).llvm_bb, else_bb.as(BB).llvm_bb)
+  def bb_addr(bb : AbstractBB) : Value
+    val = bb.as(BB).llvm_bb.address
+    wrap_val(val, typer.indirect, Value::PP::LabelAddress.new(bb.name))
   end
 
-  def next(name : String) : AbstractBB
-    BB.new(name, builder, @func, @func_def)
+  def cond(cond : Value, then_bb : AbstractBB, else_bb : AbstractBB)
+    @llvm_builder.cond(llvm_val(cond), then_bb.as(BB).llvm_bb, else_bb.as(BB).llvm_bb)
   end
 
   def select(cond : Value, arg_true : Value, arg_false : Value) : Value

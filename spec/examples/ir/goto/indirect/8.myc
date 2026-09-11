@@ -1,0 +1,36 @@
+FUNC :main
+  BODY
+    PUSH 0
+    LOCAL :i :i32
+    STORE
+    ADDR :body
+    LOCAL :label :indirect
+    STORE
+    LABEL :dispatch
+    LOCAL :label
+    GOTO :body :end
+    LABEL :body
+    LOCAL :i
+    INSPECT
+    PUSH 1
+    LOCAL :i
+    BINARY :add
+    LOCAL :i
+    STORE
+    PUSH 5
+    LOCAL :i
+    BINARY :less
+    IF
+      THEN
+        ADDR :body
+        LOCAL :label :indirect
+        STORE
+      ELSE
+        ADDR :end
+        LOCAL :label :indirect
+        STORE
+    ENDIF
+    GOTO :dispatch
+    LABEL :end
+ENDFUNC
+

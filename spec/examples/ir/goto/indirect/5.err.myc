@@ -1,0 +1,7 @@
+FUNC :main
+  BODY
+    GOTO :enter :finish
+    LABEL :enter
+    LABEL :finish
+ENDFUNC
+

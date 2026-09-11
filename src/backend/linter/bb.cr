@@ -16,6 +16,9 @@ class Myc::Backend::Linter::BB < Myc::Backend::AbstractBB
   def jmp(other : AbstractBB)
   end
 
+  def indirect_jmp(bb_addr : Value, bbs : Array(AbstractBB))
+  end
+
   def ret(val : Value?)
   end
 
@@ -35,11 +38,11 @@ class Myc::Backend::Linter::BB < Myc::Backend::AbstractBB
     wrap_val(FAKE_VAL, type_fn, Value::PP::FnAddress.new(name))
   end
 
-  def cond(cond : Value, then_bb : AbstractBB, else_bb : AbstractBB)
+  def bb_addr(bb : AbstractBB) : Value
+    wrap_val(FAKE_VAL, func_def.mod.typer.voidp, Value::PP::LabelAddress.new(bb.name))
   end
 
-  def next(name : String) : AbstractBB
-    BB.new(name, builder, @func, @func_def)
+  def cond(cond : Value, then_bb : AbstractBB, else_bb : AbstractBB)
   end
 
   def select(cond : Value, arg_true : Value, arg_false : Value) : Value

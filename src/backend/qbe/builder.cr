@@ -11,7 +11,6 @@ class Myc::Backend::QBE::Builder < Myc::Backend::AbstractBuilder
 
     @data_io = IO::Memory.new
     @str_counter = 0
-    @label_counter = 0
     @string_constants = Hash(String, String).new
     @func_links = Hash(String, Type::Fn).new
     @global_links = Hash(String, Value).new
@@ -153,11 +152,6 @@ class Myc::Backend::QBE::Builder < Myc::Backend::AbstractBuilder
       @data_io << "b 0 }\n"
       "$#{name}"
     end
-  end
-
-  def new_label(prefix : String) : String
-    @label_counter += 1
-    "#{prefix}_#{@label_counter}"
   end
 
   def copy_io(from : IO, to : IO)

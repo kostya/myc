@@ -1,0 +1,14 @@
+FUNC :main
+  BODY
+    ADDR :jmp1
+    GOTO :jmp1 :jmp2
+    LABEL :jmp1
+    PUSH "in jmp1"
+    INSPECT
+    GOTO :end
+    LABEL :jmp2
+    PUSH "in jmp2"
+    INSPECT
+    LABEL :end
+ENDFUNC
+

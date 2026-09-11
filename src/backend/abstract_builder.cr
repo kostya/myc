@@ -9,6 +9,7 @@ abstract class Myc::Backend::AbstractBuilder
     @std_funcs = add_std_funcs
     @inspect_funcs = Hash(Type, String).new
     @inspect_type_fns = Hash(String, Mod::FuncDef).new
+    @label_counter = 0_u64
   end
 
   def add_std_funcs
@@ -99,8 +100,6 @@ abstract class Myc::Backend::AbstractBuilder
             return InitValue::F64.new(type, value.val.to_f64)
           end
         end
-      when Type::EnumType, Type::EnumVariantType, Type::VoidType
-        raise error("cant create primitive_value for #{type}")
       when Type::Fn
         value = @values[@pos]
         @pos += 1
@@ -196,5 +195,10 @@ abstract class Myc::Backend::AbstractBuilder
     def error(msg)
       Error::ErrorLoc.new(msg, loc)
     end
+  end
+
+  def new_label(prefix : String) : String
+    @label_counter += 1
+    "#{prefix}_#{@label_counter}"
   end
 end
