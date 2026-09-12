@@ -5,4 +5,8 @@ class Myc::Type::IntType < Myc::Type
   def initialize(@loc, @id_name, @bytes_count, @signed)
     @backend_name = normalize_name(id_name)
   end
+
+  def bitsize : UInt64
+    bytes_count * 8
+  end
 end

@@ -458,7 +458,19 @@ class Myc::Mycc::ASTBuilder
       end
 
       children = children(cursor)
-      children.size == 1 ? build_node(children[0]) : raise error("Unknown node #{cursor.kind}", cursor)
+      if children.size == 1
+        child = children[0]
+        if child.kind.decl_ref_expr?
+          type = get_type(child, child.type)
+          if type.eq?(typer.valist)
+            return TypedAST::UnaryOp.new(:vaarg, build_node(child), get_type(cursor, cursor.type), location(cursor))
+          end
+        end
+
+        build_node(child)
+      else
+        raise error("Unknown node #{cursor.kind}", cursor)
+      end
     when .paren_expr?
       children = children(cursor)
       children.size == 1 ? build_node(children[0]) : raise error("Unknown node #{cursor.kind}", cursor)
@@ -1746,6 +1758,14 @@ class Myc::Mycc::ASTBuilder
 
   private def get_type(cursor : Clang::Cursor, type : Clang::Type, count = 0) : Type
     count += 1
+
+    if type.kind.typedef?
+      case type.spelling
+      when "va_list", "__builtin_va_list", "__gnuc_va_list"
+        return typer.valist
+      end
+    end
+
     canonical = type.canonical_type
 
     if count >= 50

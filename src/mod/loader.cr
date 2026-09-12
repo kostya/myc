@@ -286,6 +286,22 @@ class Myc::Mod::Loader
       Opcode::Label.new(get_only_one_string_value(node)).with_position(node)
     when Opcode::Code::SLOT
       Opcode::Slot.new(get_only_one_string_value(node)).with_position(node)
+    when Opcode::Code::VA
+      values = node.values
+      raise error("#{node.code} should have at least 1 value", node) unless values
+      case values.size
+      when 1
+        op_name = get_only_one_string_value(node)
+        op = Opcode::Va::Op.parse?(op_name) || raise error("unknown va #{op_name}", node)
+        Opcode::Va.new(op, nil).with_position(node)
+      when 2
+        op_name = get_string_value(node, values[0])
+        op = Opcode::Va::Op.parse?(op_name) || raise error("unknown va #{op_name}", node)
+        type = find_type(get_string_value(node, values[1]), node)
+        Opcode::Va.new(op, type).with_position(node)
+      else
+        raise error("#{node.code} expected 1 or 2 values", node)
+      end
     else
       raise error("unknown opcode #{node.code}", node)
     end

@@ -57,3 +57,24 @@ struct LLVM::BasicBlock
     LLVM::Value.new(v)
   end
 end
+
+lib LibLLVM
+  fun build_va_arg = LLVMBuildVAArg(
+    builder : BuilderRef,
+    list : ValueRef,
+    ty : TypeRef,
+    name : Char*,
+  ) : ValueRef
+end
+
+class LLVM::Builder
+  def va_arg(list : LLVM::Value, type : LLVM::Type, name : String = "") : LLVM::Value
+    v = LibLLVM.build_va_arg(
+      self.to_unsafe,
+      list,
+      type,
+      name
+    )
+    LLVM::Value.new(v)
+  end
+end

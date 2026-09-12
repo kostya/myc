@@ -39,6 +39,7 @@ class Myc::Opcode
     LABEL
     ALLOCA
     SLOT
+    VA
 
     UNDEF    = 500
     TYPE

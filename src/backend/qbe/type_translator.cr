@@ -43,6 +43,10 @@ class Myc::Backend::QBE::TypeTranslator
     "l"
   end
 
+  private def do_translate(type : Type::VaListType)
+    "l"
+  end
+
   private def do_translate(type : Type::StructType)
     name = ":" + type.backend_name
     fields = type.data.map { |t| translate(t) }.join(", ")

@@ -18,13 +18,7 @@ class Myc::Backend::C::BB < Myc::Backend::AbstractBB
   end
 
   def load_ref(value : Value) : Value
-    if value.type.is_a?(Type::FlatType)
-      wrap_val(c_val(value), value.type, value.pp)
-    else
-      temp = builder.new_temp
-      emit "#{c_type(value.type)} #{temp} = #{c_val(value)};"
-      wrap_val(temp, value.type, value.pp)
-    end
+    wrap_val(c_val(value), value.type, value.pp)
   end
 
   def jmp(other : AbstractBB)
@@ -372,6 +366,20 @@ class Myc::Backend::C::BB < Myc::Backend::AbstractBB
   def bitcast(value : Value, to_type : Type) : Value
     new_val = "(*(#{c_type(to_type)}*)(#{c_val(value)}))"
     wrap_ref(new_val, to_type, value.pp)
+  end
+
+  def va_start(arg : Value, val : Value)
+    emit "va_start(#{c_val(arg)}, #{c_val(val)});"
+  end
+
+  def va_end(arg : Value)
+    emit "va_end(#{c_val(arg)});"
+  end
+
+  def va_arg(arg : Value, type : Type) : Value
+    t = builder.new_temp
+    emit("#{c_type(type)} #{t} = va_arg(#{c_val(arg)}, #{c_type(type)});")
+    wrap_res(t, type, arg.pp)
   end
 
   def builder

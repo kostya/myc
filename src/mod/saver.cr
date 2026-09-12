@@ -239,6 +239,7 @@ class Myc::Mod::Saver
              res
            when Opcode::Label then opcode(Opcode::Code::LABEL, op.label)
            when Opcode::Slot  then opcode(Opcode::Code::SLOT, op.name)
+           when Opcode::Va    then op.type ? opcode(Opcode::Code::VA, op.op.to_s.underscore, op.type.not_nil!.id_name) : opcode(Opcode::Code::VA, op.op.to_s.underscore)
            else                    raise "unknown opcode #{op.class}"
            end
 

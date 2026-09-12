@@ -674,6 +674,11 @@ class Myc::Mycc::CodeGenerator
       generate_expr(expr.operand)
       emit("STORE")
       generate_expr(expr.operand) unless expr.is_statement
+    when :vaarg
+      generate_expr(expr.operand)
+      emit("VA :arg #{type_s(expr.type)}")
+    else
+      raise error("unknown unary #{expr.op}", expr)
     end
   end
 

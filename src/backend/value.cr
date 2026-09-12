@@ -157,7 +157,7 @@ class Myc::Backend::Value
     end
   end
 
-  private def if_local_mark_it_as_initialized(visitor : AbstractVisitor)
+  def if_local_mark_it_as_initialized(visitor : AbstractVisitor)
     case _pp = @pp
     when PP::LocalUninitialized
       if local = visitor.locals[_pp.name]?

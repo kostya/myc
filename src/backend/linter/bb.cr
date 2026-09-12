@@ -150,6 +150,16 @@ class Myc::Backend::Linter::BB < Myc::Backend::AbstractBB
     wrap_ref(FAKE_VAL, to_type, value.pp)
   end
 
+  def va_start(arg : Value, val : Value)
+  end
+
+  def va_end(arg : Value)
+  end
+
+  def va_arg(arg : Value, type : Type) : Value
+    wrap_ref(FAKE_VAL, type, arg.pp)
+  end
+
   private def wrap_val(val, type : Type, pp : Value::PP) : Value
     Value.new(val, type, Value::MM::Val, pp)
   end

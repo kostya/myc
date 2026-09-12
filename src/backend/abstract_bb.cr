@@ -35,4 +35,8 @@ abstract class Myc::Backend::AbstractBB
   abstract def cast?(value : Value, from_type : Type, to_type : Type) : Value?
   abstract def to?(value : Value, from_type : Type, to_type : Type) : Value?
   abstract def select(cond : Value, arg_true : Value, arg_false : Value) : Value
+
+  abstract def va_start(arg : Value, val : Value)
+  abstract def va_end(arg : Value)
+  abstract def va_arg(arg : Value, type : Type) : Value
 end

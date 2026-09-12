@@ -31,6 +31,7 @@ class Myc::Backend::QBE::Func < Myc::Backend::AbstractFunc
   end
 
   def build
+    type_fn = @func_def.type_fn
     visibility = "export "
     @func_def.attrs.each do |attr|
       case attr
@@ -39,10 +40,18 @@ class Myc::Backend::QBE::Func < Myc::Backend::AbstractFunc
       end
     end
 
-    ret_type = builder.qbe_type(@func_def.type_fn.ret)
-    args = @func_def.type_fn.args.map_with_index { |t, i| "#{builder.qbe_type(t)} %arg#{i}" }
+    ret_type = builder.qbe_type(type_fn.ret)
+    args = type_fn.args.map_with_index { |t, i| "#{builder.qbe_type(t)} %arg#{i}" }
 
-    emit "#{visibility}function #{ret_type} $#{@func_def.name}(#{args.join(", ")}) {\n"
+    vaarg_str = if type_fn.vaarg
+                  if type_fn.args.empty?
+                    "..."
+                  else
+                    ", ..."
+                  end
+                end
+
+    emit "#{visibility}function #{ret_type} $#{@func_def.name}(#{args.join(", ")}#{vaarg_str}) {\n"
     emit "@start\n"
 
     v = new_visitor
@@ -64,7 +73,7 @@ class Myc::Backend::QBE::Func < Myc::Backend::AbstractFunc
       if (r = result) && r.type.needs_blit?
         emit "  ret %__myc_result\n"
       else
-        ret_type = @func_def.type_fn.ret
+        ret_type = type_fn.ret
         qbe_ret_type = builder.qbe_type(ret_type)
 
         if ret_type.is_a?(Type::IntType) && ret_type.bytes_count < 4

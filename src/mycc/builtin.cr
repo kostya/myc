@@ -104,6 +104,13 @@ class Myc::Mycc::CodeGenerator
       else
         raise error("unexpected type", args[0])
       end
+    when "__builtin_va_end"
+      generate_expr(args[0])
+      emit("VA :end")
+    when "__builtin_va_start"
+      generate_expr(args[1])
+      generate_expr(args[0])
+      emit("VA :start")
     else
       return false
     end

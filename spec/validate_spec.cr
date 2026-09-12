@@ -989,4 +989,22 @@ context "Validate" do
     ENDFUNC
     _____________________________res
   end
+
+  it "VA" do
+    validate(<<-'_____________________________src').should eq <<-'_____________________________res'
+    FUNC :bla
+      BODY
+        VA :arg :i32
+        VA :start
+        VA :end
+    ENDFUNC
+    _____________________________src
+    FUNC :bla
+      BODY
+        VA :arg :i32
+        VA :start
+        VA :end
+    ENDFUNC
+    _____________________________res
+  end
 end

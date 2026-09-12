@@ -141,6 +141,8 @@ class Myc::Type
       {true, "VoidTypes are structurally equal"}
     when {IndirectType, IndirectType}
       {true, "IndirectTypes are structurally equal"}
+    when {VaListType, VaListType}
+      {true, "IndirectTypes are structurally equal"}
     else
       {false, "Incompatible type combination: #{left.class} and #{other.class}"}
     end

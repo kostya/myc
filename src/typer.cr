@@ -9,6 +9,7 @@ class Myc::Typer
   {% end %}
 
   getter indirect : Type
+  getter valist : Type
 
   def initialize
     @map = Hash(String, Type).new
@@ -52,6 +53,9 @@ class Myc::Typer
 
     @indirect = Type::IndirectType.new(std_loc, "indirect").finished!
     map["indirect"] = @indirect
+
+    @valist = Type::VaListType.new(std_loc, "valist").finished!
+    map["valist"] = @valist
 
     map.rehash
   end

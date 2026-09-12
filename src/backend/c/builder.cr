@@ -171,6 +171,7 @@ class Myc::Backend::C::Builder < Myc::Backend::AbstractBuilder
     io << "typedef unsigned long long uintptr_t;\n"
     io << "#define NULL ((void*)0)\n"
     io << "\n"
+    io << "#include <stdarg.h>\n"
 
     io << "void* memcpy(void* arg0, void* arg1, uint64_t arg2);\n"
   end

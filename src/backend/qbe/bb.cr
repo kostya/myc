@@ -708,6 +708,19 @@ class Myc::Backend::QBE::BB < Myc::Backend::AbstractBB
     wrap_ref(qbe_val(value), to_type, value.pp)
   end
 
+  def va_start(arg : Value, val : Value)
+    emit("vastart #{qbe_val(arg)}")
+  end
+
+  def va_end(arg : Value)
+  end
+
+  def va_arg(arg : Value, type : Type) : Value
+    t = new_temp
+    emit("#{t} =#{qbe_type(type)} vaarg #{qbe_val(arg)}")
+    wrap_res(t, type, arg.pp)
+  end
+
   def builder
     @builder.as(Builder)
   end

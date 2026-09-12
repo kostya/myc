@@ -208,33 +208,33 @@ class Myc::Backend::Llvm::BB < Myc::Backend::AbstractBB
     in .rotl?
       case ltype
       when Type::IntType
-        wrap_res(intrinsic_call("llvm.fshl", ltype, [lhs, lhs, rhs]), ltype, lhs.pp)
+        wrap_res(intrinsic_call("llvm.fshl.i#{ltype.bitsize}", ltype, [lhs, lhs, rhs]), ltype, lhs.pp)
       end
     in .rotr?
       case ltype
       when Type::IntType
-        wrap_res(intrinsic_call("llvm.fshr", ltype, [lhs, lhs, rhs]), ltype, lhs.pp)
+        wrap_res(intrinsic_call("llvm.fshr.i#{ltype.bitsize}", ltype, [lhs, lhs, rhs]), ltype, lhs.pp)
       end
     in .min?
       case ltype
       when Type::IntType
         prefix = ltype.as(Type::IntType).signed ? "llvm.smin" : "llvm.umin"
-        wrap_res(intrinsic_call(prefix, ltype, [lhs, rhs]), ltype, lhs.pp)
+        wrap_res(intrinsic_call(prefix + ".i#{ltype.bitsize}", ltype, [lhs, rhs]), ltype, lhs.pp)
       when Type::FloatType
-        wrap_res(intrinsic_call("llvm.minnum", ltype, [lhs, rhs]), ltype, lhs.pp)
+        wrap_res(intrinsic_call("llvm.minnum.f#{ltype.bitsize}", ltype, [lhs, rhs]), ltype, lhs.pp)
       end
     in .max?
       case ltype
       when Type::IntType
         prefix = ltype.as(Type::IntType).signed ? "llvm.smax" : "llvm.umax"
-        wrap_res(intrinsic_call(prefix, ltype, [lhs, rhs]), ltype, lhs.pp)
+        wrap_res(intrinsic_call(prefix + ".i#{ltype.bitsize}", ltype, [lhs, rhs]), ltype, lhs.pp)
       when Type::FloatType
-        wrap_res(intrinsic_call("llvm.maxnum", ltype, [lhs, rhs]), ltype, lhs.pp)
+        wrap_res(intrinsic_call("llvm.maxnum.f#{ltype.bitsize}", ltype, [lhs, rhs]), ltype, lhs.pp)
       end
     in .copysign?
       case ltype
       when Type::FloatType
-        wrap_res(intrinsic_call("llvm.copysign", ltype, [lhs, rhs]), ltype, lhs.pp)
+        wrap_res(intrinsic_call("llvm.copysign.f#{ltype.bitsize}", ltype, [lhs, rhs]), ltype, lhs.pp)
       end
     end
   end
@@ -245,69 +245,69 @@ class Myc::Backend::Llvm::BB < Myc::Backend::AbstractBB
 
     case op
     in .lnot?
-      case rhs.type
+      case t
       when Type::IntType, Type::BoolType
         is_zero = @llvm_builder.icmp(LLVM::IntPredicate::EQ, v, llvm_type(rhs.type).const_int(0))
         wrap_res(@llvm_builder.zext(is_zero, llvm_type(rhs.type)), t, rhs.pp)
       end
     in .bnot?
-      case rhs.type
+      case t
       when Type::IntType
         wrap_res(@llvm_builder.not(v), t, rhs.pp)
       end
     in .neg?
-      case rhs.type
+      case t
       when Type::IntType
         wrap_res(@llvm_builder.neg(v), t, rhs.pp)
       when Type::FloatType
         wrap_res(@llvm_builder.fneg(v), t, rhs.pp)
       end
     in .abs?
-      case rhs.type
+      case t
       when Type::IntType
-        wrap_res(intrinsic_call("llvm.abs", t, [rhs, value_false]), t, rhs.pp)
+        wrap_res(intrinsic_call("llvm.abs.i#{t.bitsize}", t, [rhs, value_false]), t, rhs.pp)
       when Type::FloatType
-        wrap_res(intrinsic_call("llvm.fabs", t, [rhs]), t, rhs.pp)
+        wrap_res(intrinsic_call("llvm.fabs.f#{t.bitsize}", t, [rhs]), t, rhs.pp)
       end
     in .ceil?
-      case rhs.type
+      case t
       when Type::FloatType
-        wrap_res(intrinsic_call("llvm.ceil", t, [rhs]), t, rhs.pp)
+        wrap_res(intrinsic_call("llvm.ceil.f#{t.bitsize}", t, [rhs]), t, rhs.pp)
       end
     in .floor?
-      case rhs.type
+      case t
       when Type::FloatType
-        wrap_res(intrinsic_call("llvm.floor", t, [rhs]), t, rhs.pp)
+        wrap_res(intrinsic_call("llvm.floor.f#{t.bitsize}", t, [rhs]), t, rhs.pp)
       end
     in .trunc?
-      case rhs.type
+      case t
       when Type::FloatType
-        wrap_res(intrinsic_call("llvm.trunc", t, [rhs]), t, rhs.pp)
+        wrap_res(intrinsic_call("llvm.trunc.f#{t.bitsize}", t, [rhs]), t, rhs.pp)
       end
     in .nearest?
-      case rhs.type
+      case t
       when Type::FloatType
-        wrap_res(intrinsic_call("llvm.nearbyint", t, [rhs]), t, rhs.pp)
+        wrap_res(intrinsic_call("llvm.nearbyint.f#{t.bitsize}", t, [rhs]), t, rhs.pp)
       end
     in .sqrt?
-      case rhs.type
+      case t
       when Type::FloatType
-        wrap_res(intrinsic_call("llvm.sqrt", t, [rhs]), t, rhs.pp)
+        wrap_res(intrinsic_call("llvm.sqrt.f#{t.bitsize}", t, [rhs]), t, rhs.pp)
       end
     in .clz?
-      case rhs.type
+      case t
       when Type::IntType
-        wrap_res(intrinsic_call("llvm.ctlz", t, [rhs, value_false]), t, rhs.pp)
+        wrap_res(intrinsic_call("llvm.ctlz.i#{t.bitsize}", t, [rhs, value_false]), t, rhs.pp)
       end
     in .ctz?
-      case rhs.type
+      case t
       when Type::IntType
-        wrap_res(intrinsic_call("llvm.cttz", t, [rhs, value_false]), t, rhs.pp)
+        wrap_res(intrinsic_call("llvm.cttz.i#{t.bitsize}", t, [rhs, value_false]), t, rhs.pp)
       end
     in .popcnt?
-      case rhs.type
+      case t
       when Type::IntType
-        wrap_res(intrinsic_call("llvm.ctpop", t, [rhs]), t, rhs.pp)
+        wrap_res(intrinsic_call("llvm.ctpop.i#{t.bitsize}", t, [rhs]), t, rhs.pp)
       end
     end
   end
@@ -473,6 +473,18 @@ class Myc::Backend::Llvm::BB < Myc::Backend::AbstractBB
     wrap_ref(llvm_val(value), to_type, value.pp)
   end
 
+  def va_start(arg : Value, val : Value)
+    intrinsic_call("llvm.va_start.p0", typer.void, [arg])
+  end
+
+  def va_end(arg : Value)
+    intrinsic_call("llvm.va_end.p0", typer.void, [arg])
+  end
+
+  def va_arg(arg : Value, type : Type) : Value
+    wrap_res(@llvm_builder.va_arg(llvm_val(arg), llvm_type(type)), type, arg.pp)
+  end
+
   private def builder
     @builder.as(Builder)
   end
@@ -513,15 +525,6 @@ class Myc::Backend::Llvm::BB < Myc::Backend::AbstractBB
 
   private def intrinsic_link(name : String, ret_type : Type, arg_types : Array(Type)) : FuncLink
     fname = name
-    case ret_type
-    when Type::IntType
-      fname += ".i#{ret_type.bytes_count * 8}"
-    when Type::FloatType
-      fname += ".f#{ret_type.bytes_count * 8}"
-    else
-      raise "unreachable"
-    end
-
     type_fn = Type::Fn.new(Location.new("", 0), arg_types, ret_type)
     builder.func_link(fname, type_fn)
   end

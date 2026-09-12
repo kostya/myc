@@ -870,11 +870,7 @@ abstract class Myc::Backend::AbstractVisitor
   def visit(op : Opcode::Unary)
     value = pop_rhs
     result = @bb.unary(op.op, value)
-
-    unless result
-      raise error("unknown unary for #{value.type}")
-    end
-
+    raise error("unknown unary for #{value.type}") unless result
     self << result
   end
 
@@ -1040,6 +1036,27 @@ abstract class Myc::Backend::AbstractVisitor
     value = pop_rhs
     @slots.last[op.name] = value
     @all_slots[op.name] = value
+  end
+
+  def visit(op : Opcode::Va)
+    arg = pop._to_ref(self)
+
+    unless arg.type.eq?(mod.typer.valist)
+      raise error("arg type should be :valist, not #{arg.type}")
+    end
+
+    arg.if_local_mark_it_as_initialized(self)
+
+    case op.op
+    when .start?
+      @bb.va_start(arg, pop_rhs)
+    when .end?
+      @bb.va_end(arg)
+    when .arg?
+      self << @bb.va_arg(arg, op.type || raise("va_arg expected type"))
+    when .copy?
+      raise error("not implemented copy")
+    end
   end
 
   def visit(op : Opcode)
