@@ -1,3 +1,5 @@
+#include <stdlib.h>
+
 int printf(const char *fmt, ...);
 
 void test_arrays() {
