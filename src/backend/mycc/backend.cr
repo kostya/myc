@@ -25,9 +25,13 @@ class Myc::Backend::Mycc::Backend < Myc::Backend::AbstractBackend
 
   def dump(mod : Mod, header_mod : Mod, output : String)
     Myc.measure("mycc:dump") do
-      saver = Mod::Saver.new(mod)
-      dom = saver.save
-      File.open(output, "w") { |f| IO.copy(dom.serialize, f) }
+      if get_backend_string?
+        myc_backend.dump(mod, header_mod, output)
+      else
+        saver = Mod::Saver.new(mod)
+        dom = saver.save
+        File.open(output, "w") { |f| IO.copy(dom.serialize, f) }
+      end
     end
   end
 
@@ -35,11 +39,7 @@ class Myc::Backend::Mycc::Backend < Myc::Backend::AbstractBackend
 
   def myc_backend : Myc::Backend::AbstractBackend
     @myc_backend ||= begin
-      name = (data.options["backend"]? || ENV["MYCC_BACKEND"]?).try(&.upcase).try(&.strip)
-      unless %w{LLVM QBE C}.includes?(name)
-        name = "LLVM"
-      end
-
+      name = get_backend_string? || "LLVM"
       puts "used #{name} backend" unless ENV["MYC_SPEC"]? == "1"
 
       backend = case name
@@ -115,5 +115,12 @@ class Myc::Backend::Mycc::Backend < Myc::Backend::AbstractBackend
 
   def shared_types
     @shared_types ||= SharedTypes.new(typer)
+  end
+
+  private def get_backend_string? : String?
+    name = (data.options["backend"]? || ENV["MYCC_BACKEND"]?).try(&.upcase).try(&.strip)
+    if %w{LLVM QBE C}.includes?(name)
+      name
+    end
   end
 end
