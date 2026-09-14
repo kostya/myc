@@ -48,7 +48,8 @@ class Myc::Backend::Llvm::TypeTranslator
   end
 
   private def do_translate(type : Type::VaListType)
-    @context.pointer
+    @context.struct([@context.int64, @context.int64,
+                     @context.int64, @context.int64], type.id_name)
   end
 
   private def do_translate(type : Type::StructType)

@@ -474,14 +474,17 @@ class Myc::Backend::Llvm::BB < Myc::Backend::AbstractBB
   end
 
   def va_start(arg : Value, val : Value)
+    arg = wrap_val(llvm_val(arg), arg.type.to_unsafe_ptr, arg.pp)
     intrinsic_call("llvm.va_start.p0", typer.void, [arg])
   end
 
   def va_end(arg : Value)
+    arg = wrap_val(llvm_val(arg), arg.type.to_unsafe_ptr, arg.pp)
     intrinsic_call("llvm.va_end.p0", typer.void, [arg])
   end
 
   def va_arg(arg : Value, type : Type) : Value
+    arg = wrap_val(llvm_val(arg), arg.type.to_unsafe_ptr, arg.pp)
     wrap_res(@llvm_builder.va_arg(llvm_val(arg), llvm_type(type)), type, arg.pp)
   end
 

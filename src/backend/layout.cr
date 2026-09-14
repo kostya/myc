@@ -22,7 +22,7 @@ class Myc::Backend::Layout
     when Type::BoolType        then 1_u64
     when Type::VoidType        then 0_u64
     when Type::IndirectType    then @target.pointer_size
-    when Type::VaListType      then @target.pointer_size
+    when Type::VaListType      then @target.pointer_size * 4
     when Type::StructType      then compute_struct_size(type)
     when Type::FlatType        then type.elements_count * size_of(type.target_type)
     when Type::EnumType        then compute_enum_size(type)

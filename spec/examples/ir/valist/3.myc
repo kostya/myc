@@ -5,6 +5,9 @@ FUNC :add
   RETURN
     TYPE :i32
   BODY
+    PARAM 1
+    LOCAL :list :valist
+    STORE
     PUSH 0
     LOCAL :sum :i32
     STORE
@@ -17,7 +20,7 @@ FUNC :add
         LOCAL :__s0_i
         BINARY :less
       BODY
-        PARAM 1
+        LOCAL :list
         VA :arg :i32
         LOCAL :sum
         BINARY :add
@@ -45,12 +48,10 @@ FUNC :sum
     PARAM 0
     LOCAL :__s0_ap :valist
     VA :start
-
     LOCAL :__s0_ap
     PARAM 0
-    CALL :add 
+    CALL :add
     SLOT :res
-
     LOCAL :__s0_ap
     VA :end
     SLOT :res
@@ -70,3 +71,4 @@ FUNC :main
     PUSH 0
     RET
 ENDFUNC
+

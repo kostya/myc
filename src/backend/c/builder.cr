@@ -4,6 +4,8 @@ class Myc::Backend::C::Builder < Myc::Backend::AbstractBuilder
 
   getter func_links : Hash(String, Type::Fn)
   getter global_links : Hash(String, Value)
+  property use_valist_feature = false
+  property use_memcpy_feature = false
 
   def initialize(@backend, @layout)
     super(@backend, @layout)
@@ -158,22 +160,11 @@ class Myc::Backend::C::Builder < Myc::Backend::AbstractBuilder
   end
 
   private def add_shared_header(io)
-    io << "typedef unsigned char uint8_t;\n"
-    io << "typedef unsigned short uint16_t;\n"
-    io << "typedef unsigned int uint32_t;\n"
-    io << "typedef unsigned long long uint64_t;\n"
-    io << "typedef signed char int8_t;\n"
-    io << "typedef signed short int16_t;\n"
-    io << "typedef signed int int32_t;\n"
-    io << "typedef signed long long int64_t;\n"
-    io << "typedef unsigned long long size_t;\n"
-    io << "typedef long long intptr_t;\n"
-    io << "typedef unsigned long long uintptr_t;\n"
+    io << "#include \"stdint.h\"\n"
     io << "#define NULL ((void*)0)\n"
+    io << "#include <stdarg.h>\n" if use_valist_feature
+    io << "void* memcpy(void* arg0, void* arg1, uint64_t arg2);\n" if use_memcpy_feature
     io << "\n"
-    io << "#include <stdarg.h>\n"
-
-    io << "void* memcpy(void* arg0, void* arg1, uint64_t arg2);\n"
   end
 
   def new_func(func_def : Mod::FuncDef, header_mod : Mod) : AbstractFunc

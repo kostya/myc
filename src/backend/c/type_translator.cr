@@ -50,6 +50,7 @@ struct Myc::Backend::C::TypeTranslator
   end
 
   private def do_translate(type : Type::VaListType)
+    @builder.use_valist_feature = true
     "va_list"
   end
 

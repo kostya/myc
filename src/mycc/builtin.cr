@@ -111,6 +111,10 @@ class Myc::Mycc::CodeGenerator
       generate_expr(args[1])
       generate_expr(args[0])
       emit("VA :start")
+    when "__builtin_va_copy"
+      generate_expr(args[1])
+      generate_expr(args[0])
+      emit("STORE")
     else
       return false
     end

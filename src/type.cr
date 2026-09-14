@@ -23,8 +23,8 @@ abstract class Myc::Type
 
   def needs_blit? : Bool
     case self
-    when StructType, FlatType, EnumType, EnumVariantType then true
-    else                                                      false
+    when StructType, FlatType, EnumType, EnumVariantType, VaListType then true
+    else                                                                  false
     end
   end
 
@@ -42,6 +42,10 @@ abstract class Myc::Type
 
   def finished!
     self
+  end
+
+  def to_unsafe_ptr
+    Type::PtrType.new(@loc, "ptr<#{self.id_name}>", self)
   end
 end
 

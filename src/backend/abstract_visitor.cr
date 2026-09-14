@@ -320,6 +320,9 @@ abstract class Myc::Backend::AbstractVisitor
     when Type::IndirectType
       body << push("indirect")
       body << Opcode::Printf.new(0)
+    when Type::VaListType
+      body << push("valist")
+      body << Opcode::Printf.new(0)
     when Type::StructType
       body << push("#{type.id_name}(")
       body << Opcode::Printf.new(0)
@@ -600,16 +603,7 @@ abstract class Myc::Backend::AbstractVisitor
 
     if type_fn.vaarg
       op.vaargs_count.times do
-        case t = last.type
-        when Type::IntType
-          if t.bytes_count < 4
-            visit Opcode::To.new(mod.typer.i32)
-          end
-        when Type::FloatType
-          if t.bytes_count == 4
-            visit Opcode::To.new(mod.typer.f64)
-          end
-        end
+        last_va_extend
         args << pop_rhs
       end
     else
@@ -648,12 +642,7 @@ abstract class Myc::Backend::AbstractVisitor
 
     if type_fn.vaarg
       op.vaargs_count.times do
-        case t = last.type
-        when Type::FloatType
-          if t.bytes_count == 4
-            visit Opcode::To.new(mod.typer.f64)
-          end
-        end
+        last_va_extend
         args << pop_rhs
       end
     else
@@ -670,6 +659,24 @@ abstract class Myc::Backend::AbstractVisitor
     else
       if value = @bb.invoke(fn_ptr, type_fn, args)
         self << value
+      end
+    end
+  end
+
+  private def last_va_extend
+    slot_size = builder.layout.target.pointer_size
+    case t = last.type
+    when Type::IntType
+      if t.bytes_count < slot_size
+        target = slot_size == 8 ? mod.typer.i64 : mod.typer.i32
+        visit Opcode::To.new(target)
+      end
+    when Type::BoolType
+      target = slot_size == 8 ? mod.typer.i64 : mod.typer.i32
+      visit Opcode::As.new(target)
+    when Type::FloatType
+      if t.bytes_count == 4
+        visit Opcode::To.new(mod.typer.f64)
       end
     end
   end
@@ -1055,6 +1062,7 @@ abstract class Myc::Backend::AbstractVisitor
     when .arg?
       self << @bb.va_arg(arg, op.type || raise("va_arg expected type"))
     when .copy?
+      from = pop_rhs
       raise error("not implemented copy")
     end
   end

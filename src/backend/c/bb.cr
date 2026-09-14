@@ -18,7 +18,13 @@ class Myc::Backend::C::BB < Myc::Backend::AbstractBB
   end
 
   def load_ref(value : Value) : Value
-    wrap_val(c_val(value), value.type, value.pp)
+    if value.type.is_a?(Type::FlatType)
+      wrap_val(c_val(value), value.type, value.pp)
+    else
+      temp = builder.new_temp
+      emit "#{c_type(value.type)} #{temp} = #{c_val(value)};"
+      wrap_val(temp, value.type, value.pp)
+    end
   end
 
   def jmp(other : AbstractBB)
@@ -93,14 +99,16 @@ class Myc::Backend::C::BB < Myc::Backend::AbstractBB
   end
 
   def store(lhs : Value, rhs : Value)
-    if lhs.type.needs_blit?
-      src_val = if rhs.mm.val? && rhs.type.is_a?(Type::FlatType)
+    if lhs.type.is_a?(Type::VaListType)
+      emit("va_copy(#{c_val(lhs)}, #{c_val(rhs)});")
+    elsif lhs.type.needs_blit?
+      src_val = if rhs.mm.val? && (rhs.type.is_a?(Type::FlatType))
                   c_val(rhs)
                 else
                   "&(#{c_val(rhs)})"
                 end
       size = builder.layout.size_of(lhs.type)
-
+      builder.use_memcpy_feature = true
       emit "memcpy(&#{c_val(lhs)}, #{src_val}, #{size});"
     else
       emit "#{c_val(lhs)} = #{c_val(rhs)};"

@@ -179,9 +179,11 @@ class Myc::Mycc::ASTBuilder
         if arg_type.is_a?(Type::FlatType)
           arg_type = typer.to_ptr(arg_type.target_type, location(cursor))
         end
-        @current_function_params[param_name] = TypedAST::Function::ParamInfo.new(
-          param_name, arg_type, @current_function_params.size
-        )
+        param = TypedAST::Function::ParamInfo.new(param_name, arg_type, @current_function_params.size)
+        if arg_type.eq?(typer.valist)
+          param.changed = true
+        end
+        @current_function_params[param_name] = param
       end
     end
 
@@ -458,12 +460,27 @@ class Myc::Mycc::ASTBuilder
       end
 
       children = children(cursor)
+      target_type = nil
+      if children.size == 2
+        child = children[0]
+        if child.kind.type_ref?
+          children.shift
+          target_type ||= get_type(child, child.type)
+        end
+      end
+
       if children.size == 1
         child = children[0]
-        if child.kind.decl_ref_expr?
-          type = get_type(child, child.type)
-          if type.eq?(typer.valist)
-            return TypedAST::UnaryOp.new(:vaarg, build_node(child), get_type(cursor, cursor.type), location(cursor))
+        child2 = if child.kind.first_expr?
+                   child.children[0]
+                 else
+                   child
+                 end
+        type = get_type(child2, child2.type)
+        if type.eq?(typer.valist)
+          target_type ||= get_type(cursor, cursor.type)
+          if !target_type.eq?(type)
+            return TypedAST::UnaryOp.new(:vaarg, build_node(child2), target_type, location(cursor))
           end
         end
 
@@ -1759,9 +1776,15 @@ class Myc::Mycc::ASTBuilder
   private def get_type(cursor : Clang::Cursor, type : Clang::Type, count = 0) : Type
     count += 1
 
-    if type.kind.typedef?
+    case type.kind
+    when .typedef?, .elaborated?
       case type.spelling
       when "va_list", "__builtin_va_list", "__gnuc_va_list"
+        return typer.valist
+      end
+    when .pointer?
+      case type.spelling
+      when "struct __va_list_tag *"
         return typer.valist
       end
     end
@@ -1849,7 +1872,7 @@ class Myc::Mycc::ASTBuilder
       get_type(cursor, canonical.named_type, count)
     when .function_proto?
       ret = get_type(cursor, canonical.result_type, count)
-      arg_types = canonical.arguments.map { |t| get_type(cursor, t, count) }
+      arg_types = type.arguments.map { |t| get_type(cursor, t, count) }
       vaarg = canonical.variadic?
 
       type_fn = Type::Fn.new(location(cursor), arg_types, ret, vaarg: vaarg)

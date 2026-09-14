@@ -17,8 +17,6 @@ int sum(int n, ...) {
   return s;
 }
 
-va_list identity_va(va_list ap) { return ap; }
-
 int head(va_list ap) { return va_arg(ap, int); }
 
 int tail_sum(int n, va_list ap) {

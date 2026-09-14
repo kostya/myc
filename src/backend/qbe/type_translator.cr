@@ -44,7 +44,8 @@ class Myc::Backend::QBE::TypeTranslator
   end
 
   private def do_translate(type : Type::VaListType)
-    "l"
+    @builder.emit_type("type :valist = align 8 { 32 }\n")
+    ":valist"
   end
 
   private def do_translate(type : Type::StructType)

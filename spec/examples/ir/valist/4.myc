@@ -1,3 +1,40 @@
+FUNC :add
+  ARGS
+    TYPE :i32
+    TYPE :ptr<valist>
+  RETURN
+    TYPE :i32
+  BODY
+    PUSH 0
+    LOCAL :sum :i32
+    STORE
+    PUSH 0
+    LOCAL :__s0_i :i32
+    STORE
+    LOOP
+      COND
+        PARAM 0
+        LOCAL :__s0_i
+        BINARY :less
+      BODY
+        PARAM 1
+        DEREF
+        VA :arg :i32
+        LOCAL :sum
+        BINARY :add
+        LOCAL :sum
+        STORE
+      STEP
+        PUSH 1 :i32
+        LOCAL :__s0_i
+        BINARY :add
+        LOCAL :__s0_i
+        STORE
+    ENDLOOP
+    LOCAL :sum
+    RET
+ENDFUNC
+
 FUNC :sum
   ARGS
     TYPE :i32
@@ -9,34 +46,14 @@ FUNC :sum
     PARAM 0
     LOCAL :__s0_ap :valist
     VA :start
-    PUSH 0
-    LOCAL :__s0_s :i32
-    STORE
-    PUSH 0
-    LOCAL :__s0_i :i32
-    STORE
-    LOOP
-      COND
-        PARAM 0
-        LOCAL :__s0_i
-        BINARY :less
-      BODY
-        LOCAL :__s0_ap
-        VA :arg :i32
-        LOCAL :__s0_s
-        BINARY :add
-        LOCAL :__s0_s
-        STORE
-      STEP
-        PUSH 1 :i32
-        LOCAL :__s0_i
-        BINARY :add
-        LOCAL :__s0_i
-        STORE
-    ENDLOOP
+    LOCAL :__s0_ap
+    ADDR
+    PARAM 0
+    CALL :add
+    SLOT :res
     LOCAL :__s0_ap
     VA :end
-    LOCAL :__s0_s
+    SLOT :res
     RET
 ENDFUNC
 
