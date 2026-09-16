@@ -1055,15 +1055,12 @@ abstract class Myc::Backend::AbstractVisitor
     arg.if_local_mark_it_as_initialized(self)
 
     case op.op
-    when .start?
+    in .start?
       @bb.va_start(arg, pop_rhs)
-    when .end?
+    in .end?
       @bb.va_end(arg)
-    when .arg?
+    in .arg?
       self << @bb.va_arg(arg, op.type || raise("va_arg expected type"))
-    when .copy?
-      from = pop_rhs
-      raise error("not implemented copy")
     end
   end
 
