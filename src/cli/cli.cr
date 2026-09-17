@@ -110,9 +110,11 @@ class Myc::Cli
     end
   end
 
+  # --llvm-bitcode-obj takes no value. Without it here, the CLI reads
+  # the next argument (the output path) as its value.
   private def option_require_argument?(arg : String)
     case arg
-    when "final", "debug"
+    when "final", "debug", "llvm-bitcode-obj"
       false
     else
       true
@@ -190,6 +192,9 @@ Commands:
 OPTIONS:
   --final ; Slow compilation, for final build only.
   --debug ; To disable inliner
+  --llvm-bitcode-obj ; Write LLVM bitcode in place of a native object,
+                     ; for link-time optimization. Use with --final, or
+                     ; functions stay noinline.
   --target=TARGET   (TARGET: arm64, x86_64, x86, ...; default: native)
 USAGE
   end
