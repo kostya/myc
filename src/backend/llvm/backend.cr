@@ -17,9 +17,8 @@ class Myc::Backend::Llvm::Backend < Myc::Backend::AbstractBackend
 
     Myc.measure("backend:llvmobj") do
       if data.options["llvm-bitcode-obj"]?
-        # LLVMWriteBitcodeToFile returns 0 on success
         unless b.llvm_mod.write_bitcode_to_file(output) == 0
-          raise "WriteBitcode failed for #{output}"
+          raise data.error("WriteBitcode failed for #{output}")
         end
       else
         b.generate_obj(output)
@@ -41,7 +40,6 @@ class Myc::Backend::Llvm::Backend < Myc::Backend::AbstractBackend
 
       Myc.measure("backend:llvmopt") do
         mode = if common_options.final
-                 # with bitcode the linker runs the rest of the pipeline
                  data.options["llvm-bitcode-obj"]? ? "lto-pre-link<O3>" : "default<O3>"
                elsif common_options.debug
                  "default<O0>"
