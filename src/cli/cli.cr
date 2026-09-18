@@ -110,12 +110,12 @@ class Myc::Cli
     end
   end
 
-  private def option_require_argument?(arg : String)
+  private def option_require_argument?(arg : String) : Bool
     case arg
-    when "final", "debug"
-      false
-    else
+    when "target", "header", "backend"
       true
+    else
+      false
     end
   end
 

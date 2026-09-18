@@ -16,7 +16,13 @@ class Myc::Backend::Llvm::Backend < Myc::Backend::AbstractBackend
     b = build(mod, header_mod)
 
     Myc.measure("backend:llvmobj") do
-      b.generate_obj(output)
+      if data.options["llvm-bitcode-obj"]?
+        unless b.llvm_mod.write_bitcode_to_file(output) == 0
+          raise data.error("WriteBitcode failed for #{output}")
+        end
+      else
+        b.generate_obj(output)
+      end
     end
   end
 
@@ -34,7 +40,7 @@ class Myc::Backend::Llvm::Backend < Myc::Backend::AbstractBackend
 
       Myc.measure("backend:llvmopt") do
         mode = if common_options.final
-                 "default<O3>"
+                 data.options["llvm-bitcode-obj"]? ? "lto-pre-link<O3>" : "default<O3>"
                elsif common_options.debug
                  "default<O0>"
                else
