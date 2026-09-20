@@ -86,6 +86,10 @@ class Myc::Backend::Mycc::Backend < Myc::Backend::AbstractBackend
       p ast
     end
 
+    Myc.measure("mycc:finalize_enums") do
+      builder.mod.finalize_enums(new_layout)
+    end
+
     io, io2 = Myc.measure("mycc:codegen") do
       c = ::Myc::Mycc::CodeGenerator.new(builder.mod.typer, builder)
       c.generate(ast)

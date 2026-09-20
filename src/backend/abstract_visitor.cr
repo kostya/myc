@@ -965,7 +965,11 @@ abstract class Myc::Backend::AbstractVisitor
         local.pp = Value::PP::Local.new(local_name)
       end
     when Type::EnumType
-      raise error("Cant create enum directly, just create variant and cast with AS")
+      raise error("Cant create enum directly, just create variant and cast with AS") if type.index_type
+      t = type.data.find { |_, vt| vt.position == 0 }.try(&.[1])
+      raise error("Cant create enum directly, just create variant and cast with AS") unless t
+      visit Opcode::Create.new(t)
+      visit Opcode::As.new(type)
     when Type::EnumVariantType
       local_name = next_unique("__myc_create_enum")
 

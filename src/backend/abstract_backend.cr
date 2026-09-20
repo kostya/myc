@@ -83,6 +83,18 @@ abstract class Myc::Backend::AbstractBackend
       end
     end
 
+    Myc.measure("load:load_mods") do
+      parsed.each do |mod, dom|
+        loader = Mod::Loader.new(dom, mod.filename, typer, mod)
+        loader.load
+      end
+    end
+
+    Myc.measure("load:finalize_enums") do
+      layout = new_layout
+      parsed.each { |mod, _| mod.finalize_enums(layout) }
+    end
+
     Myc.measure("load:check_types") do
       collector.duplicates.each do |(name, dup_mod, dup_type)|
         first_type = @typer.map[name]
@@ -92,13 +104,6 @@ abstract class Myc::Backend::AbstractBackend
           td = dup_mod.type_defs[name]
           td.type = first_type
         end
-      end
-    end
-
-    Myc.measure("load:load_mods") do
-      parsed.each do |mod, dom|
-        loader = Mod::Loader.new(dom, mod.filename, typer, mod)
-        loader.load
       end
     end
 
@@ -313,9 +318,6 @@ abstract class Myc::Backend::AbstractBackend
 
   protected def build_mod(mod : Mod, header_mod : Mod, builder : AbstractBuilder) : AbstractBuilder
     Myc.measure("mod:build") do
-      mod.finalize_enums(builder.layout)
-      header_mod.finalize_enums(builder.layout) if header_mod != mod
-
       mod.func_defs.each do |name, func_def|
         builder.func_register(name, func_def)
       end
@@ -437,6 +439,10 @@ abstract class Myc::Backend::AbstractBackend
              Target::Arch::Unknown
            {% end %}
     Target.new(arch)
+  end
+
+  protected def new_layout : Layout
+    Layout.new(common_options.target || detect_native_target)
   end
 
   def debug_flags : String

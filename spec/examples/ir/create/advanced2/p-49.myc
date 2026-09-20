@@ -1,0 +1,21 @@
+ENUM :Data
+  TAG
+    SKIP
+  VARIANT :A
+    TYPE :i32
+    TYPE :f64
+  VARIANT :B
+    TYPE :u32
+ENDENUM
+
+GLOBAL :x
+  TYPE :Data
+  INITIAL 99 1.5
+ENDGLOBAL
+
+FUNC :main
+  BODY
+    GLOBAL :x
+    AS :Data::A
+    INSPECT
+ENDFUNC

@@ -1,0 +1,14 @@
+ENUM :Data
+  VARIANT :A
+    TYPE :i32
+  VARIANT :B
+    TYPE :u32
+ENDENUM
+
+FUNC :main
+  BODY
+    PUSH 99
+    CREATE :Data
+    INSPECT
+ENDFUNC
+

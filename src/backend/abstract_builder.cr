@@ -99,7 +99,13 @@ abstract class Myc::Backend::AbstractBuilder
             return InitValue::F64.new(type, value.val.to_f64)
           end
         end
-      when Type::EnumType, Type::EnumVariantType, Type::VoidType
+      when Type::EnumType
+        raise error("cant create primitive_value for #{type}") if type.index_type
+        t = type.data.find { |_, vt| vt.position == 0 }.try(&.[1]).try &.composite_value_type
+        raise error("cant create primitive_value for #{type}") unless t
+        res = _parse(t)
+        return res
+      when Type::EnumVariantType, Type::VoidType
         raise error("cant create primitive_value for #{type}")
       when Type::Fn
         value = @values[@pos]

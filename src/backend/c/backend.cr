@@ -8,8 +8,7 @@ class Myc::Backend::C::Backend < Myc::Backend::AbstractBackend
   end
 
   def new_builder : AbstractBuilder
-    layout = Layout.new(common_options.target || detect_native_target)
-    Builder.new(self, layout)
+    Builder.new(self, new_layout)
   end
 
   def obj(mod : Mod, header_mod : Mod, output : String)
