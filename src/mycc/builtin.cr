@@ -32,6 +32,7 @@ class Myc::Mycc::CodeGenerator
       generate_expr(args[0])
       emit("STACK :dup")
       emit("BINARY :not_eq")
+      emit("AS :i32")
     when "__builtin_isinf_sign"
       case type = args[0].type
       when Type::FloatType
@@ -98,6 +99,36 @@ class Myc::Mycc::CodeGenerator
           end
           generate_expr(args[0])
           emit("CALL :__myc_builtin_signbit_32")
+        else
+          raise error("unexpected type", args[0])
+        end
+      else
+        raise error("unexpected type", args[0])
+      end
+    when "__builtin_isinf", "__builtin_isinff", "__builtin_isinfl"
+      case type = args[0].type
+      when Type::FloatType
+        case type.bytes_count
+        when 8
+          unless @generated_isinf_sign_64
+            @generated_isinf_sign_64 = true
+            isinf_sign(64)
+          end
+          generate_expr(args[0])
+          emit("CALL :__myc_builtin_isinf_sign_64")
+          emit("PUSH 0")
+          emit("BINARY :not_eq")
+          emit("AS :i32")
+        when 4
+          unless @generated_isinf_sign_32
+            @generated_isinf_sign_32 = true
+            isinf_sign(32)
+          end
+          generate_expr(args[0])
+          emit("CALL :__myc_builtin_isinf_sign_32")
+          emit("PUSH 0")
+          emit("BINARY :not_eq")
+          emit("AS :i32")
         else
           raise error("unexpected type", args[0])
         end
