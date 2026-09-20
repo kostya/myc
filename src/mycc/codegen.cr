@@ -816,6 +816,16 @@ class Myc::Mycc::CodeGenerator
   def generate_expr(expr : TypedAST::ZeroInitializer)
   end
 
+  def generate_expr(expr : TypedAST::StmtExpr)
+    push_scope
+    expr.body.each { |s| generate_stmt(s) }
+
+    if result = expr.result
+      generate_expr(result)
+    end
+    pop_scope
+  end
+
   private def returns_void?(call : TypedAST::Call) : Bool
     call.type.id_name == "void"
   end

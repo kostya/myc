@@ -251,6 +251,28 @@ module Myc::Mycc::TypedAST
     end
   end
 
+  class StmtExpr < Node
+    getter body : Array(Stmt)
+    getter result : Node?
+
+    def initialize(@body, @result, @type, @location)
+    end
+
+    private def inspect_fields(io : IO)
+      io << "body("
+      body.each_with_index do |el, index|
+        io << ", " if index != 0
+        el.inspect(io)
+      end
+      io << ")"
+      if r = result
+        io << ", result("
+        r.inspect(io)
+        io << ")"
+      end
+    end
+  end
+
   abstract class Stmt
     getter location : Location
 

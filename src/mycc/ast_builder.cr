@@ -405,7 +405,7 @@ class Myc::Mycc::ASTBuilder
     end
   end
 
-  private def build_node(cursor : Clang::Cursor) : TypedAST::Node
+  private def build_node?(cursor : Clang::Cursor) : TypedAST::Node?
     case cursor.kind
     when .integer_literal?      then build_int_literal(cursor)
     when .floating_literal?     then build_float_literal(cursor)
@@ -472,9 +472,34 @@ class Myc::Mycc::ASTBuilder
 
       value = TypedAST::BinaryOp.new(bin_op, left.dup, right, left.type, location(cursor))
       TypedAST::AssignExpr.new(left, value, location(cursor))
+    when .stmt_expr?
+      children_list = children(cursor)
+      if children_list.size > 0
+        compound = children_list[0]
+        stmts = [] of TypedAST::Stmt
+        last_expr = nil
+
+        children(compound).each_with_index do |c, i|
+          is_last = (i == children(compound).size - 1)
+          if is_last && (n = build_node?(c))
+            last_expr = n
+          else
+            build_stmt(c, stmts)
+          end
+        end
+
+        result_type = last_expr.try(&.type) || typer.void
+        TypedAST::StmtExpr.new(stmts, last_expr, result_type, location(cursor))
+      else
+        return nil
+      end
     else
-      raise error("Unknown node #{cursor.kind}", cursor)
+      return nil
     end
+  end
+
+  private def build_node(cursor : Clang::Cursor) : TypedAST::Node
+    build_node?(cursor) || raise error("Unknown node #{cursor.kind}", cursor)
   end
 
   private def build_stmt(cursor : Clang::Cursor, body : Array(TypedAST::Stmt))
@@ -613,6 +638,9 @@ class Myc::Mycc::ASTBuilder
       children(cursor).each { |child| build_stmt(child, body) }
     when .var_decl?
       body << build_var_decl(cursor)
+    when .stmt_expr?
+      expr = build_node(cursor)
+      body << TypedAST::ExprStmt.new(expr, location(cursor))
     when .label_ref?
     else
       raise error("Unhandled stmt #{cursor.kind}", cursor)
@@ -1182,6 +1210,13 @@ class Myc::Mycc::ASTBuilder
 
       op_type = is_statement ? typer.void : operand.type
       TypedAST::UnaryOp.new(op_sym, operand, op_type, loc, is_statement)
+    when "__extension__"
+      children_list = children(cursor)
+      if children_list.size > 0
+        return build_node(children_list[0])
+      else
+        raise error("__extension__ without operand", cursor)
+      end
     else
       raise error("Unknown unary operator: #{op}", cursor)
     end
@@ -1201,8 +1236,10 @@ class Myc::Mycc::ASTBuilder
     when LibC::CXUnaryOperatorKind::PostDec then "--"
     when LibC::CXUnaryOperatorKind::PreInc  then "++"
     when LibC::CXUnaryOperatorKind::PreDec  then "--"
+    when LibC::CXUnaryOperatorKind::Extension
+      "__extension__"
     else
-      raise error("unknown unary_op", cursor)
+      raise error("unknown unary_op #{cursor.unary_operator_kind}", cursor)
     end
   end
 
