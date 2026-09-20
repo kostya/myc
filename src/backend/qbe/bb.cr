@@ -474,7 +474,7 @@ class Myc::Backend::QBE::BB < Myc::Backend::AbstractBB
       if to_size == from_size
         wrap_res(val, to_type, value.pp)
       elsif to_size > from_size
-        if from_type.signed && to_type.signed
+        if from_type.signed
           ext = case from_size
                 when 4 then "extsw"
                 when 2 then "extsh"
@@ -482,6 +482,12 @@ class Myc::Backend::QBE::BB < Myc::Backend::AbstractBB
                 end
           to_qbe_type = from_size == 4 ? "l" : "w"
           emit "#{t} =#{to_qbe_type} #{ext} #{val}"
+
+          if to_size == 8 && from_size != 4
+            t2 = new_temp
+            emit "#{t2} =l extsw #{t}"
+            t = t2
+          end
         else
           ext = case from_size
                 when 4 then "extuw"
@@ -585,6 +591,12 @@ class Myc::Backend::QBE::BB < Myc::Backend::AbstractBB
                 else        "extsb"
                 end
           emit "#{t} =#{to_qbe} #{ext} #{val}"
+
+          if to_size == 8 && from_size != 4
+            t2 = new_temp
+            emit "#{t2} =l extsw #{t}"
+            t = t2
+          end
         else
           ext = case from_size
                 when 4 then "extuw"
@@ -592,6 +604,12 @@ class Myc::Backend::QBE::BB < Myc::Backend::AbstractBB
                 else        "extub"
                 end
           emit "#{t} =#{to_qbe} #{ext} #{val}"
+
+          if to_size == 8 && from_size != 4
+            t2 = new_temp
+            emit "#{t2} =l extuw #{t}"
+            t = t2
+          end
         end
         wrap_res(t, to_type, value.pp)
       elsif to_size == from_size && from_type.signed == to_type.signed

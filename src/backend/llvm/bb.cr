@@ -327,7 +327,7 @@ class Myc::Backend::Llvm::BB < Myc::Backend::AbstractBB
       val = if to_size == from_size
               v
             elsif to_size > from_size
-              if from_type.signed && to_type.signed
+              if from_type.signed
                 @llvm_builder.sext(v, tt)
               else
                 @llvm_builder.zext(v, tt)
