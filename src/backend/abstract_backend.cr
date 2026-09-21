@@ -114,7 +114,7 @@ abstract class Myc::Backend::AbstractBackend
     parsed.map(&.first)
   end
 
-  protected def load_all(files : Array(String)) : Tuple(Array(Mod), Mod)
+  protected def load_all(files : Array(String), force_build_header = false) : Tuple(Array(Mod), Mod)
     myc_files = resolve_inputs(files)
     parsed = parse_files(myc_files)
     mods = run_phases(parsed)
@@ -125,7 +125,7 @@ abstract class Myc::Backend::AbstractBackend
                    mods1 = run_phases(parsed1)
                    mods1[0]
                  else
-                   build_header_module(mods)
+                   build_header_module(mods, force_build_header)
                  end
 
     Myc.measure("load:check_func_recursion") do
@@ -285,7 +285,7 @@ abstract class Myc::Backend::AbstractBackend
   end
 
   protected def _header
-    _, header = load_all(data.values)
+    _, header = load_all(data.values, force_build_header: true)
     IO.copy(Mod::Saver.new(header).save.serialize, STDOUT)
   end
 
@@ -481,9 +481,9 @@ abstract class Myc::Backend::AbstractBackend
     end
   end
 
-  private def build_header_module(mods : Array(Mod)) : Mod
+  private def build_header_module(mods : Array(Mod), force_build_header = false) : Mod
     raise data.error("no targets in build_header_module") if mods.size == 0
-    return mods[0] if mods.size == 1
+    return mods[0] if mods.size == 1 && !force_build_header
 
     Myc.measure("mod:header") do
       header = Mod.new("__header__", "/tmp/__header__", typer)
