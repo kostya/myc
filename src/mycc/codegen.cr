@@ -769,8 +769,30 @@ class Myc::Mycc::CodeGenerator
   end
 
   def generate_expr(expr : TypedAST::InitList)
-    expr.elements.reverse.each { |e| generate_expr(e) }
-    emit("CREATE #{type_s(expr.type)}")
+    case expr_type = expr.type
+    when Type::EnumType
+      if expr.elements.empty?
+        emit("PUSH 0")
+        emit("CREATE #{type_s(expr_type)}")
+      else
+        payload = expr.elements[0]
+        variant_type = expr_type.data.values.find do |v|
+          v.value_types.first?.try(&.eq?(payload.type))
+        end
+
+        expr.elements.reverse.each { |e| generate_expr(e) }
+
+        if variant_type
+          emit("CREATE #{type_s(variant_type)}")
+          emit("AS #{type_s(expr_type)}")
+        else
+          emit("CREATE #{type_s(expr_type)}")
+        end
+      end
+    else
+      expr.elements.reverse.each { |e| generate_expr(e) }
+      emit("CREATE #{type_s(expr.type)}")
+    end
   end
 
   def generate_expr(expr : TypedAST::Conditional)

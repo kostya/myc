@@ -110,6 +110,24 @@ class Myc::Mycc::ASTBuilder
     return node if node.type.eq?(target_type)
     from = node.type
 
+    if node.is_a?(TypedAST::StringLiteral) && target_type.is_a?(Type::FlatType) && target_type.target_type.eq?(typer.u8)
+      flat_type = target_type.as(Type::FlatType)
+      total = flat_type.elements_count.to_i
+      bytes = node.value.bytes
+
+      elements = [] of TypedAST::Node
+      bytes.each do |byte|
+        break if elements.size >= total
+        elements << TypedAST::IntLiteral.new(byte.to_i64, typer.u8, loc)
+      end
+
+      (elements.size...total).each do |_|
+        elements << TypedAST::IntLiteral.new(0_i64, typer.u8, loc)
+      end
+
+      return TypedAST::InitList.new(elements, flat_type, loc)
+    end
+
     if (from.is_a?(Type::IntType) || from.is_a?(Type::FloatType) || from.is_a?(Type::PtrType)) &&
        target_type.is_a?(Type::BoolType)
       zero = from.is_a?(Type::FloatType) ? TypedAST::FloatLiteral.new(0.0, from, loc) : TypedAST::IntLiteral.new(0_i64, from, loc)
@@ -479,8 +497,9 @@ class Myc::Mycc::ASTBuilder
         stmts = [] of TypedAST::Stmt
         last_expr = nil
 
-        children(compound).each_with_index do |c, i|
-          is_last = (i == children(compound).size - 1)
+        children_list2 = children(compound)
+        children_list2.each_with_index do |c, i|
+          is_last = (i == children_list2.size - 1)
           if is_last && (n = build_node?(c))
             last_expr = n
           else
@@ -703,14 +722,28 @@ class Myc::Mycc::ASTBuilder
                child.kind.struct_decl? || child.kind.union_decl? ||
                child.kind.enum_decl? || child.kind.visibility_attr? ||
                child.kind.asm_label_attr?
-          node = build_node(child)
-          init = node
+          if child.kind.init_list_expr?
+            init = build_init_list(child, var_type)
+            break
+          else
+            node = build_node(child)
+            init = node
+          end
         end
       end
 
       if init
         if init.is_a?(TypedAST::InitList) && init.elements.size > 0
-          all_zeros = init.elements.all? { |elem| elem.is_a?(TypedAST::IntLiteral) && elem.value == 0 }
+          all_zeros = init.elements.all? do |elem|
+            case elem
+            when TypedAST::IntLiteral
+              elem.value == 0
+            when TypedAST::Cast
+              elem.operand.is_a?(TypedAST::IntLiteral) && elem.operand.as(TypedAST::IntLiteral).value == 0
+            else
+              false
+            end
+          end
           if all_zeros
             init = TypedAST::ZeroInitializer.new(var_type, location(cursor))
           end
@@ -728,8 +761,12 @@ class Myc::Mycc::ASTBuilder
             init = auto_cast(init, var_type, location(cursor)) if init.type != var_type
           end
         elsif init.is_a?(TypedAST::InitList)
-          init = resolve_init_list_types(init, var_type)
-          init = auto_cast(init, var_type, location(cursor)) if init.type != var_type
+          if init.elements.empty? && var_type.is_a?(Type::EnumType)
+            init = TypedAST::ZeroInitializer.new(var_type, location(cursor))
+          else
+            init = resolve_init_list_types(init, var_type)
+            init = auto_cast(init, var_type, location(cursor)) if init.type != var_type
+          end
         elsif init.is_a?(TypedAST::ZeroInitializer)
         else
           init = auto_cast(init, var_type, location(cursor))
@@ -804,9 +841,8 @@ class Myc::Mycc::ASTBuilder
                   end
 
     init_list.elements.each_with_index do |elem, idx|
-      if elem.is_a?(TypedAST::InitList) && elem.type.id_name == "void"
-        nested_type = field_types[idx]? || target_type
-        elements << resolve_init_list_types(elem, nested_type)
+      if elem.is_a?(TypedAST::InitList)
+        elements << elem
       else
         expected_type = field_types[idx]?
         if expected_type
@@ -1247,25 +1283,212 @@ class Myc::Mycc::ASTBuilder
     elements = [] of TypedAST::Node
     field_types = get_field_types(target_type)
     field_idx = 0
+    field_values = {} of Int32 => TypedAST::Node
 
     children(cursor).each do |child|
       if child.kind.init_list_expr?
         nested_type = field_types[field_idx]? || typer.void
-        elements << build_init_list(child, nested_type)
+        field_values[field_idx] = build_init_list(child, nested_type)
         field_idx += 1
+      elsif child.kind.string_literal? && target_type.is_a?(Type::FlatType) && target_type.target_type.eq?(typer.u8)
+        str_value = extract_string_value(child)
+
+        str_value.each_byte do |byte|
+          field_values[field_idx] = TypedAST::IntLiteral.new(byte.to_i64, typer.u8, location(child))
+          field_idx += 1
+        end
+
+        field_values[field_idx] = TypedAST::IntLiteral.new(0_i64, typer.u8, location(child))
+        field_idx += 1
+      elsif child.kind.first_expr?
+        inner_children = children(child)
+
+        if inner_children.size == 2 && inner_children.all? { |c| c.kind.integer_literal? }
+          idx_node = build_node(inner_children[0])
+          value_node = build_node(inner_children[1])
+
+          if idx_node.is_a?(TypedAST::IntLiteral) && target_type.is_a?(Type::FlatType)
+            idx = idx_node.value.to_i
+            expected_type = target_type.target_type
+            value_node = auto_cast(value_node, expected_type, value_node.location)
+            field_values[idx] = value_node
+            field_idx = idx + 1
+          end
+        elsif designated = try_build_designated_init(child, target_type)
+          field_values[designated[:index]] = designated[:value]
+          field_idx = designated[:index] + 1
+        else
+          node = build_node(child)
+          expected_type = field_types[field_idx]?
+          if expected_type
+            node = auto_cast(node, expected_type, node.location)
+          end
+          field_values[field_idx] = node
+          field_idx += 1
+        end
       else
         node = build_node(child)
         expected_type = field_types[field_idx]?
         if expected_type
           node = auto_cast(node, expected_type, node.location)
         end
-        elements << node
+        field_values[field_idx] = node
         field_idx += 1
+      end
+    end
+
+    if target_type.is_a?(Type::EnumType) && field_values.size == 1
+      if value = field_values[0]?
+        if value.is_a?(TypedAST::IntLiteral) && value.value == 0
+          return TypedAST::InitList.new([] of TypedAST::Node, target_type, location(cursor))
+        end
+      end
+    end
+
+    if target_type.is_a?(Type::StructType)
+      total = target_type.data.size
+      (0...total).each do |idx|
+        if value = field_values[idx]?
+          elements << value
+        else
+          expected_type = target_type.data[idx]
+          zero = TypedAST::IntLiteral.new(0_i64, expected_type, location(cursor))
+          elements << zero
+        end
+      end
+    elsif target_type.is_a?(Type::FlatType)
+      total = target_type.elements_count.to_i
+      (0...total).each do |idx|
+        if value = field_values[idx]?
+          elements << value
+        else
+          expected_type = target_type.target_type
+          zero = TypedAST::IntLiteral.new(0_i64, expected_type, location(cursor))
+          elements << zero
+        end
+      end
+    elsif target_type.is_a?(Type::EnumType)
+      if value = field_values[0]?
+        elements << value
       end
     end
 
     type = target_type || typer.void
     TypedAST::InitList.new(elements, type, location(cursor))
+  end
+
+  private def extract_string_value(cursor : Clang::Cursor) : String
+    raw = cursor.spelling
+    if raw.size >= 2 && raw[0] == '"' && raw[-1] == '"'
+      raw[1..-2]
+    else
+      ""
+    end
+  end
+
+  private def try_build_designated_init(cursor : Clang::Cursor, target_type : Type?) : NamedTuple(value: TypedAST::Node, index: Int32)?
+    return nil unless target_type
+
+    inner_children = children(cursor)
+
+    member_refs = inner_children.select { |c| c.kind.member_ref? }
+    return nil if member_refs.empty?
+
+    value_cursor = inner_children.find { |c| !c.kind.member_ref? }
+    return nil unless value_cursor
+
+    if member_refs.size == 1
+      field_name = member_refs[0].spelling
+
+      case target_type
+      when Type::StructType
+        fields = @shared_types.struct_fields[target_type.id_name]?
+        return nil unless fields
+
+        field_index = fields.index { |name, _| name == field_name }
+        return nil unless field_index
+
+        field_type = target_type.data[field_index]
+        value = build_value_for_designated(value_cursor, field_type)
+        return {value: value, index: field_index}
+      when Type::EnumType
+        variant = target_type.data.values.find { |v| v.original_name == field_name }
+        return nil unless variant
+
+        field_type = variant.value_types.first? || target_type
+        value = build_value_for_designated(value_cursor, field_type)
+        return {value: value, index: 0}
+      else
+        return nil
+      end
+    end
+
+    current_type = target_type
+    chain = [] of NamedTuple(parent_type: Type, field_index: Int32, field_type: Type)
+
+    member_refs.each do |member_ref|
+      field_name = member_ref.spelling
+
+      case current_type
+      when Type::StructType
+        fields = @shared_types.struct_fields[current_type.id_name]?
+        return nil unless fields
+
+        field_index = fields.index { |name, _| name == field_name }
+        return nil unless field_index
+
+        field_type = current_type.data[field_index]
+        chain << {parent_type: current_type, field_index: field_index, field_type: field_type}
+        current_type = field_type
+      when Type::EnumType
+        variant = current_type.data.values.find { |v| v.original_name == field_name }
+        return nil unless variant
+
+        field_type = variant.value_types.first? || current_type
+        chain << {parent_type: current_type, field_index: 0, field_type: field_type}
+        current_type = field_type
+      else
+        return nil
+      end
+    end
+
+    final_value = build_value_for_designated(value_cursor, current_type)
+
+    (chain.size - 1).downto(1) do |i|
+      entry = chain[i]
+      parent_type = entry[:parent_type]
+      field_index = entry[:field_index]
+
+      elements = [] of TypedAST::Node
+
+      case parent_type
+      when Type::StructType
+        total = parent_type.data.size
+        (0...total).each do |idx|
+          if idx == field_index
+            elements << final_value
+          else
+            elements << TypedAST::IntLiteral.new(0_i64, parent_type.data[idx], location value_cursor)
+          end
+        end
+        final_value = TypedAST::InitList.new(elements, parent_type, location value_cursor)
+      when Type::EnumType
+        elements << final_value
+        final_value = TypedAST::InitList.new(elements, parent_type, location value_cursor)
+      end
+    end
+
+    first = chain[0]
+    {value: final_value, index: first[:field_index]}
+  end
+
+  private def build_value_for_designated(cursor : Clang::Cursor, target_type : Type) : TypedAST::Node
+    if cursor.kind.init_list_expr?
+      build_init_list(cursor, target_type)
+    else
+      v = build_node(cursor)
+      auto_cast(v, target_type, v.location)
+    end
   end
 
   private def build_while(cursor : Clang::Cursor) : TypedAST::While
