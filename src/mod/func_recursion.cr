@@ -5,6 +5,11 @@ class Myc::Mod
       if f = self.func_defs[name]?
         f.inline_stats.recursive!
       end
+      if self != header_mod && (fh = header_mod.func_defs[name]?)
+        fh = fh.dup
+        fh.body = nil
+        header_mod.func_defs[name] = fh
+      end
     end
   end
 
@@ -29,7 +34,7 @@ class Myc::Mod
       @in_stack << name
       @visited << name
 
-      if (func = @mod.func_defs[name]?) || (func = @header_mod.func_defs[name]?)
+      if ((func = @mod.func_defs[name]?) && func.body) || ((func = @header_mod.func_defs[name]?) && func.body)
         func.inline_stats.calls.each_key do |called|
           if dfs(called)
             @recursive << called

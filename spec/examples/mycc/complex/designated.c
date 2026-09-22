@@ -91,7 +91,7 @@ int main() {
 
   printf("\n=== 2. PtrCast ===\n");
   struct PtrCast pc = {0};
-  printf("p = %p, x = %d\n", (void *)pc.p, pc.x);
+  printf("p = %d, x = %d\n", pc.p == (void*)0, pc.x);
 
   printf("\n=== 3. Deep chain ===\n");
   struct D d = {.d = 1, .c.b.a.a = 42};
