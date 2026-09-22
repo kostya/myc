@@ -29,7 +29,7 @@ class Myc::Mod
       @in_stack << name
       @visited << name
 
-      if (func = @mod.func_defs[name]?) || (func = @header_mod.func_defs[name]?)
+      if ((func = @mod.func_defs[name]?) && func.body) || ((func = @header_mod.func_defs[name]?) && func.body)
         func.inline_stats.calls.each_key do |called|
           if dfs(called)
             @recursive << called
