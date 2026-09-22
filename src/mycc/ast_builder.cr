@@ -734,17 +734,7 @@ class Myc::Mycc::ASTBuilder
 
       if init
         if init.is_a?(TypedAST::InitList) && init.elements.size > 0
-          all_zeros = init.elements.all? do |elem|
-            case elem
-            when TypedAST::IntLiteral
-              elem.value == 0
-            when TypedAST::Cast
-              elem.operand.is_a?(TypedAST::IntLiteral) && elem.operand.as(TypedAST::IntLiteral).value == 0
-            else
-              false
-            end
-          end
-          if all_zeros
+          if all_zero_node?(init)
             init = TypedAST::ZeroInitializer.new(var_type, location(cursor))
           end
         end
@@ -805,6 +795,23 @@ class Myc::Mycc::ASTBuilder
       var
     else
       TypedAST::VarDecl.new(name, var_type, init, location(cursor), vla_sizes: vla_sizes)
+    end
+  end
+
+  private def all_zero_node?(node : TypedAST::Node) : Bool
+    case node
+    when TypedAST::IntLiteral
+      node.value == 0
+    when TypedAST::FloatLiteral
+      node.value == 0.0
+    when TypedAST::Cast
+      all_zero_node?(node.operand)
+    when TypedAST::InitList
+      node.elements.all? { |e| all_zero_node?(e) }
+    when TypedAST::ZeroInitializer
+      true
+    else
+      false
     end
   end
 
@@ -1303,14 +1310,21 @@ class Myc::Mycc::ASTBuilder
       elsif child.kind.first_expr?
         inner_children = children(child)
 
-        if inner_children.size == 2 && inner_children.all? { |c| c.kind.integer_literal? }
+        if inner_children.size == 2 && inner_children[0].kind.integer_literal? && target_type.is_a?(Type::FlatType)
           idx_node = build_node(inner_children[0])
-          value_node = build_node(inner_children[1])
+          value_cursor = inner_children[1]
 
-          if idx_node.is_a?(TypedAST::IntLiteral) && target_type.is_a?(Type::FlatType)
+          if idx_node.is_a?(TypedAST::IntLiteral)
             idx = idx_node.value.to_i
             expected_type = target_type.target_type
-            value_node = auto_cast(value_node, expected_type, value_node.location)
+
+            value_node = if value_cursor.kind.init_list_expr?
+                           build_init_list(value_cursor, expected_type)
+                         else
+                           v = build_node(value_cursor)
+                           auto_cast(v, expected_type, v.location)
+                         end
+
             field_values[idx] = value_node
             field_idx = idx + 1
           end
@@ -1336,7 +1350,6 @@ class Myc::Mycc::ASTBuilder
         field_idx += 1
       end
     end
-
     if target_type.is_a?(Type::EnumType) && field_values.size == 1
       if value = field_values[0]?
         if value.is_a?(TypedAST::IntLiteral) && value.value == 0
@@ -1352,7 +1365,7 @@ class Myc::Mycc::ASTBuilder
           elements << value
         else
           expected_type = target_type.data[idx]
-          zero = TypedAST::IntLiteral.new(0_i64, expected_type, location(cursor))
+          zero = build_zero_value(expected_type, location(cursor))
           elements << zero
         end
       end
@@ -1363,7 +1376,7 @@ class Myc::Mycc::ASTBuilder
           elements << value
         else
           expected_type = target_type.target_type
-          zero = TypedAST::IntLiteral.new(0_i64, expected_type, location(cursor))
+          zero = build_zero_value(expected_type, location(cursor))
           elements << zero
         end
       end
@@ -1488,6 +1501,42 @@ class Myc::Mycc::ASTBuilder
     else
       v = build_node(cursor)
       auto_cast(v, target_type, v.location)
+    end
+  end
+
+  private def build_zero_value(type : Type, loc : Location) : TypedAST::Node
+    case type
+    when Type::StructType
+      elements = [] of TypedAST::Node
+      type.data.each { |t| elements << build_zero_value(t, loc) }
+      TypedAST::InitList.new(elements, type, loc)
+    when Type::FlatType
+      elements = [] of TypedAST::Node
+      type.elements_count.times { elements << build_zero_value(type.target_type, loc) }
+      TypedAST::InitList.new(elements, type, loc)
+    when Type::EnumType
+      payload = type.payload_type
+      if payload
+        TypedAST::InitList.new([build_zero_value(payload, loc)] of TypedAST::Node, type, loc)
+      else
+        first = type.data.values.first?
+        if first && (vt = first.value_types.first?)
+          TypedAST::InitList.new([build_zero_value(vt, loc)] of TypedAST::Node, type, loc)
+        else
+          TypedAST::IntLiteral.new(0_i64, type, loc)
+        end
+      end
+    when Type::FloatType
+      TypedAST::FloatLiteral.new(0.0, type, loc)
+    when Type::IntType, Type::BoolType
+      TypedAST::IntLiteral.new(0_i64, type, loc)
+    when Type::PtrType, Type::Fn
+      TypedAST::Cast.new(
+        TypedAST::IntLiteral.new(0_i64, typer.i32, loc),
+        type, loc
+      )
+    else
+      TypedAST::IntLiteral.new(0_i64, type, loc)
     end
   end
 
