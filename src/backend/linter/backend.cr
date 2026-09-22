@@ -12,6 +12,6 @@ class Myc::Backend::Linter::Backend < Myc::Backend::AbstractBackend
   end
 
   def new_builder : AbstractBuilder
-    Builder.new(self, Layout.new(detect_native_target))
+    Builder.new(self, new_layout)
   end
 end

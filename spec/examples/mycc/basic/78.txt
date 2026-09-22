@@ -1,0 +1,15 @@
+a.u.i = 0
+a.u.d = 0
+
+b.u.i = 42
+b.u.d = 42
+
+bla.u.i = 3
+bla.u.d = 3
+
+zero.u.i = 0
+zero.u.d = 0
+
+arr[1].u.i = 20
+arr[1].u.d = 20
+

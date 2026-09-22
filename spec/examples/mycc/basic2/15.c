@@ -1,17 +1,13 @@
-#include <stdarg.h>
-#include <stdio.h>
+int printf(const char *fmt, ...);
 
-int sum(int n, ...) {
-  va_list ap;
-  va_start(ap, n);
-  int s = 0;
-  for (int i = 0; i < n; i++)
-    s += va_arg(ap, int);
-  va_end(ap);
-  return s;
-}
-
-int main(void) {
-  printf("%d\n", sum(3, 10, 20, 30));
+int main() {
+  int a;
+  int b;
+  int c = ({
+    a = 1;
+    b = 2;
+    a + b;
+  });
+  printf("a = %d, b = %d, c = %d\n", a, b, c);
   return 0;
 }

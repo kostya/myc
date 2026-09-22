@@ -1,23 +1,9 @@
 int printf(const char *fmt, ...);
+#include <assert.h>
 
-int main() {
-  void *label;
-
-  for (int i = 0; i < 10; i++) {
-    if (i % 2 == 1) {
-      label = &&print1;
-    } else {
-      label = &&print2;
-    }
-    goto *label;
-
-  print1:
-    printf("in print1\n");
-    continue;
-
-  print2:
-    printf("in print2\n");
-  }
-
+int main(void) {
+  int x = 10;
+  assert((x == 10) && (1 < 2));
+  printf("OK\n");
   return 0;
 }

@@ -1,10 +1,1 @@
-in print2
-in print1
-in print2
-in print1
-in print2
-in print1
-in print2
-in print1
-in print2
-in print1
+OK

@@ -1,0 +1,18 @@
+ENUM :Data
+  VARIANT :A
+    TYPE :i32
+  VARIANT :B
+    TYPE :u32
+ENDENUM
+
+GLOBAL :x
+  TYPE :Data
+  INITIAL 99
+ENDGLOBAL
+
+FUNC :main
+  BODY
+    GLOBAL :x
+    INSPECT
+ENDFUNC
+

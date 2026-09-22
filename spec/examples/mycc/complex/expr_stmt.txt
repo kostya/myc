@@ -1,0 +1,24 @@
+1. base: a=1 b=2 c=3
+2. scope: x=10 y=10
+3. if: result=100
+4. for: sum=15
+5. expr: p=5 q=6 r=32
+6. side: counter=3 cnt=3
+7. nested: nested=11
+8. arg: result=25
+8. arg: arg=20
+9. cond: cond > 2.5
+10. while: collatz=25
+11. switch: sw_result=20
+12. void: v > 5
+13. MAX: 20
+13. MIN: 10
+13. ABS: 42
+13. SWAP: m1=20 m2=10
+14. multi: multi=15
+15. tern: tern_result=200
+16. array: arr_result=30
+17. pointer: ptr_result=42
+18. fact: fact=120
+19. nested_if: nested_if=50
+20. loop: loop_result=18

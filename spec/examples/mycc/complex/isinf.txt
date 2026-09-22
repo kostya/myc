@@ -1,0 +1,23 @@
+=== isinf ===
+isinf(+inf) = 1
+isinf(-inf) = 1
+isinf(nan) = 0
+isinf(1.0) = 0
+isinf(0.0) = 0
+
+=== isnan ===
+isnan(+inf) = 0
+isnan(-inf) = 0
+isnan(nan) = 1
+isnan(1.0) = 0
+isnan(0.0) = 0
+
+=== combined ===
+isnan(+inf) || isinf(+inf) = 1
+isnan(nan) || isinf(nan) = 1
+isnan(1.0) || isinf(1.0) = 0
+
+=== if ===
+inf is inf
+ninf is inf
+normal is not inf

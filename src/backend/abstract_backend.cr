@@ -83,6 +83,18 @@ abstract class Myc::Backend::AbstractBackend
       end
     end
 
+    Myc.measure("load:load_mods") do
+      parsed.each do |mod, dom|
+        loader = Mod::Loader.new(dom, mod.filename, typer, mod)
+        loader.load
+      end
+    end
+
+    Myc.measure("load:finalize_enums") do
+      layout = new_layout
+      parsed.each { |mod, _| mod.finalize_enums(layout) }
+    end
+
     Myc.measure("load:check_types") do
       collector.duplicates.each do |(name, dup_mod, dup_type)|
         first_type = @typer.map[name]
@@ -95,13 +107,6 @@ abstract class Myc::Backend::AbstractBackend
       end
     end
 
-    Myc.measure("load:load_mods") do
-      parsed.each do |mod, dom|
-        loader = Mod::Loader.new(dom, mod.filename, typer, mod)
-        loader.load
-      end
-    end
-
     Myc.measure("load:check_type_recursion") do
       parsed.each { |mod, _| mod.check_type_recursion! }
     end
@@ -109,7 +114,7 @@ abstract class Myc::Backend::AbstractBackend
     parsed.map(&.first)
   end
 
-  protected def load_all(files : Array(String)) : Tuple(Array(Mod), Mod)
+  protected def load_all(files : Array(String), force_build_header = false) : Tuple(Array(Mod), Mod)
     myc_files = resolve_inputs(files)
     parsed = parse_files(myc_files)
     mods = run_phases(parsed)
@@ -120,7 +125,7 @@ abstract class Myc::Backend::AbstractBackend
                    mods1 = run_phases(parsed1)
                    mods1[0]
                  else
-                   build_header_module(mods)
+                   build_header_module(mods, force_build_header)
                  end
 
     Myc.measure("load:check_func_recursion") do
@@ -280,7 +285,7 @@ abstract class Myc::Backend::AbstractBackend
   end
 
   protected def _header
-    _, header = load_all(data.values)
+    _, header = load_all(data.values, force_build_header: true)
     IO.copy(Mod::Saver.new(header).save.serialize, STDOUT)
   end
 
@@ -313,9 +318,6 @@ abstract class Myc::Backend::AbstractBackend
 
   protected def build_mod(mod : Mod, header_mod : Mod, builder : AbstractBuilder) : AbstractBuilder
     Myc.measure("mod:build") do
-      mod.finalize_enums(builder.layout)
-      header_mod.finalize_enums(builder.layout) if header_mod != mod
-
       mod.func_defs.each do |name, func_def|
         builder.func_register(name, func_def)
       end
@@ -439,6 +441,10 @@ abstract class Myc::Backend::AbstractBackend
     Target.new(arch)
   end
 
+  protected def new_layout : Layout
+    Layout.new(common_options.target || detect_native_target)
+  end
+
   def debug_flags : String
     String.build do |s|
       s << '('
@@ -475,9 +481,9 @@ abstract class Myc::Backend::AbstractBackend
     end
   end
 
-  private def build_header_module(mods : Array(Mod)) : Mod
+  private def build_header_module(mods : Array(Mod), force_build_header = false) : Mod
     raise data.error("no targets in build_header_module") if mods.size == 0
-    return mods[0] if mods.size == 1
+    return mods[0] if mods.size == 1 && !force_build_header
 
     Myc.measure("mod:header") do
       header = Mod.new("__header__", "/tmp/__header__", typer)

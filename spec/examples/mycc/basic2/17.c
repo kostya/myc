@@ -1,22 +1,18 @@
-#include <stdarg.h>
-#include <stdio.h>
+int printf(const char *fmt, ...);
 
-typedef long l_mem;
+struct Bla {
+  int x;
+  int y;
+};
 
-long sum(int n, ...) {
-  va_list argp;
-  va_start(argp, n);
-
-  l_mem s = 0;
-  for (int i = 0; i < n; i++) {
-    s += (l_mem)va_arg(argp, size_t);
-  }
-
-  va_end(argp);
-  return s;
+void test() {
+  static struct Bla bla[2];
+  bla[1].x = 10;
+  bla[1].y = 20;
+  printf("%d, %d\n", bla[1].x, bla[1].y);
 }
 
-int main(void) {
-  printf("%ld\n", sum(3, 10, 20, 30));
+int main() {
+  test();
   return 0;
 }

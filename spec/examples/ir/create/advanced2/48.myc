@@ -1,0 +1,26 @@
+ENUM :Data
+  TAG
+    SKIP
+  VARIANT :A
+    TYPE :i32
+  VARIANT :B
+    TYPE :u32
+ENDENUM
+
+STRUCT :bla
+  TYPE :i32
+  TYPE :Data
+  TYPE :i32
+ENDSTRUCT
+
+GLOBAL :x
+  TYPE :bla
+  INITIAL 99 15 103
+ENDGLOBAL
+
+FUNC :main
+  BODY
+    GLOBAL :x
+    INSPECT
+ENDFUNC
+

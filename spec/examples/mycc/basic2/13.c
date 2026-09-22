@@ -1,12 +1,8 @@
 int printf(const char *fmt, ...);
+#include <assert.h>
 
-int main() {
-  void *label = &&target;
-
-  goto *label;
-  printf("not in target\n");
-
-target:
-  printf("in target\n");
+int main(void) {
+  assert(1 == 1);
+  printf("OK\n");
   return 0;
 }

@@ -20,6 +20,7 @@ class Myc::Backend::Mycc::Backend < Myc::Backend::AbstractBackend
   end
 
   def obj(mod : Mod, header_mod : Mod, output : String)
+    puts "used #{get_backend_string?} backend" unless ENV["MYC_SPEC"]? == "1"
     myc_backend.obj(mod, header_mod, output)
   end
 
@@ -40,7 +41,6 @@ class Myc::Backend::Mycc::Backend < Myc::Backend::AbstractBackend
   def myc_backend : Myc::Backend::AbstractBackend
     @myc_backend ||= begin
       name = get_backend_string? || "LLVM"
-      puts "used #{name} backend" unless ENV["MYC_SPEC"]? == "1"
 
       backend = case name
                 when "LLVM"
@@ -84,6 +84,10 @@ class Myc::Backend::Mycc::Backend < Myc::Backend::AbstractBackend
     Myc.debug(:mycc) do
       puts "---------------------------- TypedAST ---------------------------------"
       p ast
+    end
+
+    Myc.measure("mycc:finalize_enums") do
+      builder.mod.finalize_enums(new_layout)
     end
 
     io, io2 = Myc.measure("mycc:codegen") do
