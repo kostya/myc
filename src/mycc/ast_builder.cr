@@ -1872,43 +1872,76 @@ class Myc::Mycc::ASTBuilder
     sw = TypedAST::Switch.new(value, cases, location(cursor), switch_label_prefix)
     @break_stack << sw
 
-    children(children_list[1]).each do |child|
-      case child.kind
-      when .case_stmt?
-        label = "#{switch_label_prefix}_#{cases.size}"
-        values = [extract_case_value(child)]
-        body = [] of TypedAST::Stmt
-        collect_case_values_and_body(child, values, body)
-        cases << TypedAST::Case.new(values, body, location(child), label)
-      when .default_stmt?
-        label = "#{switch_label_prefix}_#{cases.size}"
-        values = [] of Int64
-        body = [] of TypedAST::Stmt
-        collect_case_values_and_body(child, values, body)
-        cases << TypedAST::Case.new(values, body, location(child), label)
-      else
-        if last_case = cases.last?
-          build_body(child, last_case.body)
-        else
-          raise error("No cases: #{child.kind}", child)
-        end
-      end
-    end
+    collect_switch_cases(children_list[1], cases, switch_label_prefix)
 
     @break_stack.pop
     sw
   end
 
-  private def collect_case_values_and_body(cursor : Clang::Cursor, values, body : Array(TypedAST::Stmt))
+  private def collect_switch_cases(cursor : Clang::Cursor, cases : Array(TypedAST::Case), prefix : String)
     children(cursor).each do |child|
       case child.kind
       when .case_stmt?
-        values << extract_case_value(child)
-        collect_case_values_and_body(child, values, body)
+        collect_case_from_cursor(child, cases, prefix)
+      when .default_stmt?
+        collect_default_from_cursor(child, cases, prefix)
       else
-        build_body(child, body)
+        if last_case = cases.last?
+          build_body(child, last_case.body)
+        end
       end
     end
+  end
+
+  private def collect_case_from_cursor(cursor : Clang::Cursor, cases : Array(TypedAST::Case), prefix : String)
+    children_list = children(cursor)
+
+    value_child = children_list[0]
+    values = [extract_case_value(cursor)]
+
+    body = [] of TypedAST::Stmt
+
+    children_list[1..].each do |child|
+      case child.kind
+      when .case_stmt?
+        label = "#{prefix}_#{cases.size}"
+        cases << TypedAST::Case.new(values, body, location(cursor), label)
+        collect_case_from_cursor(child, cases, prefix)
+        return
+      when .default_stmt?
+        label = "#{prefix}_#{cases.size}"
+        cases << TypedAST::Case.new(values, body, location(cursor), label)
+        collect_default_from_cursor(child, cases, prefix)
+        return
+      else
+        build_stmt(child, body)
+      end
+    end
+
+    label = "#{prefix}_#{cases.size}"
+    cases << TypedAST::Case.new(values, body, location(cursor), label)
+  end
+
+  private def collect_default_from_cursor(cursor : Clang::Cursor, cases : Array(TypedAST::Case), prefix : String)
+    body = [] of TypedAST::Stmt
+    label = "#{prefix}_#{cases.size}"
+
+    children(cursor).each do |child|
+      case child.kind
+      when .case_stmt?
+        cases << TypedAST::Case.new([] of Int64, body, location(cursor), label)
+        collect_case_from_cursor(child, cases, prefix)
+        return
+      when .default_stmt?
+        cases << TypedAST::Case.new([] of Int64, body, location(cursor), label)
+        collect_default_from_cursor(child, cases, prefix)
+        return
+      else
+        build_stmt(child, body)
+      end
+    end
+
+    cases << TypedAST::Case.new([] of Int64, body, location(cursor), label)
   end
 
   private def extract_case_value(cursor : Clang::Cursor) : Int64
