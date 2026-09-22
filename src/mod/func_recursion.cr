@@ -5,9 +5,6 @@ class Myc::Mod
       if f = self.func_defs[name]?
         f.inline_stats.recursive!
       end
-      if f = header_mod.func_defs[name]?
-        f.body = nil
-      end
     end
   end
 
