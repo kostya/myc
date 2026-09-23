@@ -20,7 +20,7 @@ class Myc::Backend::Mycc::Backend < Myc::Backend::AbstractBackend
   end
 
   def obj(mod : Mod, header_mod : Mod, output : String)
-    puts "used #{get_backend_string?} backend" unless ENV["MYC_SPEC"]? == "1"
+    puts "used #{get_backend_string? || "LLVM"} backend" unless ENV["MYC_SPEC"]? == "1"
     myc_backend.obj(mod, header_mod, output)
   end
 
