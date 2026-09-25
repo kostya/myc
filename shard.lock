@@ -1,6 +1,6 @@
 version: 2.0
 shards:
   clang:
-    git: https://github.com/crystal-lang/clang.cr.git
-    version: 0.3.0+git.commit.d8f426d649201c1aff249e53c826be088c152077
+    git: https://github.com/kostya/clang.cr.git
+    version: 0.4.0
 
