@@ -480,32 +480,40 @@ module Myc::Mycc::TypedAST
 
   class Switch < Stmt
     getter value : Node
-    getter cases : Array(Case)
     getter label_prefix : String
+    getter body : Array(Stmt)
+    getter cases : Array(SwitchCase)
 
-    def initialize(@value, @cases, @location, @label_prefix); end
+    def initialize(@value, @body, @cases, @location, @label_prefix); end
 
     private def inspect_fields(io : IO)
+      io << "value("
       value.inspect(io)
-      cases.each_with_index do |c, index|
-        io << ", "
-        if c.values.empty?
-          io << "default("
-        else
-          io << "case("
-        end
-        {c.values, c.body}.inspect(io)
-        io << ")"
+      io << "), "
+      io << "body("
+      body.each_with_index do |s, index|
+        io << ", " if index != 0
+        s.inspect(io)
       end
+      io << ")"
     end
   end
 
-  class Case
-    getter values : Array(Int64)
-    getter body : Array(Stmt)
+  class SwitchCase
+    getter value : Int64?
     getter label : String
 
-    def initialize(@values, @body, @location : Location, @label)
+    def initialize(@value, @label, @location : Location)
+    end
+
+    private def inspect_fields(io : IO)
+      if c.value
+        io << "case("
+      else
+        io << "default("
+      end
+      c.value.inspect(io)
+      io << ")"
     end
   end
 

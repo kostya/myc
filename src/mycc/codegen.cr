@@ -476,18 +476,16 @@ class Myc::Mycc::CodeGenerator
     emit("STORE")
 
     stmt.cases.each do |c|
-      if c.values.present?
-        c.values.each do |val|
-          val_type_s = type_s(stmt.value.type)
-          emit("PUSH #{val} #{val_type_s}")
-          emit_local(switch_val, stmt.value.type)
-          emit("BINARY :eq")
-          emit("IF")
-          @indent += 1
-          emit("THEN GOTO \"#{c.label}\"")
-          @indent -= 1
-          emit("ENDIF")
-        end
+      if val = c.value
+        val_type_s = type_s(stmt.value.type)
+        emit("PUSH #{val} #{val_type_s}")
+        emit_local(switch_val, stmt.value.type)
+        emit("BINARY :eq")
+        emit("IF")
+        @indent += 1
+        emit("THEN GOTO \"#{c.label}\"")
+        @indent -= 1
+        emit("ENDIF")
       else
         emit("GOTO \"#{c.label}\"")
       end
@@ -495,12 +493,7 @@ class Myc::Mycc::CodeGenerator
 
     emit("GOTO \"#{label}_end\"")
 
-    stmt.cases.each do |c|
-      emit("LABEL \"#{c.label}\"")
-      push_scope
-      c.body.each { |s| generate_stmt(s) }
-      pop_scope
-    end
+    stmt.body.each { |s| generate_stmt(s) }
 
     emit("LABEL \"#{label}_end\"")
   end
