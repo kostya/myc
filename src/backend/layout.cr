@@ -215,4 +215,27 @@ class Myc::Backend::Layout
   def float_format(type : Type::FloatType) : String
     "%.7f"
   end
+
+  def va_extend_type(type : Type, typer : Typer) : Type
+    case t = type
+    when Type::IntType
+      if t.bytes_count < 4
+        return typer.i32
+      end
+
+      if @target.va_arg_requires_extension_for?(t.bytes_count)
+        return typer.i64
+      end
+    when Type::BoolType
+      if @target.va_arg_requires_extension_for?(1)
+        return typer.i64
+      end
+      return typer.i32
+    when Type::FloatType
+      if t.bytes_count == 4
+        return typer.f64
+      end
+    end
+    type
+  end
 end

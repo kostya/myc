@@ -17,7 +17,7 @@ class Myc::Backend::C::Builder < Myc::Backend::AbstractBuilder
   end
 
   def type_translator
-    @type_translator ||= TypeTranslator.new(self)
+    @type_translator ||= TypeTranslator.new(self, @backend.typer)
   end
 
   def type_sorter

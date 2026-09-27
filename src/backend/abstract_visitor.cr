@@ -663,21 +663,11 @@ abstract class Myc::Backend::AbstractVisitor
     end
   end
 
-  private def last_va_extend
-    slot_size = builder.layout.target.pointer_size
-    case t = last.type
-    when Type::IntType
-      if t.bytes_count < slot_size
-        target = slot_size == 8 ? mod.typer.i64 : mod.typer.i32
-        visit Opcode::To.new(target)
-      end
-    when Type::BoolType
-      target = slot_size == 8 ? mod.typer.i64 : mod.typer.i32
-      visit Opcode::As.new(target)
-    when Type::FloatType
-      if t.bytes_count == 4
-        visit Opcode::To.new(mod.typer.f64)
-      end
+  protected def last_va_extend
+    last_type = last.type
+    type = builder.layout.va_extend_type(last_type, mod.typer)
+    if type != last_type
+      visit Opcode::As.new(type)
     end
   end
 
@@ -1050,7 +1040,7 @@ abstract class Myc::Backend::AbstractVisitor
   end
 
   def visit(op : Opcode::Va)
-    arg = pop._to_ref(self)
+    arg = pop
 
     unless arg.type.eq?(mod.typer.valist)
       raise error("arg type should be :valist, not #{arg.type}")
@@ -1064,7 +1054,13 @@ abstract class Myc::Backend::AbstractVisitor
     in .end?
       @bb.va_end(arg)
     in .arg?
-      self << @bb.va_arg(arg, op.type || raise("va_arg expected type"))
+      type = op.type
+      raise("va_arg expected type") unless type
+      type2 = builder.layout.va_extend_type(type, mod.typer)
+      self << @bb.va_arg(arg, type2)
+      unless type == type2
+        visit Opcode::As.new(type)
+      end
     end
   end
 

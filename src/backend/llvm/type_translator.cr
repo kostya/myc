@@ -1,7 +1,8 @@
 class Myc::Backend::Llvm::TypeTranslator
   getter layout : Layout
+  getter typer : Typer
 
-  def initialize(@context : LLVM::Context, @layout)
+  def initialize(@context : LLVM::Context, @layout, @typer)
     @cache = Hash(String, LLVM::Type).new
   end
 
@@ -48,8 +49,7 @@ class Myc::Backend::Llvm::TypeTranslator
   end
 
   private def do_translate(type : Type::VaListType)
-    @context.struct([@context.int64, @context.int64,
-                     @context.int64, @context.int64], type.id_name)
+    @context.pointer
   end
 
   private def do_translate(type : Type::StructType)

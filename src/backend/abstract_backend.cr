@@ -438,7 +438,20 @@ abstract class Myc::Backend::AbstractBackend
            {% else %}
              Target::Arch::Unknown
            {% end %}
-    Target.new(arch)
+
+    os = {% if flag?(:darwin) || flag?(:macos) %}
+           Target::OS::Darwin
+         {% elsif flag?(:linux) %}
+           Target::OS::Linux
+         {% elsif flag?(:windows) %}
+           Target::OS::Windows
+         {% elsif flag?(:wasm32) %}
+           Target::OS::Wasm
+         {% else %}
+           Target::OS::Unknown
+         {% end %}
+
+    Target.new(arch, os)
   end
 
   protected def new_layout : Layout

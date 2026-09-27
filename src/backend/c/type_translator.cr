@@ -1,7 +1,8 @@
 struct Myc::Backend::C::TypeTranslator
   getter builder : Builder
+  getter typer : Typer
 
-  def initialize(@builder)
+  def initialize(@builder, @typer)
     @cache = Hash(Type, String).new
   end
 

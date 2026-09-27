@@ -3,6 +3,7 @@ class Myc::Backend::QBE::Builder < Myc::Backend::AbstractBuilder
   getter global_links : Hash(String, Value)
   getter string_constants : Hash(String, String)
   getter data_io : IO::Memory
+  getter layout : Layout
   @type_translator : TypeTranslator?
   @data_type_translator : DataTypeTranslator?
 
@@ -18,11 +19,11 @@ class Myc::Backend::QBE::Builder < Myc::Backend::AbstractBuilder
   end
 
   def type_translator
-    @type_translator ||= TypeTranslator.new(self)
+    @type_translator ||= TypeTranslator.new(self, @backend.typer)
   end
 
   def data_type_translator
-    @data_type_translator ||= DataTypeTranslator.new(self)
+    @data_type_translator ||= DataTypeTranslator.new(self, @backend.typer)
   end
 
   def func_register(name : String, func_def : Mod::FuncDef)

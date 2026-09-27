@@ -11,7 +11,8 @@ class Myc::Backend::Llvm::BB < Myc::Backend::AbstractBB
   end
 
   def alloca(name : String, type : Type) : Value
-    wrap_ref(@llvm_builder.alloca(llvm_type(type), name), type, Value::PP::LocalUninitialized.new(name))
+    ltype = type.is_a?(Type::VaListType) ? builder.valist_llvm_type : llvm_type(type)
+    wrap_ref(@llvm_builder.alloca(ltype, name), type, Value::PP::LocalUninitialized.new(name))
   end
 
   def vla(type : Type, ptr_type : Type, size : Value) : Value
@@ -20,7 +21,11 @@ class Myc::Backend::Llvm::BB < Myc::Backend::AbstractBB
   end
 
   def load_ref(value : Value) : Value
-    wrap_val(@llvm_builder.load(llvm_type(value), llvm_val(value)), value.type, value.pp)
+    if value.type.is_a?(Type::VaListType)
+      value
+    else
+      wrap_val(@llvm_builder.load(llvm_type(value), llvm_val(value)), value.type, value.pp)
+    end
   end
 
   def jmp(other : AbstractBB)
@@ -79,7 +84,13 @@ class Myc::Backend::Llvm::BB < Myc::Backend::AbstractBB
   end
 
   def store(lhs : Value, rhs : Value)
-    @llvm_builder.store(llvm_val(rhs), llvm_val(lhs))
+    if lhs.type.is_a?(Type::VaListType)
+      lhs = wrap_val(llvm_val(lhs), lhs.type.to_unsafe_ptr, lhs.pp)
+      rhs = wrap_val(llvm_val(rhs), rhs.type.to_unsafe_ptr, rhs.pp)
+      intrinsic_call("llvm.va_copy.p0", typer.void, [lhs, rhs])
+    else
+      @llvm_builder.store(llvm_val(rhs), llvm_val(lhs))
+    end
   end
 
   def binary(op : Opcode::Binary::Op, lhs : Value, rhs : Value) : Value?

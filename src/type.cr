@@ -1,10 +1,10 @@
 abstract class Myc::Type
   property hidden : Bool = false
 
-  getter id_name : String
-  getter backend_name : String
+  property id_name : String
+  property backend_name : String
 
-  getter loc : Location
+  property loc : Location
 
   def initialize(@loc, @id_name)
     @backend_name = normalize_name(id_name)

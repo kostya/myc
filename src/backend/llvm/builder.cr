@@ -14,7 +14,7 @@ class Myc::Backend::Llvm::Builder < Myc::Backend::AbstractBuilder
 
     @context = LLVM::Context.new(LibLLVM.create_context, false)
     @target_machine = create_target_machine(@layout.target.triple)
-    @type_translator = TypeTranslator.new(@context, @layout)
+    @type_translator = TypeTranslator.new(@context, @layout, @backend.typer)
 
     @llvm_mod = @context.new_module("main")
     @llvm_mod.target = @target_machine.triple
@@ -39,6 +39,15 @@ class Myc::Backend::Llvm::Builder < Myc::Backend::AbstractBuilder
       reloc: LLVM::RelocMode::PIC).not_nil!
     machine.enable_global_isel = false
     machine
+  end
+
+  @valist_llvm_type : LLVM::Type?
+
+  def valist_llvm_type : LLVM::Type
+    @valist_llvm_type ||= begin
+      @context.struct([@context.int32, @context.int32,
+                       @context.pointer, @context.pointer], "valist")
+    end
   end
 
   def llvm_type(type : Type) : LLVM::Type

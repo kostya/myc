@@ -1,7 +1,8 @@
 class Myc::Backend::QBE::TypeTranslator
   getter builder : Builder
+  getter typer : Typer
 
-  def initialize(@builder)
+  def initialize(@builder, @typer)
     @cache = Hash(String, String).new
   end
 
@@ -44,8 +45,7 @@ class Myc::Backend::QBE::TypeTranslator
   end
 
   private def do_translate(type : Type::VaListType)
-    @builder.emit_type("type :valist = align 8 { 32 }\n")
-    ":valist"
+    "l"
   end
 
   private def do_translate(type : Type::StructType)
