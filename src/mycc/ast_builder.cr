@@ -21,7 +21,6 @@ class Myc::Mycc::ASTBuilder
     @switch_counter = 0_u64
     @unnamed_types_map = Hash(String, String).new
     @static_func_names_map = Hash(String, String).new
-    @static_globals_names_map = Hash(String, String).new
     @break_stack = Deque(TypedAST::Stmt).new
   end
 
@@ -182,6 +181,14 @@ class Myc::Mycc::ASTBuilder
     return_type = get_type(cursor, cursor.result_type)
     @current_return_type = return_type
 
+    is_static = cursor.storage_class.static?
+    if is_static
+      name2 = "static_fn_#{source.name}_#{name}"
+      @static_func_names_map[name] = name2
+      name = name2
+    end
+    @current_function_name = name
+
     param_names = [] of String
     children(cursor).each do |child|
       if child.kind.parm_decl?
@@ -219,12 +226,6 @@ class Myc::Mycc::ASTBuilder
     end
 
     vaarg = func_type.is_a?(Type::Fn) ? func_type.vaarg : false
-    is_static = cursor.storage_class.static?
-    if is_static
-      name2 = "static_fn_#{source.name}_#{name}"
-      @static_func_names_map[name] = name2
-      name = name2
-    end
 
     TypedAST::Function.new(
       name,
@@ -871,17 +872,15 @@ class Myc::Mycc::ASTBuilder
     end
 
     if is_static
-      func_name = @current_function_name.presence || "static_#{source.name}"
-      unique_name = "#{func_name}_#{name}"
-      @static_globals_names_map[name] = unique_name
-      var = TypedAST::VarDecl.new(unique_name, var_type, init, location(cursor), is_static: true, vla_sizes: vla_sizes, original_name: name)
-      unless @globals.any? { |g| g.name == unique_name }
+      func_name = @current_function_name.presence || ""
+      var = TypedAST::VarDecl.new(name, var_type, init, location(cursor), is_static: true, vla_sizes: vla_sizes, func_name: func_name)
+      unless @globals.find { |g| g.name == var.name && g.func_name == var.func_name }
         @globals << var
       end
       var
     elsif @current_function_name.empty?
       var = TypedAST::VarDecl.new(name, var_type, init, location(cursor), is_extern: is_extern && init.nil?, vla_sizes: vla_sizes)
-      if var_found = @globals.find { |g| g.name == var.name }
+      if var_found = @globals.find { |g| g.name == var.name && var.func_name == "" }
         if var_found.is_extern && !var.is_extern
           @globals.delete(var_found)
           @globals << var
@@ -891,7 +890,7 @@ class Myc::Mycc::ASTBuilder
       end
       var
     else
-      TypedAST::VarDecl.new(name, var_type, init, location(cursor), vla_sizes: vla_sizes)
+      TypedAST::VarDecl.new(name, var_type, init, location(cursor), vla_sizes: vla_sizes, func_name: @current_function_name)
     end
   end
 

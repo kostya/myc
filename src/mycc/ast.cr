@@ -324,9 +324,9 @@ module Myc::Mycc::TypedAST
     getter is_static : Bool
     property is_extern : Bool
     getter vla_sizes : Array(Node)?
-    getter original_name : String
+    getter func_name : String
 
-    def initialize(@name, @var_type, @init, @location, @is_static = false, @is_extern = false, @original_name = name, @vla_sizes = nil)
+    def initialize(@name, @var_type, @init, @location, @is_static = false, @is_extern = false, @func_name = "", @vla_sizes = nil)
     end
 
     private def inspect_fields(io : IO)
@@ -338,7 +338,7 @@ module Myc::Mycc::TypedAST
       end
       if is_static
         io << ", "
-        io << "static(#{original_name})"
+        io << "static(in #{func_name.inspect})"
       end
       if vs = vla_sizes
         io << ", vla("
@@ -351,6 +351,14 @@ module Myc::Mycc::TypedAST
       if i = init
         io << ", "
         i.inspect(io)
+      end
+    end
+
+    def global_name
+      if func_name.empty?
+        name
+      else
+        "#{func_name}_#{name}"
       end
     end
   end

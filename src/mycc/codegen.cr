@@ -22,7 +22,7 @@ class Myc::Mycc::CodeGenerator
     @additional_io = IO::Memory.new
     @vars_stack = [Hash(String, VarInfo).new]
     @params = Hash(String, Int32).new
-    @globals = Hash(String, TypedAST::VarDecl).new
+    @globals = Hash(Tuple(String, String), TypedAST::VarDecl).new
     @local_marks = Set(String).new
     @switch_count = 0
     @scope_counter = 0
@@ -91,22 +91,21 @@ class Myc::Mycc::CodeGenerator
     end
 
     program.globals.each do |var|
-      emit("GLOBAL :#{var.name}")
+      emit("GLOBAL :#{var.global_name}")
       @indent += 1
       emit("TYPE #{type_s(var.var_type)}")
       @indent -= 1
 
       if init = var.init
         emit("INITIAL")
-        emit_init_element(init)
+        emit_init_element(init, var.func_name)
       end
 
       emit("PRIVATE") if var.is_static
 
       emit("ENDGLOBAL")
 
-      @globals[var.name] = var
-      @globals[var.original_name] = var
+      @globals[{var.func_name, var.name}] = var
     end
 
     program.functions.each do |_, f|
@@ -117,7 +116,7 @@ class Myc::Mycc::CodeGenerator
     {io, @additional_io}
   end
 
-  private def emit_init_element(elem : TypedAST::Node)
+  private def emit_init_element(elem : TypedAST::Node, func_name : String)
     case elem
     when TypedAST::IntLiteral
       emit(" #{elem.value}")
@@ -142,20 +141,24 @@ class Myc::Mycc::CodeGenerator
       end
       emit(" #{str}")
     when TypedAST::Cast
-      emit_init_element(elem.operand)
+      emit_init_element(elem.operand, func_name)
     when TypedAST::ZeroInitializer
       emit(" 0" * elem.type.flat_elements_count)
     when TypedAST::InitList
       elem.elements.each do |e|
-        emit_init_element(e)
+        emit_init_element(e, func_name)
       end
     when TypedAST::VarRef
-      name = @builder.@static_func_names_map[elem.name]? ||
-             @builder.@static_globals_names_map[elem.name]? ||
-             elem.name
-      emit(" :#{name}")
+      if g = @globals[{func_name, elem.name}]? || @globals[{"", elem.name}]?
+        emit(" :#{g.global_name}")
+      elsif elem.type.is_a?(Type::Fn)
+        name = @builder.@static_func_names_map[elem.name]? || elem.name
+        emit(" :#{name}")
+      else
+        raise error("Not found var ref #{elem.name}", elem)
+      end
     when TypedAST::AddrOf
-      emit_init_element(elem.operand)
+      emit_init_element(elem.operand, func_name)
     else
       raise error("Unsupported init element: #{elem.class}", elem)
     end
@@ -547,13 +550,15 @@ class Myc::Mycc::CodeGenerator
       emit_local(var.mangled_name, expr.type)
     elsif param = @params[name]?
       emit("PARAM #{param}")
-    elsif g = @globals["#{@current_function_name}_#{expr.name}"]? || @globals[expr.name]?
-      emit("GLOBAL :#{g.name}")
+    elsif g = @globals[{@current_function_name, expr.name}]? || @globals[{"", expr.name}]?
+      emit("GLOBAL :#{g.global_name}")
     elsif expr.type.is_a?(Type::Fn)
       if name2 = @builder.@static_func_names_map[name]?
         name = name2
       end
       emit("ADDR :#{name}")
+    else
+      raise error("Not found var ref #{name}", expr)
     end
   end
 

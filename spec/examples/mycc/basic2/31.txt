@@ -1,0 +1,6 @@
+  i=0 lst[i]='set' name='cur'
+  i=1 lst[i]='cur' name='cur'
+  i=0 lst[i]='no' name='full'
+  i=1 lst[i]='full' name='full'
+f_seek: op=1 (expect 1)
+f_setvbuf: op=1 (expect 1)
