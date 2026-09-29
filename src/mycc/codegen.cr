@@ -117,7 +117,7 @@ class Myc::Mycc::CodeGenerator
     {io, @additional_io}
   end
 
-  private def emit_init_element(elem)
+  private def emit_init_element(elem : TypedAST::Node)
     case elem
     when TypedAST::IntLiteral
       emit(" #{elem.value}")
@@ -128,26 +128,26 @@ class Myc::Mycc::CodeGenerator
     when TypedAST::StringLiteral
       if elem.type.is_a?(Type::PtrType)
         emit(" #{elem.value.inspect}")
-      else
-        value = elem.value
-        str = String.build do |s|
-          i = 0
-          value.each_byte do |b|
-            s << ' ' if i != 0
-            s << b
-            i += 1
-          end
-          s << " 0"
-        end
-        emit(" #{str}")
+        return
       end
+      value = elem.value
+      str = String.build do |s|
+        i = 0
+        value.each_byte do |b|
+          s << ' ' if i != 0
+          s << b
+          i += 1
+        end
+        s << " 0"
+      end
+      emit(" #{str}")
     when TypedAST::Cast
       emit_init_element(elem.operand)
     when TypedAST::ZeroInitializer
       emit(" 0" * elem.type.flat_elements_count)
     when TypedAST::InitList
-      elem.elements.each do |elem|
-        emit_init_element(elem)
+      elem.elements.each do |e|
+        emit_init_element(e)
       end
     when TypedAST::VarRef
       name = @builder.@static_func_names_map[elem.name]? ||

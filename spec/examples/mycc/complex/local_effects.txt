@@ -1,0 +1,17 @@
+=== short-circuit && ===
+side(0) r1=0
+side(1) side(2) r2=1
+=== short-circuit || ===
+side(1) r3=1
+side(0) side(4) r4=1
+=== ++ в || ===
+v1=1 v2=1 mode=r+b
+=== assign in if ===
+side(5) x=5
+=== i++ ===
+v3=10 i=1
+arr[0]=100 arr[1]=20 i=1
+=== side effect init ===
+v4=43 i=42
+=== inner ===
+side(0) side(1) v5=1 i=2

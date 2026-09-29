@@ -1,0 +1,72 @@
+y: 15 5 50 2 1 30
+neg: -5 5 -0.223308 -1.500000
+bits: 16 63 255 15 240 -1
+unary: 1 0 0
+sizeof: 4 1 8 40
+cast: 5 5 5 5.000000
+ptr: 1 1 hello world
+cond: 10 20
+comb: 21 5 -4
+--- simple arrays ---
+arr1: 1 2 3
+arr2: 1 2 0 0 0
+arr3: 10 20 30
+str1: hello size=6
+str2: hi size=10
+arr4: 0 0
+--- zero arrays ---
+zero1: 0 0 0 0 0
+zero2: 0 0 0
+zero3: 0 0 0 0
+--- one arrays ---
+one1: 42
+one2: 42
+one3: 42 0 0 0 0
+--- expr arrays ---
+expr1: 3 12 -1
+expr2: 4 1 15 -3
+expr3: 1 2 3
+expr4: 10 20 30
+--- designated arrays ---
+des1: 1 0 3 0 5
+des2: 10 0 0 0 50
+des3: 0 0 99
+des4: 1 2 3
+--- pointer arrays ---
+strs1: a b c
+strs2: one two 1
+strs3: first second third
+ptrs1: 1 1 1
+ptrs2: 15 5 1
+--- struct arrays ---
+pts1: (1,2) (3,4) (5,6)
+pts2: (1,2) (0,0) (0,0)
+pts3: (0,0) (0,0)
+pts4: (1,2) (3,4)
+pts5: (0,0) (7,8) (0,0)
+pts6: (1,0) (0,5) (0,0)
+--- float arrays ---
+f1: 1.500000 2.500000 3.500000
+d1: 1.500000 2.500000 3.500000
+d2: 1.000000 0.000000 0.000000
+f2: 1.000000 2.000000 3.000000
+--- char arrays ---
+chars1: a b c
+chars2: h i 0
+chars3: xyz
+chars4: a 0 0
+--- size arrays ---
+size1: 0 0
+size2: 0 0
+size3: 0 0
+size4: 0 0
+--- local arrays ---
+l1: 0 10 20 30 40
+l2: 1 2 3 0 0
+l3: 10 20 30
+l5: 0 10 0 30 0
+--- static local arrays ---
+sl1: 0 0 0 0 0
+sl2: 1 2 3 0 0
+sl3: 10 20 30
+sl4: 0 10 0 30 0

@@ -503,8 +503,10 @@ class Myc::Mycc::ASTBuilder
         end
 
         build_node(child)
+      elsif children.size == 3
+        raise error("FirstExpr with 3 children (designated init) reached build_node, this is a bug", cursor)
       else
-        raise error("Unknown node #{cursor.kind}", cursor)
+        raise error("Unknown FirstExpr with #{children.size} children", cursor)
       end
     when .paren_expr?
       children = children(cursor)
@@ -784,11 +786,9 @@ class Myc::Mycc::ASTBuilder
     is_vla = cursor.type.canonical_type.kind.variable_array?
     is_extern = cursor.storage_class.extern? && !is_static
 
-    init = nil
+    is_global = @current_function_name.empty? || is_static
 
-    if !init && (literal = try_evaluate(cursor))
-      init = literal
-    end
+    init = nil
 
     vla_sizes = nil
     if is_vla
@@ -808,10 +808,20 @@ class Myc::Mycc::ASTBuilder
                child.kind.enum_decl? || child.kind.visibility_attr? ||
                child.kind.asm_label_attr?
           if child.kind.init_list_expr?
-            init = build_init_list(child, var_type)
+            init = build_init_list(child, var_type, is_global: is_global)
             break
-          else
+          elsif var_type.is_a?(Type::FlatType) && child.kind.string_literal?
             node = build_node(child)
+            init = auto_cast(node, var_type, location(cursor))
+            break
+          elsif var_type.is_a?(Type::FlatType)
+            next
+          else
+            node = if is_global && (ast = try_evaluate(child))
+                     ast
+                   else
+                     build_node(child)
+                   end
             init = node
           end
         end
@@ -827,6 +837,7 @@ class Myc::Mycc::ASTBuilder
         if var_type.is_a?(Type::FlatType) && init.is_a?(TypedAST::IntLiteral)
           init = nil
         elsif var_type.is_a?(Type::FlatType) && init.is_a?(TypedAST::StringLiteral)
+          init = auto_cast(init, var_type, location(cursor))
         elsif var_type.is_a?(Type::FlatType) && init.is_a?(TypedAST::InitList)
           if init.elements.size == 1 && init.elements[0].is_a?(TypedAST::StringLiteral) && var_type.as(Type::FlatType).target_type.eq?(typer.u8)
             init = init.elements[0]
@@ -848,6 +859,7 @@ class Myc::Mycc::ASTBuilder
         end
       end
     end
+
     if (is_static || @current_function_name.empty?) && !is_extern
       if init.nil? || (init.is_a?(TypedAST::Cast) && is_zero_cast?(init))
         if var_type.is_a?(Type::FlatType) || var_type.is_a?(Type::StructType)
@@ -1193,17 +1205,13 @@ class Myc::Mycc::ASTBuilder
     end
 
     if node
-      return node.as(TypedAST::Node)
+      node.not_nil!
     else
       raise error("cant build_compound_literal", cursor)
     end
   end
 
   private def build_binary(cursor : Clang::Cursor) : TypedAST::Node
-    if literal = try_evaluate(cursor)
-      return literal
-    end
-
     op = cursor.spelling
     if op.empty?
       @tu.tokenize(cursor.extent) do |token|
@@ -1279,10 +1287,6 @@ class Myc::Mycc::ASTBuilder
   end
 
   private def build_unary(cursor : Clang::Cursor, is_statement : Bool = false, known_op : String? = nil) : TypedAST::Node
-    if literal = try_evaluate(cursor)
-      return literal
-    end
-
     op = known_op || detect_unary_op(cursor)
 
     children_list = children(cursor)
@@ -1371,7 +1375,7 @@ class Myc::Mycc::ASTBuilder
     end
   end
 
-  private def build_init_list(cursor : Clang::Cursor, target_type : Type? = nil) : TypedAST::InitList
+  private def build_init_list(cursor : Clang::Cursor, target_type : Type? = nil, is_global : Bool = false) : TypedAST::Node
     elements = [] of TypedAST::Node
     field_types = get_field_types(target_type)
     field_idx = 0
@@ -1380,7 +1384,7 @@ class Myc::Mycc::ASTBuilder
     children(cursor).each do |child|
       if child.kind.init_list_expr?
         nested_type = field_types[field_idx]? || typer.void
-        field_values[field_idx] = build_init_list(child, nested_type)
+        field_values[field_idx] = build_init_list(child, nested_type, is_global: is_global)
         field_idx += 1
       elsif child.kind.string_literal? && target_type.is_a?(Type::FlatType) && target_type.target_type.eq?(typer.u8)
         str_value = extract_string_value(child)
@@ -1395,7 +1399,17 @@ class Myc::Mycc::ASTBuilder
       elsif child.kind.first_expr?
         inner_children = children(child)
 
-        if inner_children.size == 2 && inner_children[0].kind.integer_literal? && target_type.is_a?(Type::FlatType)
+        if inner_children.size == 1
+          node = if is_global && (ast = try_evaluate(child))
+                   ast
+                 else
+                   build_node(child)
+                 end
+          expected_type = field_types[field_idx]?
+          node = auto_cast(node, expected_type, node.location) if expected_type
+          field_values[field_idx] = node
+          field_idx += 1
+        elsif inner_children.size == 2 && inner_children[0].kind.integer_literal? && target_type.is_a?(Type::FlatType)
           idx_node = build_node(inner_children[0])
           value_cursor = inner_children[1]
 
@@ -1404,42 +1418,130 @@ class Myc::Mycc::ASTBuilder
             expected_type = target_type.target_type
 
             value_node = if value_cursor.kind.init_list_expr?
-                           build_init_list(value_cursor, expected_type)
+                           build_init_list(value_cursor, expected_type, is_global: is_global)
                          else
-                           v = build_node(value_cursor)
+                           v = if is_global && (ast = try_evaluate(value_cursor))
+                                 ast
+                               else
+                                 build_node(value_cursor)
+                               end
                            auto_cast(v, expected_type, v.location)
                          end
 
             field_values[idx] = value_node
             field_idx = idx + 1
           end
-        elsif designated = try_build_designated_init(child, target_type)
+        elsif inner_children.size == 3 &&
+              inner_children[0].kind.integer_literal? &&
+              inner_children[1].kind.member_ref? &&
+              target_type.is_a?(Type::FlatType)
+          idx_node = build_node(inner_children[0])
+          field_cursor = inner_children[1]
+          value_cursor = inner_children[2]
+
+          if idx_node.is_a?(TypedAST::IntLiteral)
+            idx = idx_node.value.to_i
+            elem_type = target_type.target_type
+            field_name = field_cursor.spelling
+
+            field_index = -1
+            field_type : Type? = nil
+
+            case elem_type
+            when Type::StructType
+              fields = @shared_types.struct_fields[elem_type.id_name]?
+              if fields && (fi = fields.index { |name, _| name == field_name })
+                field_index = fi
+                field_type = elem_type.data[fi]
+              end
+            when Type::EnumType
+              variant = elem_type.data.values.find { |v| v.original_name == field_name }
+              if variant
+                field_index = 0
+                field_type = variant.value_types.first? || elem_type
+              end
+            end
+
+            if field_index >= 0 && (ft = field_type)
+              elem_field_types = case elem_type
+                                 when Type::StructType then elem_type.data
+                                 when Type::EnumType   then [ft]
+                                 else                       [] of Type
+                                 end
+
+              elem_fields = [] of TypedAST::Node
+              elem_field_types.each_with_index do |fti, i|
+                if i == field_index
+                  v = if is_global && (ast = try_evaluate(value_cursor))
+                        ast
+                      else
+                        build_node(value_cursor)
+                      end
+                  elem_fields << auto_cast(v, fti, v.location)
+                else
+                  elem_fields << build_zero_value(fti, location(cursor))
+                end
+              end
+
+              field_values[idx] = TypedAST::InitList.new(elem_fields, elem_type, location(cursor))
+              field_idx = idx + 1
+            else
+              raise error("field not found: #{field_name} in #{elem_type.id_name}", child)
+            end
+          end
+        elsif inner_children.size == 3 &&
+              inner_children[0].kind.integer_literal? &&
+              inner_children[1].kind.integer_literal? &&
+              target_type.is_a?(Type::FlatType)
+          idx1_node = build_node(inner_children[0])
+          idx2_node = build_node(inner_children[1])
+          value_cursor = inner_children[2]
+
+          if idx1_node.is_a?(TypedAST::IntLiteral) && idx2_node.is_a?(TypedAST::IntLiteral)
+            idx1 = idx1_node.value.to_i
+            idx2 = idx2_node.value.to_i
+            inner_type = target_type.target_type
+
+            if inner_type.is_a?(Type::FlatType)
+              inner_count = inner_type.elements_count.to_i
+              inner_elem = inner_type.target_type
+
+              inner_fields = [] of TypedAST::Node
+              (0...inner_count).each do |i|
+                if i == idx2
+                  v = if is_global && (ast = try_evaluate(value_cursor))
+                        ast
+                      else
+                        build_node(value_cursor)
+                      end
+                  inner_fields << auto_cast(v, inner_elem, v.location)
+                else
+                  inner_fields << build_zero_value(inner_elem, location(cursor))
+                end
+              end
+
+              field_values[idx1] = TypedAST::InitList.new(inner_fields, inner_type, location(cursor))
+              field_idx = idx1 + 1
+            end
+          end
+        elsif designated = try_build_designated_init(child, target_type, is_global)
           field_values[designated[:index]] = designated[:value]
           field_idx = designated[:index] + 1
         else
-          node = build_node(child)
-          expected_type = field_types[field_idx]?
-          if expected_type
-            node = auto_cast(node, expected_type, node.location)
-          end
-          field_values[field_idx] = node
-          field_idx += 1
+          raise error("Unsupported FirstExpr with #{inner_children.size} children", child)
         end
       else
-        node = build_node(child)
+        node = if is_global && (ast = try_evaluate(child))
+                 ast
+               else
+                 build_node(child)
+               end
         expected_type = field_types[field_idx]?
         if expected_type
           node = auto_cast(node, expected_type, node.location)
         end
         field_values[field_idx] = node
         field_idx += 1
-      end
-    end
-    if target_type.is_a?(Type::EnumType) && field_values.size == 1
-      if value = field_values[0]?
-        if value.is_a?(TypedAST::IntLiteral) && value.value == 0
-          return TypedAST::InitList.new([] of TypedAST::Node, target_type, location(cursor))
-        end
       end
     end
 
@@ -1450,10 +1552,10 @@ class Myc::Mycc::ASTBuilder
           elements << value
         else
           expected_type = target_type.data[idx]
-          zero = build_zero_value(expected_type, location(cursor))
-          elements << zero
+          elements << build_zero_value(expected_type, location(cursor))
         end
       end
+      TypedAST::InitList.new(elements, target_type, location(cursor))
     elsif target_type.is_a?(Type::FlatType)
       total = target_type.elements_count.to_i
       (0...total).each do |idx|
@@ -1461,18 +1563,22 @@ class Myc::Mycc::ASTBuilder
           elements << value
         else
           expected_type = target_type.target_type
-          zero = build_zero_value(expected_type, location(cursor))
-          elements << zero
+          elements << build_zero_value(expected_type, location(cursor))
         end
       end
+      TypedAST::InitList.new(elements, target_type, location(cursor))
     elsif target_type.is_a?(Type::EnumType)
       if value = field_values[0]?
         elements << value
       end
+      TypedAST::InitList.new(elements, target_type, location(cursor))
+    else
+      if v = field_values[0]?
+        v
+      else
+        build_zero_value(target_type || typer.i32, location(cursor))
+      end
     end
-
-    type = target_type || typer.void
-    TypedAST::InitList.new(elements, type, location(cursor))
   end
 
   private def extract_string_value(cursor : Clang::Cursor) : String
@@ -1484,7 +1590,7 @@ class Myc::Mycc::ASTBuilder
     end
   end
 
-  private def try_build_designated_init(cursor : Clang::Cursor, target_type : Type?) : NamedTuple(value: TypedAST::Node, index: Int32)?
+  private def try_build_designated_init(cursor : Clang::Cursor, target_type : Type?, is_global : Bool = false) : NamedTuple(value: TypedAST::Node, index: Int32)?
     return nil unless target_type
 
     inner_children = children(cursor)
@@ -1507,14 +1613,14 @@ class Myc::Mycc::ASTBuilder
         return nil unless field_index
 
         field_type = target_type.data[field_index]
-        value = build_value_for_designated(value_cursor, field_type)
+        value = build_value_for_designated(value_cursor, field_type, is_global)
         return {value: value, index: field_index}
       when Type::EnumType
         variant = target_type.data.values.find { |v| v.original_name == field_name }
         return nil unless variant
 
         field_type = variant.value_types.first? || target_type
-        value = build_value_for_designated(value_cursor, field_type)
+        value = build_value_for_designated(value_cursor, field_type, is_global)
         return {value: value, index: 0}
       else
         return nil
@@ -1550,7 +1656,7 @@ class Myc::Mycc::ASTBuilder
       end
     end
 
-    final_value = build_value_for_designated(value_cursor, current_type)
+    final_value = build_value_for_designated(value_cursor, current_type, is_global)
 
     (chain.size - 1).downto(1) do |i|
       entry = chain[i]
@@ -1580,11 +1686,15 @@ class Myc::Mycc::ASTBuilder
     {value: final_value, index: first[:field_index]}
   end
 
-  private def build_value_for_designated(cursor : Clang::Cursor, target_type : Type) : TypedAST::Node
+  private def build_value_for_designated(cursor : Clang::Cursor, target_type : Type, is_global : Bool = false) : TypedAST::Node
     if cursor.kind.init_list_expr?
-      build_init_list(cursor, target_type)
+      build_init_list(cursor, target_type, is_global: is_global)
     else
-      v = build_node(cursor)
+      v = if is_global && (ast = try_evaluate(cursor))
+            ast
+          else
+            build_node(cursor)
+          end
       auto_cast(v, target_type, v.location)
     end
   end
@@ -2277,7 +2387,7 @@ class Myc::Mycc::ASTBuilder
     end
   end
 
-  private def try_evaluate(cursor : Clang::Cursor) : TypedAST::Node?
+  def try_evaluate(cursor : Clang::Cursor) : TypedAST::Node?
     if result = cursor.evaluate
       case result.kind
       when LibC::CXEvalResultKind::Int
