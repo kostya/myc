@@ -47,6 +47,21 @@ abstract class Myc::Type
   def to_unsafe_ptr
     Type::PtrType.new(@loc, "ptr<#{self.id_name}>", self)
   end
+
+  # Heap pointers and aggregates that contain them. Used by myc-llvm
+  # safepoints: spill these across CALL so a moving GC can rewrite the
+  # slots. C pointers that are not heap objects are still PtrType; the
+  # collector leaves non-heap words unchanged.
+  def gc_pointer? : Bool
+    case self
+    when Type::PtrType
+      true
+    when Type::StructType
+      self.as(Type::StructType).data.any?(&.gc_pointer?)
+    else
+      false
+    end
+  end
 end
 
 require "./type/*"

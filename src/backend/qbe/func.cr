@@ -37,6 +37,7 @@ class Myc::Backend::QBE::Func < Myc::Backend::AbstractFunc
       case attr
       when Mod::FuncDef::Attr::Private
         visibility = ""
+      when Mod::FuncDef::Attr::Noinline, Mod::FuncDef::Attr::Leaf, Mod::FuncDef::Attr::Vaarg
       end
     end
 

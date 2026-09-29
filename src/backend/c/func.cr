@@ -37,6 +37,7 @@ class Myc::Backend::C::Func < Myc::Backend::AbstractFunc
         attrs += "__attribute__((noinline)) "
       when Mod::FuncDef::Attr::Private
         is_static = true
+      when Mod::FuncDef::Attr::Leaf, Mod::FuncDef::Attr::Vaarg
       end
     end
     unless builder.backend.common_options.final

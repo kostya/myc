@@ -39,4 +39,16 @@ abstract class Myc::Backend::AbstractBB
   abstract def va_start(arg : Value, val : Value)
   abstract def va_end(arg : Value)
   abstract def va_arg(arg : Value, type : Type) : Value
+
+  # After a collecting CALL, LLVM isel can keep a pre-call heap pointer
+  # in an unrooted spill. The LLVM backend reloads each rooted pointer
+  # slot through an opaque C helper so later uses cannot be those copies.
+  def gc_reload_root_slots(slots : Array(Value))
+  end
+
+  # Rooted pointer allocas to list in the next collecting CALL's
+  # gc.statepoint gc-live bundle. Default backends ignore this.
+  def gc_set_stackmap_lives(lives : Array(Value))
+  end
 end
+

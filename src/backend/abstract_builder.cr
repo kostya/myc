@@ -1,15 +1,30 @@
+# Pointer safepoints for a moving GC (LLVM backend). Frontends declare a
+# root hook; myc-llvm spills live pointers around collecting CALL and
+# wraps those calls as gc.statepoint so LLVM records stack-map slots.
+# See Myc::Backend::GcConfig (abstract_backend.cr).
+
 abstract class Myc::Backend::AbstractBuilder
   getter backend : AbstractBackend
   getter layout : Layout
   getter std_funcs : Hash(String, Type::Fn)
   getter inspect_funcs : Hash(Type, String)
   getter inspect_type_fns : Hash(String, Mod::FuncDef)
+  property gc_config : GcConfig
 
   def initialize(@backend, @layout)
+    @gc_config = GcConfig.new
     @std_funcs = add_std_funcs
     @inspect_funcs = Hash(Type, String).new
     @inspect_type_fns = Hash(String, Mod::FuncDef).new
     @label_counter = 0_u64
+  end
+
+  def gc_safepoints : Bool
+    gc_config.enabled
+  end
+
+  def gc_safepoints=(value : Bool)
+    gc_config.enabled = value
   end
 
   def add_std_funcs

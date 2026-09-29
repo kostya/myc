@@ -130,6 +130,18 @@ mycc: `C -> Parse(libclang) -> mycc CodeGen -> IR(myc) -> [LLVM/QBE/C] -> binary
 
 Rare features are not implemented: va_list, long double, atomic, complex numbers, longjmp, bitfields, asm. I wouldn't try building Linux or sqlite with it. It has only been tested on arm64 and linux64.
 
+### Safepoints for moving GC (myc-llvm)
+
+If the module declares a root hook (`FUNC :gc_root` by default, or `--gc-root=NAME`), myc-llvm spills live pointer SSA around collecting `CALL`s and wraps those calls as `llvm.experimental.gc.statepoint` so LLVM records stack-map slots. After emit, `.llvm_stackmaps` is marked `SHF_WRITE` so PIE links have no `DT_TEXTREL`.
+
+Non-collecting calls: libc (`printf`, `memset`, `memcpy`, `memmove`, `malloc`, `calloc`, `free`), the configured hook names, `--gc-leaf=a,b`, and `ATTRIBUTES ATTR :leaf` on a `FUNC`. Other calls collect.
+
+```
+myc-llvm c prog.myc out --gc-root=gc_root --gc-reload=gc_reload --gc-enter=gc_enter --gc-leave=gc_leave
+```
+
+`MYC_GC_SAFEPOINTS=0` or `--no-gc-safepoints` turns this off. QBE and C backends ignore it.
+
 ## mycc: build compiler.
 
 Requires LLVM/libclang >= 20.

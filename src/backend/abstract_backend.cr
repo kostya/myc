@@ -1,3 +1,31 @@
+# Pointer safepoints for a moving GC (LLVM backend). Frontends declare a
+# root hook; myc-llvm spills live pointers around collecting CALL and
+# wraps those calls as gc.statepoint so LLVM records stack-map slots.
+class Myc::Backend::GcConfig
+  property enabled : Bool = false
+  property root : String = "gc_root"
+  property reload : String = "gc_reload"
+  property enter : String = ""
+  property leave : String = ""
+  property leaves : Set(String)
+
+  def self.libc_leaves : Set(String)
+    Set{"printf", "memset", "memcpy", "memmove", "malloc", "calloc", "free"}
+  end
+
+  def initialize
+    @leaves = self.class.libc_leaves.dup
+  end
+
+  def leaf?(name : String) : Bool
+    return true if @leaves.includes?(name)
+    return true if name == @root || name == @reload
+    return true if !@enter.empty? && name == @enter
+    return true if !@leave.empty? && name == @leave
+    false
+  end
+end
+
 abstract class Myc::Backend::AbstractBackend
   record CommonOptions, target : Target?, final : Bool, debug : Bool
 
@@ -136,7 +164,11 @@ abstract class Myc::Backend::AbstractBackend
       File.open(save_result, "w") { |f| IO.copy(Mod::Saver.new(header_mod).save.serialize, f) }
     end
 
-    if (ENV["MYC_DISABLE_INLINER"]? == "1") || (common_options.debug)
+    cfg = gc_config_from_cli
+    gc_mod = module_has_func?(mods, header_mod, cfg.root)
+    skip_inline = ENV["MYC_DISABLE_INLINER"]? == "1" || common_options.debug
+    skip_inline ||= gc_mod && !gc_safepoints_disabled?
+    if skip_inline
     else
       inline_cross_module(mods, header_mod)
     end
@@ -426,6 +458,33 @@ abstract class Myc::Backend::AbstractBackend
     debug = !!data.options["debug"]?
     debug = false if final
     CommonOptions.new(target: target, final: final, debug: debug)
+  end
+
+  protected def gc_safepoints_disabled? : Bool
+    ENV["MYC_GC_SAFEPOINTS"]? == "0" || !!data.options["no-gc-safepoints"]?
+  end
+
+  protected def gc_config_from_cli : GcConfig
+    cfg = GcConfig.new
+    cfg.root = data.options["gc-root"]? || ENV["MYC_GC_ROOT"]? || "gc_root"
+    cfg.reload = data.options["gc-reload"]? || ENV["MYC_GC_RELOAD"]? || "gc_reload"
+    cfg.enter = data.options["gc-enter"]? || ENV["MYC_GC_ENTER"]? || ""
+    cfg.leave = data.options["gc-leave"]? || ENV["MYC_GC_LEAVE"]? || ""
+    extra = data.options["gc-leaf"]? || ENV["MYC_GC_LEAF"]?
+    extra.try(&.split(',').each { |n|
+      name = n.strip
+      cfg.leaves << name unless name.empty?
+    })
+    cfg
+  end
+
+  protected def module_has_func?(mods : Array(Mod), header_mod : Mod, name : String) : Bool
+    mods.any? { |m| m.func_defs.has_key?(name) } || header_mod.func_defs.has_key?(name)
+  end
+
+  protected def gc_safepoints_for?(mod : Mod, header_mod : Mod, cfg : GcConfig) : Bool
+    return false if gc_safepoints_disabled?
+    mod.func_defs.has_key?(cfg.root) || header_mod.func_defs.has_key?(cfg.root)
   end
 
   protected def detect_native_target : Target

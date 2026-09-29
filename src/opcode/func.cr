@@ -23,6 +23,9 @@
 #   ; Variadic
 #   FUNC :printf RETURN TYPE :i32 ARGS TYPE :ptr<u8> ATTRIBUTES ATTR :vaarg ENDFUNC
 #
+#   ; Non-collecting (moving GC safepoints skip this CALL)
+#   FUNC :get_ptr ARGS TYPE :ptr<void> RETURN TYPE :ptr<void> ATTRIBUTES ATTR :leaf ENDFUNC
+#
 #   ; Calling
 #   PUSH 20      ; arg1
 #   PUSH 10      ; arg0

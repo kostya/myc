@@ -13,10 +13,17 @@ class Myc::Backend::Llvm::Func < Myc::Backend::AbstractFunc
         @link.llvm_function.add_attribute LLVM::Attribute::NoInline
       when Mod::FuncDef::Attr::Private
         @link.llvm_function.linkage = LLVM::Linkage::Private
+      when Mod::FuncDef::Attr::Leaf, Mod::FuncDef::Attr::Vaarg
       end
     end
     unless builder.backend.common_options.final
       @link.llvm_function.add_attribute LLVM::Attribute::NoInline
+    end
+    if builder.gc_safepoints
+      @link.llvm_function.add_attribute LLVM::Attribute::NoInline
+      @link.llvm_function.add_attribute LLVM::Attribute::OptimizeNone
+      @link.llvm_function.add_target_dependent_attribute("frame-pointer", "all")
+      @link.llvm_function.gc = "statepoint-example"
     end
     @link.llvm_function.add_attribute LLVM::Attribute::NoUnwind
     super

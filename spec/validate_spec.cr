@@ -46,6 +46,21 @@ context "Validate" do
     _____________________________res
   end
 
+  it "func with leaf attribute" do
+    validate(<<-'_____________________________src').should eq <<-'_____________________________res'
+    FUNC :get_ptr RETURN TYPE :ptr<void> ARGS TYPE :ptr<void> ATTRIBUTES ATTR :leaf ENDFUNC
+    _____________________________src
+    FUNC :get_ptr
+      ARGS
+        TYPE :ptr<void>
+      RETURN
+        TYPE :ptr<void>
+      ATTRIBUTES
+        ATTR :leaf
+    ENDFUNC
+    _____________________________res
+  end
+
   it "if else" do
     validate(<<-'_____________________________src').should eq <<-'_____________________________res'
     FUNC :test BODY IF THEN PUSH 1 ELSE PUSH 2 ENDIF ENDFUNC

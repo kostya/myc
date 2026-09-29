@@ -112,7 +112,7 @@ class Myc::Cli
 
   private def option_require_argument?(arg : String) : Bool
     case arg
-    when "target", "header", "backend"
+    when "target", "header", "backend", "gc-root", "gc-reload", "gc-enter", "gc-leave", "gc-leaf"
       true
     else
       false
@@ -191,6 +191,13 @@ OPTIONS:
   --final ; Slow compilation, for final build only.
   --debug ; To disable inliner
   --target=TARGET   (TARGET: arm64, x86_64, x86, ...; default: native)
+  --gc-root=NAME    ; moving-GC root hook (default gc_root). Safepoints
+                    ; turn on when this FUNC is in the module.
+  --gc-reload=NAME  ; opaque post-CALL pointer reload (default gc_reload)
+  --gc-enter=NAME   ; optional enter hook (root the return slot after it)
+  --gc-leave=NAME   ; optional leave hook (keep rooted allocas live)
+  --gc-leaf=A,B     ; extra CALLs that never collect (libc is already leaf)
+  --no-gc-safepoints ; disable even if the root hook is declared
 USAGE
   end
 

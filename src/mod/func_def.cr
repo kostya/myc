@@ -12,6 +12,7 @@ class Myc::Mod::FuncDef
     Noinline
     Vaarg
     Private
+    Leaf
   end
 
   property attrs : Attr
@@ -34,5 +35,9 @@ class Myc::Mod::FuncDef
 
   def noinline?
     @attrs.includes?(Attr::Noinline)
+  end
+
+  def leaf?
+    @attrs.includes?(Attr::Leaf)
   end
 end
