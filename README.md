@@ -56,6 +56,10 @@ All opcodes [self documented](https://github.com/kostya/myc/tree/master/src/opco
 * 6 Control flow: IF/THEN/ELSE, LOOP/INIT/COND/BODY/STEP, SWITCH/CASE, BREAK, NEXT, RET.
 * Types: STRUCT, ENUM/VARIANT, FLAT + void, bool, i8..i64, u8..u64, f32, f64, ptr<T>.
 
+## Plugins/Extensions
+
+* [LLVM safepoints for moving garbage collectors.](https://github.com/avant-lang/safepoints)
+
 ## Install
 
 Requires [Crystal](https://crystal-lang.org) to compile the myc compiler.
