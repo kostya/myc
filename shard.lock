@@ -2,5 +2,5 @@ version: 2.0
 shards:
   clang:
     git: https://github.com/kostya/clang.cr.git
-    version: 0.4.0
+    version: 0.4.1
 
