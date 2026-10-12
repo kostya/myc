@@ -6,12 +6,12 @@
 
 * Simple DSL over LLVM/QBE.
 * Your language AST -> mycIR -> [LLVM / QBE / C] -> binary.
-* ~30 stack-based opcodes.
-* Whole IR spec fits in 30 minutes of reading. 
+* ~31 stack-based opcodes.
+* Whole IR spec fits in 1 hour of reading. 
 * Compiles to native code via LLVM, QBE, or C. 
 * Fast compilation, "zero" overhead (I hope). 
-* ~8000 lines in Crystal.
-* Includes mycc: a C11-like compiler built on myc (3000 lines).
+* ~9000 lines in Crystal.
+* Includes mycc: a C11-like compiler built on myc (~4000 lines).
 
 ### Why?
 
@@ -24,10 +24,10 @@
 
 ### Current status
 
-* Alpha, but already powerful.
+* Alpha.
 * All 3 backends work smoothly.
-* 4400 tests pass.
-* Mycc compiles [LangArena](https://github.com/kostya/LangArena) benchmark - 50 tests, 9,000 lines of production-like C (json, base64, neural net, compression, maze A*, and more) and 20/34 files of Lua. 
+* ~900x9 tests pass.
+* Mycc compiles LangArena 9000 C lines and 26/34 files of Lua.
 * Two modes: default (fast, Go-like) and final (slow compile, ~5-15% faster runtime).
 
 ## How it looks like?
@@ -46,15 +46,15 @@ ENDFUNC
 
 ![plot](https://github.com/kostya/myc-benchmarks/blob/master/plot1.png?raw=true)
 
-This scatter plot shows the tradeoff between compile time and runtime. The ideal is the bottom-left corner: fast compiles, fast runtime. This is the Pareto frontier - you can't improve one without sacrificing the other. Myc-qbe(default) and myc-llvm(default) occupy a spot that even Go would respect. Measured on pure IR files - no C parsing overhead, just optimization and code generation for both MycIR and LLVM-LL. [Link to benchmark and reproduce steps](https://github.com/kostya/myc-benchmarks#benchmark-1-langarena-single-ir-file-myc-vs-clang).
+This scatter plot shows the tradeoff between compile time and runtime. The ideal is the bottom-left corner: fast compiles, fast runtime. This is the Pareto frontier - you can't improve one without sacrificing the other. Measured on pure IR files (`*.myc` vs `*.ll`). [Link to benchmark and reproduce steps](https://github.com/kostya/myc-benchmarks#benchmark-1-langarena-single-ir-file-myc-vs-clang).
 
 ## mycIR
 
 All opcodes [self documented](https://github.com/kostya/myc/tree/master/src/opcode). Also see [examples](https://github.com/kostya/myc/tree/master/examples).
 
-* 24 main opcodes: PUSH, LOCAL, STORE, CALL, PARAM, BINARY, UNARY, FIELD, DEREF, ADDR, AS, SELECT, MALLOC, CREATE, INSPECT, PRINTF, STACK, SIZEOF, TO, INVOKE, LABEL, GOTO, ALLOCA, SLOT.
+* 25 main opcodes: PUSH, LOCAL, STORE, CALL, PARAM, BINARY, UNARY, FIELD, DEREF, ADDR, AS, SELECT, MALLOC, CREATE, INSPECT, PRINTF, STACK, SIZEOF, TO, INVOKE, LABEL, GOTO, ALLOCA, SLOT, VA
 * 6 Control flow: IF/THEN/ELSE, LOOP/INIT/COND/BODY/STEP, SWITCH/CASE, BREAK, NEXT, RET.
-* Types: STRUCT, ENUM/VARIANT, FLAT + void, bool, i8..i64, u8..u64, f32, f64, ptr<T>.
+* Types: STRUCT, ENUM/VARIANT, FLAT + void, bool, i8..i64, u8..u64, f32, f64, ptr<T>, :indirect, :valist.
 
 ## Install
 
@@ -110,25 +110,19 @@ cd ../../
 
 # mycc - an alternative C compiler.
 
-As a proof of concept, I built mycc: a compiler for a subset of C (roughly C11) on top of myc. This proves that creating languages is easy. For parsing, I used libclang - it adds overhead, but it's the simplest solution for a POC. It is only 3000 lines of code and already compiles complex and production-like C, like: LangArena and part of Lua.
+As a proof of concept, I built mycc (with assist of LLM): a compiler for a subset of C (roughly C11) on top of myc. This proves that creating languages is easy. For parsing, I used libclang - it adds overhead, but it's the simplest solution for a POC. It is only 4000 lines of code and already compiles quite complex C code.
 
 ## How it works:
 
 `C source -> SyntaxTree(libclang/clang.cr) -> TypedAST(mycc) -> IR(myc) -> [LLVM/QBE/C] -> binary`
 
-The most challenging part was `SyntaxTree -> TypedAST`. In the file [ast_builder.cr](https://github.com/kostya/myc/blob/master/src/mycc/ast_builder.cr) which contains 1700 lines of code. libclang returns a non-normalized Tree with many edge cases that need to be transformed into a consistent form. Additionally, C has a ton of implicit behavior.
+The most challenging part was `SyntaxTree -> TypedAST`. In the file [ast_builder.cr](https://github.com/kostya/myc/blob/master/src/mycc/ast_builder.cr)- 2400 LOC. libclang returns a non-normalized Tree with many edge cases that need to be transformed into a consistent form. Additionally, C has a ton of implicit behavior.
 
-The `TypedAST(mycc) -> IR(myc)` stage as expected, is one of the simplest ([codegen.cr](https://github.com/kostya/myc/blob/master/src/mycc/codegen.cr), 700 lines) - a single-pass generation of stack-based IR directly from the AST.
-
-### Difference from Clang:
-
-clang: `C -> Parse(libclang) -> Clang CodeGen -> LLVM -> binary`
-
-mycc: `C -> Parse(libclang) -> mycc CodeGen -> IR(myc) -> [LLVM/QBE/C] -> binary`
+The `TypedAST(mycc) -> IR(myc)` stage as expected, is one of the simplest ([codegen.cr](https://github.com/kostya/myc/blob/master/src/mycc/codegen.cr), 900 lines) - a single-pass generation of stack-based IR directly from the AST.
 
 ### Limitations: 
 
-Rare features are not implemented: va_list, long double, atomic, complex numbers, longjmp, bitfields, asm. I wouldn't try building Linux or sqlite with it. It has only been tested on arm64 and linux64.
+Missing features: atomic, long double, complex numbers, longjmp, bitfields, asm. I wouldn't try building sqlite with it. It has only been tested on arm64 and linux64.
 
 ## mycc: build compiler.
 
