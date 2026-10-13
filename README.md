@@ -26,8 +26,9 @@
 
 * Alpha.
 * All 3 backends work smoothly.
-* ~900x9 tests pass.
-* Mycc compiles LangArena 9000 C lines and 26/34 files of Lua.
+* ~900 tests × 9 backend/mode combinations.
+* Mycc compiles LangArena 9000 C lines and 26/34 C files of Lua interpreter.
+* Currently performs one transformation: inlining. More may come later.
 * Two modes: default (fast, Go-like) and final (slow compile, ~5-15% faster runtime).
 
 ## How it looks like?
