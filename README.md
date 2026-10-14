@@ -7,7 +7,7 @@
 * Simple DSL over LLVM/QBE.
 * Your language AST -> mycIR -> [LLVM / QBE / C] -> binary.
 * ~31 stack-based opcodes.
-* Whole IR spec fits in 1 hour of reading. 
+* The whole IR spec fits in an hour of reading.
 * Compiles to native code via LLVM, QBE, or C. 
 * Fast compilation, "zero" overhead (I hope). 
 * ~9000 lines in Crystal.
@@ -26,10 +26,11 @@
 
 * Alpha.
 * All 3 backends work smoothly.
-* ~900 tests × 9 backend/mode combinations.
-* Mycc compiles LangArena 9000 C lines and 26/34 C files of Lua interpreter.
+* ~900 tests × 9 backend modes - passed.
+* Mycc compiles 9000 lines of C from LangArena and 26/34 C files of the Lua interpreter.
 * Currently performs one transformation: inlining. More may come later.
 * Two modes: default (fast, Go-like) and final (slow compile, ~5-15% faster runtime).
+* QBE has a bug on Apple aarch64 with globals.
 
 ## How it looks like?
 
@@ -117,7 +118,7 @@ As a proof of concept, I built mycc (with assist of LLM): a compiler for a subse
 
 `C source -> SyntaxTree(libclang/clang.cr) -> TypedAST(mycc) -> IR(myc) -> [LLVM/QBE/C] -> binary`
 
-The most challenging part was `SyntaxTree -> TypedAST`. In the file [ast_builder.cr](https://github.com/kostya/myc/blob/master/src/mycc/ast_builder.cr)- 2400 LOC. libclang returns a non-normalized Tree with many edge cases that need to be transformed into a consistent form. Additionally, C has a ton of implicit behavior.
+The most challenging part was `SyntaxTree -> TypedAST`. In the file [ast_builder.cr](https://github.com/kostya/myc/blob/master/src/mycc/ast_builder.cr) - 2400 LOC. libclang returns a non-normalized Tree with many edge cases that need to be transformed into a consistent form. Additionally, C has a ton of implicit behavior.
 
 The `TypedAST(mycc) -> IR(myc)` stage as expected, is one of the simplest ([codegen.cr](https://github.com/kostya/myc/blob/master/src/mycc/codegen.cr), 900 lines) - a single-pass generation of stack-based IR directly from the AST.
 
