@@ -77,7 +77,11 @@ class Myc::Backend::QBE::Func < Myc::Backend::AbstractFunc
         qbe_ret_type = builder.qbe_type(ret_type)
 
         if ret_type.is_a?(Type::IntType) && ret_type.bytes_count < 4
-          load_op = ret_type.signed ? "loadsb" : "loadub"
+          load_op = case ret_type.bytes_count
+                    when 1 then ret_type.signed ? "loadsb" : "loadub"
+                    when 2 then ret_type.signed ? "loadsh" : "loaduh"
+                    else        "load#{qbe_ret_type}"
+                    end
           emit "  %ret_val =w #{load_op} %__myc_result\n"
         elsif ret_type.is_a?(Type::BoolType)
           emit "  %ret_val =w loadub %__myc_result\n"

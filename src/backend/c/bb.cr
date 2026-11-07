@@ -204,13 +204,20 @@ class Myc::Backend::C::BB < Myc::Backend::AbstractBB
       if type.is_a?(Type::IntType)
         width = type.bytes_count * 8
         if width <= 32
-          emit "#{c_type_str} #{temp} = __builtin_clz(#{val}) - (#{32 - width});"
+          emit "#{c_type_str} #{temp} = (#{val} == 0) ? #{width} : __builtin_clz(#{val}) - (#{32 - width});"
         else
-          emit "#{c_type_str} #{temp} = __builtin_clzll(#{val});"
+          emit "#{c_type_str} #{temp} = (#{val} == 0) ? #{width} : __builtin_clzll(#{val});"
         end
       end
     when .ctz?
-      emit "#{c_type_str} #{temp} = __builtin_ctz(#{val});"
+      if type.is_a?(Type::IntType)
+        width = type.bytes_count * 8
+        if width <= 32
+          emit "#{c_type_str} #{temp} = (#{val} == 0) ? #{width} : __builtin_ctz(#{val});"
+        else
+          emit "#{c_type_str} #{temp} = (#{val} == 0) ? #{width} : __builtin_ctzll(#{val});"
+        end
+      end
     when .popcnt?
       emit "#{c_type_str} #{temp} = __builtin_popcount(#{val});"
     when .ceil?

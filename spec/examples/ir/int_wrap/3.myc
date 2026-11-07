@@ -1,0 +1,126 @@
+FUNC :main
+  BODY
+    PUSH 200 :u8
+    TO :i32
+    INSPECT
+    PUSH -1 :i8
+    TO :i32
+    INSPECT
+    PUSH 255 :u8
+    TO :i16
+    INSPECT
+    PUSH -32768 :i16
+    TO :i64
+    INSPECT
+    PUSH 4294967295 :u32
+    TO :u64
+    INSPECT
+    PUSH -1 :i32
+    TO :i64
+    INSPECT
+    PUSH 300 :i32
+    AS :u8
+    INSPECT
+    PUSH -1 :i32
+    AS :u8
+    INSPECT
+    PUSH 127 :i32
+    AS :i8
+    INSPECT
+    PUSH 128 :i32
+    AS :i8
+    INSPECT
+    PUSH -129 :i32
+    AS :i8
+    INSPECT
+    PUSH 65536 :i32
+    AS :u16
+    INSPECT
+    PUSH 65535 :i32
+    AS :u16
+    INSPECT
+    PUSH -32768 :i32
+    AS :i16
+    INSPECT
+    PUSH 32768 :i32
+    AS :i16
+    INSPECT
+    PUSH 4294967295 :i64
+    AS :u32
+    INSPECT
+    PUSH 4294967296 :i64
+    AS :u32
+    INSPECT
+    PUSH 42 :i32
+    AS :f64
+    INSPECT
+    PUSH -42 :i32
+    AS :f64
+    INSPECT
+    PUSH 255 :u8
+    AS :f64
+    INSPECT
+    PUSH -1 :i8
+    AS :f64
+    INSPECT
+    PUSH 42 :i32
+    AS :f32
+    INSPECT
+    PUSH 42.9
+    AS :i32
+    INSPECT
+    PUSH -42.9
+    AS :i32
+    INSPECT
+    PUSH 3.99
+    AS :u8
+    INSPECT
+    PUSH 3.99
+    AS :f32
+    INSPECT
+    PUSH 3.5 :f32
+    AS :f64
+    INSPECT
+    PUSH 3.5 :f64
+    AS :f32
+    INSPECT
+    PUSH 3.5 :f32
+    AS :f32
+    INSPECT
+    PUSH true
+    AS :i32
+    INSPECT
+    PUSH false
+    AS :i32
+    INSPECT
+    PUSH true
+    AS :u8
+    INSPECT
+    PUSH 0 :i32
+    PUSH 42 :i32
+    BINARY :not_eq
+    INSPECT
+    PUSH 0
+    AS :ptr<i32>
+    LOCAL :p :ptr<i32>
+    STORE
+    LOCAL :p
+    AS :ptr<void>
+    LOCAL :p2 :ptr<void>
+    STORE
+    LOCAL :p2
+    PUSH 0 :ptr<void>
+    BINARY :eq
+    INSPECT
+    PUSH 300 :i32
+    AS :u8
+    PUSH 10 :u8
+    BINARY :add
+    INSPECT
+    PUSH 2 :u8
+    PUSH 300 :i32
+    AS :u8
+    BINARY :div
+    INSPECT
+ENDFUNC
+

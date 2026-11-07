@@ -1,0 +1,135 @@
+FUNC :main
+  BODY
+    PUSH 2 :u8
+    PUSH 100 :u8
+    PUSH 300 :u8
+    PUSH true
+    SELECT
+    BINARY :div
+    INSPECT
+    PUSH 2 :u8
+    PUSH 100 :u8
+    PUSH 300 :u8
+    PUSH false
+    SELECT
+    BINARY :div
+    INSPECT
+    PUSH 2 :i8
+    PUSH 0 :i8
+    PUSH 200 :i8
+    PUSH true
+    SELECT
+    BINARY :div
+    INSPECT
+    PUSH 2 :u16
+    PUSH 0 :u16
+    PUSH 70000 :u16
+    PUSH true
+    SELECT
+    BINARY :div
+    INSPECT
+    PUSH 2 :i16
+    PUSH 0 :i16
+    PUSH 40000 :i16
+    PUSH true
+    SELECT
+    BINARY :div
+    INSPECT
+    PUSH 300
+    PUSH 0
+    CALL :sum_u8_1 1
+    INSPECT
+    PUSH 255
+    PUSH 0
+    CALL :sum_u8_1 1
+    INSPECT
+    PUSH 256
+    PUSH 0
+    CALL :sum_u8_1 1
+    INSPECT
+    PUSH 200
+    PUSH 0
+    CALL :sum_u8_1 1
+    INSPECT
+    PUSH 300
+    PUSH 0
+    CALL :sum_i8_1 1
+    INSPECT
+    PUSH 200
+    PUSH 0
+    CALL :sum_i8_1 1
+    INSPECT
+    PUSH 70000
+    PUSH 0
+    CALL :sum_u16_1 1
+    INSPECT
+    PUSH 40000
+    PUSH 0
+    CALL :sum_i16_1 1
+    INSPECT
+ENDFUNC
+
+FUNC :sum_u8_1
+  ARGS
+    TYPE :i32
+  RETURN
+    TYPE :u8
+  ATTRIBUTES
+    ATTR :vaarg
+  BODY
+    PARAM 0
+    LOCAL :a :valist
+    VA :start
+    LOCAL :a
+    VA :arg :u8
+    RET
+ENDFUNC
+
+FUNC :sum_i8_1
+  ARGS
+    TYPE :i32
+  RETURN
+    TYPE :i8
+  ATTRIBUTES
+    ATTR :vaarg
+  BODY
+    PARAM 0
+    LOCAL :a :valist
+    VA :start
+    LOCAL :a
+    VA :arg :i8
+    RET
+ENDFUNC
+
+FUNC :sum_u16_1
+  ARGS
+    TYPE :i32
+  RETURN
+    TYPE :u16
+  ATTRIBUTES
+    ATTR :vaarg
+  BODY
+    PARAM 0
+    LOCAL :a :valist
+    VA :start
+    LOCAL :a
+    VA :arg :u16
+    RET
+ENDFUNC
+
+FUNC :sum_i16_1
+  ARGS
+    TYPE :i32
+  RETURN
+    TYPE :i16
+  ATTRIBUTES
+    ATTR :vaarg
+  BODY
+    PARAM 0
+    LOCAL :a :valist
+    VA :start
+    LOCAL :a
+    VA :arg :i16
+    RET
+ENDFUNC
+

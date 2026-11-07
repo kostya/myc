@@ -1,0 +1,9 @@
+FUNC :main
+  BODY
+    PUSH 2 :u8
+    PUSH 300 :i32
+    AS :u8
+    BINARY :div
+    INSPECT
+ENDFUNC
+

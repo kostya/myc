@@ -158,6 +158,7 @@ class Myc::Backend::QBE::BB < Myc::Backend::AbstractBB
 
     emit_label end_label
 
+    t = wrap_int_result(t, arg_true.type) if arg_true.type.is_a?(Type::IntType)
     wrap_val(t, arg_true.type, arg_true.pp)
   end
 
@@ -190,9 +191,15 @@ class Myc::Backend::QBE::BB < Myc::Backend::AbstractBB
     qbe_type = qbe_type(ltype)
 
     case op
-    when .add? then emit "#{t} =#{qbe_type} add #{l}, #{r}"
-    when .sub? then emit "#{t} =#{qbe_type} sub #{l}, #{r}"
-    when .mul? then emit "#{t} =#{qbe_type} mul #{l}, #{r}"
+    when .add?
+      emit "#{t} =#{qbe_type} add #{l}, #{r}"
+      t = wrap_int_result(t, ltype)
+    when .sub?
+      emit "#{t} =#{qbe_type} sub #{l}, #{r}"
+      t = wrap_int_result(t, ltype)
+    when .mul?
+      emit "#{t} =#{qbe_type} mul #{l}, #{r}"
+      t = wrap_int_result(t, ltype)
     when .div?
       op_name = case ltype
                 when Type::IntType
@@ -203,18 +210,24 @@ class Myc::Backend::QBE::BB < Myc::Backend::AbstractBB
                   return
                 end
       emit "#{t} =#{qbe_type} #{op_name} #{l}, #{r}"
+      t = wrap_int_result(t, ltype)
+      return wrap_res(t, ltype, lhs.pp)
     when .rem?
       case ltype
       when Type::IntType
         op_name = ltype.signed ? "rem" : "urem"
         emit "#{t} =#{qbe_type} #{op_name} #{l}, #{r}"
+        t = wrap_int_result(t, ltype)
+        return wrap_res(t, ltype, lhs.pp)
       else
         return
       end
     when .and? then emit "#{t} =#{qbe_type} and #{l}, #{r}"
     when .or?  then emit "#{t} =#{qbe_type} or #{l}, #{r}"
     when .xor? then emit "#{t} =#{qbe_type} xor #{l}, #{r}"
-    when .shl? then emit "#{t} =#{qbe_type} shl #{l}, #{r}"
+    when .shl?
+      emit "#{t} =#{qbe_type} shl #{l}, #{r}"
+      t = wrap_int_result(t, ltype)
     when .shr? then emit "#{t} =#{qbe_type} shr #{l}, #{r}"
     when .sar? then emit "#{t} =#{qbe_type} sar #{l}, #{r}"
     when .eq?
@@ -336,6 +349,7 @@ class Myc::Backend::QBE::BB < Myc::Backend::AbstractBB
         emit "#{shl_temp} =#{qbe_type} shl #{l}, #{r}"
         emit "#{shr_temp} =#{qbe_type} shr #{l}, #{sub_temp}"
         emit "#{t} =#{qbe_type} or #{shl_temp}, #{shr_temp}"
+        t = wrap_int_result(t, ltype)
       end
       return wrap_res(t, ltype, lhs.pp)
     when .rotr?
@@ -349,6 +363,7 @@ class Myc::Backend::QBE::BB < Myc::Backend::AbstractBB
         emit "#{shr_temp} =#{qbe_type} shr #{l}, #{r}"
         emit "#{shl_temp} =#{qbe_type} shl #{l}, #{sub_temp}"
         emit "#{t} =#{qbe_type} or #{shl_temp}, #{shr_temp}"
+        t = wrap_int_result(t, ltype)
       end
       return wrap_res(t, ltype, lhs.pp)
     else
@@ -374,9 +389,11 @@ class Myc::Backend::QBE::BB < Myc::Backend::AbstractBB
       case type
       when Type::IntType
         emit "#{t} =#{qbe_type} xor #{val}, -1"
+        t = wrap_int_result(t, type)
       end
     when .neg?
       emit "#{t} =#{qbe_type} neg #{val}"
+      t = wrap_int_result(t, type) if type.is_a?(Type::IntType)
     when .sqrt?
       case type
       when Type::FloatType
@@ -421,6 +438,7 @@ class Myc::Backend::QBE::BB < Myc::Backend::AbstractBB
         emit_label(label_neg)
         emit "#{t} =#{qbe_type} copy #{neg}"
         emit_label(label_end)
+        t = wrap_int_result(t, type)
       when Type::FloatType
         func_name = type.bytes_count == 8 ? "fabs" : "fabsf"
         emit "#{t} =#{qbe_type} call $#{func_name}(#{qbe_type} #{val})"
@@ -439,14 +457,31 @@ class Myc::Backend::QBE::BB < Myc::Backend::AbstractBB
           emit "#{tmp} =l call $__clzdi2(l #{ext_val})"
           emit "#{t} =l sub #{tmp}, #{64 - width}"
         end
+        t = wrap_int_result(t, type)
       end
     when .ctz?
       case type
       when Type::IntType
+        width = type.bytes_count * 8
         ext = type.signed ? "extsw" : "extuw"
         ext_val = new_temp
         emit "#{ext_val} =l #{ext} #{val}"
-        emit "#{t} =l call $__ctzdi2(l #{ext_val})"
+
+        result = new_temp
+        emit "#{result} =l call $__ctzdi2(l #{ext_val})"
+
+        cmp = new_temp
+        emit "#{cmp} =w ceql #{ext_val}, 0"
+        label_end = builder.new_label("ctz_end")
+
+        emit "jnz #{cmp}, @#{label_end}_zero, @#{label_end}"
+        emit_label("#{label_end}_zero")
+        emit "#{result} =l copy #{width}"
+        emit "jmp @#{label_end}"
+        emit_label(label_end)
+
+        emit "#{t} =l copy #{result}"
+        t = wrap_int_result(t, type)
       end
     when .popcnt?
       case type
@@ -455,6 +490,7 @@ class Myc::Backend::QBE::BB < Myc::Backend::AbstractBB
         ext_val = new_temp
         emit "#{ext_val} =l #{ext} #{val}"
         emit "#{t} =l call $__popcountdi2(l #{ext_val})"
+        t = wrap_int_result(t, type)
       end
     else
       return nil
@@ -524,6 +560,7 @@ class Myc::Backend::QBE::BB < Myc::Backend::AbstractBB
         wrap_res(t, to_type, value.pp)
       else
         emit "#{t} =#{to_qbe} copy #{val}"
+        t = wrap_int_result(t, to_type)
         wrap_res(t, to_type, value.pp)
       end
     when {Type::IntType, Type::FloatType}
@@ -792,5 +829,21 @@ class Myc::Backend::QBE::BB < Myc::Backend::AbstractBB
 
   private def typer : Typer
     @func_def.mod.typer
+  end
+
+  private def wrap_int_result(t : String, type : Type) : String
+    case type
+    when Type::IntType
+      case type.bytes_count
+      when 1
+        new_temp.tap { |r| emit "#{r} =w #{type.signed ? "extsb" : "extub"} #{t}" }
+      when 2
+        new_temp.tap { |r| emit "#{r} =w #{type.signed ? "extsh" : "extuh"} #{t}" }
+      else
+        t
+      end
+    else
+      t
+    end
   end
 end
