@@ -1,0 +1,1 @@
+GLOBAL x with INITIAL already defined

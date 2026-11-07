@@ -7,7 +7,14 @@ class Myc::Mod::Loader
       case section.code
       when Opcode::Code::FUNC
         func = load_func(section.as(Source::Node::Container))
-        @mod.func_defs[func.name] = func
+        if existed_func = @mod.func_defs[func.name]?
+          if func.body
+            raise error("redefinition of #{func.name} with BODY", section) if existed_func.body
+            @mod.func_defs[func.name] = func
+          end
+        else
+          @mod.func_defs[func.name] = func
+        end
       when Opcode::Code::GLOBAL
         load_global(section.as(Source::Node::Sequence))
       when Opcode::Code::STRUCT, Opcode::Code::ENUM, Opcode::Code::FLAT
@@ -461,7 +468,14 @@ class Myc::Mod::Loader
     raise error("missing TYPE for GLOBALDEF #{global_name}", node) unless global_type
 
     init_values ||= Array(Source::Token::Value).new
-    @mod.global_defs[global_name] = Mod::GlobalDef.new(@mod, node, global_name, global_type, initial_keyword, init_values, constant_flag, global_private)
+    if existed = @mod.global_defs[global_name]?
+      if initial_keyword
+        raise error("GLOBAL #{global_name} with INITIAL already defined", node) if existed.initial_keyword
+        @mod.global_defs[global_name] = Mod::GlobalDef.new(@mod, node, global_name, global_type, initial_keyword, init_values, constant_flag, global_private)
+      end
+    else
+      @mod.global_defs[global_name] = Mod::GlobalDef.new(@mod, node, global_name, global_type, initial_keyword, init_values, constant_flag, global_private)
+    end
   end
 
   private def find_type(name : String, node : Source::Node) : Type

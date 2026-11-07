@@ -1,0 +1,23 @@
+FUNC :f
+  RETURN
+    TYPE :i32
+  BODY
+    PUSH 42
+    RET
+ENDFUNC
+
+FUNC :f
+  RETURN
+    TYPE :i32
+  BODY
+    PUSH 43
+    RET
+ENDFUNC
+
+FUNC :main
+  BODY
+    CALL :f
+    PUSH "f = %d\n"
+    PRINTF 1
+ENDFUNC
+
