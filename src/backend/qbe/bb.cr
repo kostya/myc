@@ -448,14 +448,40 @@ class Myc::Backend::QBE::BB < Myc::Backend::AbstractBB
       when Type::IntType
         width = type.bytes_count * 8
         if width == 64
-          emit "#{t} =l call $__clzdi2(l #{val})"
+          result = new_temp
+          emit "#{result} =l call $__clzdi2(l #{val})"
+
+          cmp = new_temp
+          emit "#{cmp} =w ceql #{val}, 0"
+          label_zero = builder.new_label("clz_zero")
+          label_end = builder.new_label("clz_end")
+          emit "jnz #{cmp}, @#{label_zero}, @#{label_end}"
+          emit_label(label_zero)
+          emit "#{result} =l copy #{width}"
+          emit "jmp @#{label_end}"
+          emit_label(label_end)
+
+          emit "#{t} =l copy #{result}"
         else
           ext = type.signed ? "extsw" : "extuw"
           ext_val = new_temp
           emit "#{ext_val} =l #{ext} #{val}"
-          tmp = new_temp
-          emit "#{tmp} =l call $__clzdi2(l #{ext_val})"
-          emit "#{t} =l sub #{tmp}, #{64 - width}"
+
+          result = new_temp
+          emit "#{result} =l call $__clzdi2(l #{ext_val})"
+          emit "#{result} =l sub #{result}, #{64 - width}"
+
+          cmp = new_temp
+          emit "#{cmp} =w ceql #{ext_val}, 0"
+          label_zero = builder.new_label("clz_zero")
+          label_end = builder.new_label("clz_end")
+          emit "jnz #{cmp}, @#{label_zero}, @#{label_end}"
+          emit_label(label_zero)
+          emit "#{result} =l copy #{width}"
+          emit "jmp @#{label_end}"
+          emit_label(label_end)
+
+          emit "#{t} =l copy #{result}"
         end
         t = wrap_int_result(t, type)
       end

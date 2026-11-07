@@ -1,0 +1,38 @@
+FUNC :main
+  BODY
+    PUSH 0 :u8
+    UNARY :clz
+    INSPECT
+    PUSH 0 :u16
+    UNARY :clz
+    INSPECT
+    PUSH 0 :u32
+    UNARY :clz
+    INSPECT
+    PUSH 0 :u64
+    UNARY :clz
+    INSPECT
+    PUSH 0 :i8
+    UNARY :clz
+    INSPECT
+    PUSH 0 :i16
+    UNARY :clz
+    INSPECT
+    PUSH 0 :i32
+    UNARY :clz
+    INSPECT
+    PUSH 0 :i64
+    UNARY :clz
+    INSPECT
+    PUSH 1 :u8
+    UNARY :clz
+    INSPECT
+    PUSH 128 :u8
+    UNARY :clz
+    INSPECT
+    PUSH false
+    AS :i32
+    UNARY :clz
+    INSPECT
+ENDFUNC
+
