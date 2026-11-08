@@ -19,3 +19,4 @@ FUNC :main
     AS :Data::A
     INSPECT
 ENDFUNC
+
