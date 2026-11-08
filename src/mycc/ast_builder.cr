@@ -556,6 +556,9 @@ class Myc::Mycc::ASTBuilder
       else
         return nil
       end
+    when .first_attr?, .visibility_attr?, .packed_attr?, .aligned_attr?
+      puts "mycc: build_node ignore #{cursor.inspect}"
+      return nil
     else
       return nil
     end

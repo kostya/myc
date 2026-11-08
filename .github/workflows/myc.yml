@@ -1,4 +1,4 @@
-name: myc spec
+name: myc
 
 on:
   push:
