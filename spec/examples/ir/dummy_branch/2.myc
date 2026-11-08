@@ -1,0 +1,30 @@
+FUNC :f
+  RETURN
+    TYPE :i32
+  BODY
+    PUSH false
+    IF
+      THEN
+        PUSH 1
+        RET
+        PUSH 1
+        INSPECT
+        LOOP
+          COND
+            PUSH false
+          BODY
+          STEP
+        ENDLOOP
+        CALL :f
+        INSPECT
+    ENDIF
+    PUSH 2
+    RET
+ENDFUNC
+
+FUNC :main
+  BODY
+    CALL :f
+    INSPECT
+ENDFUNC
+

@@ -1,0 +1,25 @@
+FUNC :f
+  ARGS
+    TYPE :i32
+  RETURN
+    TYPE :i32
+  BODY
+    PARAM 0
+    RET
+    PUSH 1
+    PARAM 0
+    BINARY :add
+    PUSH true
+    IF
+      THEN
+    ENDIF
+    RET
+ENDFUNC
+
+FUNC :main
+  BODY
+    PUSH 1
+    CALL :f
+    INSPECT
+ENDFUNC
+

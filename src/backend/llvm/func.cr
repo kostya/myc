@@ -32,7 +32,7 @@ class Myc::Backend::Llvm::Func < Myc::Backend::AbstractFunc
 
   def finish(v : AbstractVisitor)
     super
-    v.fake_bb.as(BB).llvm_bb.delete
+    v.dummy_bb.as(BB).llvm_bb.delete
   end
 
   private def params : Array(Value)

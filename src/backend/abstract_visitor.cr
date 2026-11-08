@@ -13,7 +13,7 @@ abstract class Myc::Backend::AbstractVisitor
 
   getter current_op : Opcode
   getter locals : Hash(String, Value)
-  getter fake_bb : AbstractBB
+  getter dummy_bb : AbstractBB
 
   def initialize(@builder, @func, @bb, @func_def, @mod, @header_mod, @params)
     @stack = Deque(Value).new
@@ -25,7 +25,7 @@ abstract class Myc::Backend::AbstractVisitor
     @was_ret = false
     @pending_labels = Hash(String, AbstractBB).new
     @labels = Hash(String, AbstractBB).new
-    @fake_bb = func.new_raw_bb("__myc_fake_bb__")
+    @dummy_bb = func.new_raw_bb("__myc_dummy_bb__")
     @slots = Deque(Hash(String, Value)).new
     @all_slots = Hash(String, Value).new
     @instruction_id = 0_u32
@@ -148,6 +148,7 @@ abstract class Myc::Backend::AbstractVisitor
   end
 
   protected def visit_child(child : Opcode)
+    return if (@bb == @dummy_bb) && !child.is_a?(Opcode::Label)
     Myc.debug(:visitor) { "visit #{child.inspect}" }
     @instruction_id += 1
     @current_op = child
@@ -558,7 +559,7 @@ abstract class Myc::Backend::AbstractVisitor
   def visit(op : Opcode::Break)
     if finish_bb = loop_finish_stack.last?
       @bb.jmp(finish_bb)
-      @bb = fake_bb
+      @bb = dummy_bb
     else
       raise error("loop not found")
     end
@@ -567,7 +568,7 @@ abstract class Myc::Backend::AbstractVisitor
   def visit(op : Opcode::Next)
     if step_bb = loop_step_stack.last?
       @bb.jmp(step_bb)
-      @bb = fake_bb
+      @bb = dummy_bb
     else
       raise error("loop not found")
     end
@@ -686,7 +687,7 @@ abstract class Myc::Backend::AbstractVisitor
     end
 
     @bb.jmp(@func.ret_bb)
-    @bb = fake_bb
+    @bb = dummy_bb
   end
 
   def visit(op : Opcode::Malloc)
@@ -1015,7 +1016,7 @@ abstract class Myc::Backend::AbstractVisitor
 
       @bb.indirect_jmp(rhs, op.labels.map { |label| find_or_create_label(label) })
     end
-    @bb = fake_bb
+    @bb = dummy_bb
   end
 
   private def find_or_create_label(label : String) : AbstractBB
