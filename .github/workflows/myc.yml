@@ -39,6 +39,14 @@ jobs:
           restore-keys: |
             shards-${{ runner.os }}-
 
+      - name: Install libclang (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libclang-22-dev
+
+      - name: Configure LLVM (macOS)
+        if: runner.os == 'macOS'
+        run: echo "LLVM_CONFIG=$(brew --prefix llvm)/bin/llvm-config" >> $GITHUB_ENV
+
       - name: Shards install
         run: shards install
 
