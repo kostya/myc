@@ -1,0 +1,65 @@
+name: myc tests
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+env:
+  QBE_SHA: "fab6d40620ac8e23fa42cc9b945688ca5edeb091"
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-26.04, macos-latest ]
+        backend: [ llvm, qbe, c ]
+        cc: [ clang, gcc ]
+        exclude:
+          - { backend: llvm, cc: gcc }
+          - { backend: qbe,  cc: gcc }
+          - { os: macos-latest, cc: gcc }
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Crystal
+        uses: crystal-lang/install-crystal@v1
+        with:
+          crystal: latest
+
+      - name: Cache shards
+        uses: actions/cache@v4
+        with:
+          path: lib
+          key: shards-${{ runner.os }}-${{ hashFiles('shard.lock') }}
+          restore-keys: |
+            shards-${{ runner.os }}-
+
+      - name: Shards install
+        run: shards install
+
+      - name: Restore QBE cache
+        if: startsWith(matrix.backend, 'qbe')
+        id: qbe-cache
+        uses: actions/cache@v4
+        with:
+          path: plugins/qbe
+          key: qbe-${{ runner.os }}-${{ env.QBE_SHA }}
+
+      - name: Clone and build QBE (skip if cached)
+        if: startsWith(matrix.backend, 'qbe') && steps.qbe-cache.outputs.cache-hit != 'true'
+        run: |
+          git clone https://github.com/kostya/qbe.git plugins/qbe
+          cd plugins/qbe
+          git checkout ${{ env.QBE_SHA }}
+          make
+
+      - name: Run specs
+        env:
+          BACKEND: ${{ matrix.backend }}
+          CC: ${{ matrix.cc }}
+        run: crystal spec
