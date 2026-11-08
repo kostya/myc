@@ -135,15 +135,19 @@ class Myc::Backend::C::BB < Myc::Backend::AbstractBB
     when .rotl?
       case ltype = lhs.type
       when Type::IntType
+        width = ltype.bytes_count * 8
+        u = "uint#{width}_t"
         temp = builder.new_temp
-        emit "#{c_type(lhs.type)} #{temp} = __builtin_rotateleft#{ltype.bytes_count * 8}(#{l}, #{r});"
+        emit "#{c_type(lhs.type)} #{temp} = (#{c_type(lhs.type)})(((#{u})(#{l}) << ((#{r}) & #{width - 1})) | ((#{u})(#{l}) >> ((#{width} - ((#{r}) & #{width - 1})) & #{width - 1})));"
         return wrap_res(temp, lhs.type, lhs.pp)
       end
     when .rotr?
       case ltype = lhs.type
       when Type::IntType
+        width = ltype.bytes_count * 8
+        u = "uint#{width}_t"
         temp = builder.new_temp
-        emit "#{c_type(lhs.type)} #{temp} = __builtin_rotateright#{ltype.bytes_count * 8}(#{l}, #{r});"
+        emit "#{c_type(lhs.type)} #{temp} = (#{c_type(lhs.type)})(((#{u})(#{l}) >> ((#{r}) & #{width - 1})) | ((#{u})(#{l}) << ((#{width} - ((#{r}) & #{width - 1})) & #{width - 1})));"
         return wrap_res(temp, lhs.type, lhs.pp)
       end
     end
