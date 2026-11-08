@@ -102,7 +102,12 @@ class Myc::Backend::C::Builder < Myc::Backend::AbstractBuilder
     when InitValue::Zero
       io << "NULL"
     when InitValue::GlobalRef
-      io << '&' << init.name
+      g = @global_links[init.name]?
+      if g && g.type.is_a?(Type::FlatType)
+        io << '&' << init.name << "[0]"
+      else
+        io << '&' << init.name
+      end
     when InitValue::FnRef
       io << init.name
     when InitValue::StructInit
