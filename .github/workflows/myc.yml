@@ -1,4 +1,4 @@
-name: myc tests
+name: myc spec
 
 on:
   push:
@@ -10,7 +10,7 @@ env:
   QBE_SHA: "fab6d40620ac8e23fa42cc9b945688ca5edeb091"
 
 jobs:
-  test:
+  spec:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false

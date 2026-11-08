@@ -281,7 +281,7 @@ class Examples
                        res
                      end
 
-    puts "Test modes: #{filtered_modes.inspect}"
+    puts "Test modes: #{filtered_modes.inspect}, CC: #{ENV["CC"]?}"
     filtered_modes.each do |backend, mode|
       examples.each do |example|
         example.register(backend, mode)
