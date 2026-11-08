@@ -8,6 +8,7 @@ on:
 
 env:
   QBE_SHA: "fab6d40620ac8e23fa42cc9b945688ca5edeb091"
+  CPPGM_SHA: "30adb3542505ff7adba0599734ecfb804f15734a"
 
 jobs:
   spec:
@@ -16,11 +17,13 @@ jobs:
       fail-fast: false
       matrix:
         os: [ ubuntu-26.04, macos-latest ]
-        backend: [ "llvm,qbe", c ]
+        backend: [ "llvm,qbe", c, gm ]
         cc: [ clang, gcc ]
         exclude:
           - { backend: "llvm,qbe", cc: gcc }
           - { os: macos-latest, cc: gcc }
+          - { os: macos-latest, backend: gm }
+          - { backend: gm, cc: gcc }
 
     steps:
       - uses: actions/checkout@v4
@@ -77,6 +80,22 @@ jobs:
           cd plugins/qbe
           git checkout ${{ env.QBE_SHA }}
           make
+
+      - name: Restore cppgm-extended cache
+        if: contains(matrix.backend, 'gm')
+        id: cppgm-cache
+        uses: actions/cache@v4
+        with:
+          path: plugins/cppgm-extended
+          key: cppgm-${{ runner.os }}-${{ env.CPPGM_SHA }}
+
+      - name: Clone and build cppgm-extended (skip if cached)
+        if: contains(matrix.backend, 'gm') && steps.cppgm-cache.outputs.cache-hit != 'true'
+        run: |
+          git clone https://github.com/vishvananda/cppgm-extended plugins/cppgm-extended
+          cd plugins/cppgm-extended
+          git checkout ${{ env.CPPGM_SHA }}
+          CC=clang make
 
       - name: Run specs
         env:

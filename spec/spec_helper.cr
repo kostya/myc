@@ -146,6 +146,8 @@ class Examples
                    Myc::Backend::C::Backend.new(data)
                  when "QBE"
                    Myc::Backend::QBE::Backend.new(data)
+                 when "GM"
+                   Myc::Backend::GM::Backend.new(data)
                  else
                    raise "unknown runner #{backend}"
                  end
@@ -251,7 +253,7 @@ class Examples
   def run
     all_modes = Array(Tuple(String, Int32)).new
 
-    backends = %w{LLVM QBE C}
+    backends = %w{LLVM QBE C GM}
 
     backends.each do |backend|
       {0, 1, 2}.each do |mode|
@@ -293,6 +295,7 @@ end
 require "../src/backend/llvm/all"
 require "../src/backend/c/all"
 require "../src/backend/qbe/all"
+require "../src/backend/gm/all"
 require "../src/backend/mycc/all"
 
 def merge(src1, src2)

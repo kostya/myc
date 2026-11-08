@@ -54,11 +54,19 @@ OPTS = [
     "name" => "myc-c(final, clang)",
     "opts" => ["c", "./bin_langarena_myc_c_clang_final", "--final"],
   },
+  {
+    "name" => "myc-gm(default)",
+    "opts" => ["gm", "./bin_langarena_myc_gm_default", ""],
+  },
+  {
+    "name" => "myc-gm(final)",
+    "opts" => ["gm", "./bin_langarena_myc_gm_final", "--final"],
+  },
 ]
 
 if ENV["MYC_CI"] == "1"
   OPTS.select! do |r|
-    r['name'] == "myc-llvm(default)" || r['name'] == "myc-qbe(default)" || r['name'] == "myc-c(default, clang)"
+    r['name'] == "myc-llvm(default)" || r['name'] == "myc-qbe(default)" || r['name'] == "myc-c(default, clang)" || r['name'] == "myc-gm(default)"
   end
 end
 

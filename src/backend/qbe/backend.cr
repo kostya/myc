@@ -40,4 +40,12 @@ class Myc::Backend::QBE::Backend < Myc::Backend::AbstractBackend
       builder.save(output)
     end
   end
+
+  protected def additional_linker_flags : Array(String)
+    {% if flag?(:linux) %}
+      %w{-no-pie}
+    {% else %}
+      [] of String
+    {% end %}
+  end
 end

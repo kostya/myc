@@ -5,6 +5,7 @@ myc-llvm
 myc-c
 myc-qbe
 myc-test
+myc-gm
 /mycc
 
 bin_*
@@ -13,6 +14,7 @@ bin_*
 *.ssa
 *.tmp
 *.s
+*.lowir
 *.out
 todo.txt
 plugins/

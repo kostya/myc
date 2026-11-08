@@ -4,11 +4,11 @@
 
 ### What is it?
 
-* Simple DSL over LLVM/QBE.
-* Your language AST -> mycIR -> [LLVM / QBE / C] -> binary.
+* Simple DSL over LLVM/QBE/GM.
+* Your language AST -> mycIR -> [LLVM / QBE / GM / C] -> binary.
 * ~31 stack-based opcodes.
 * The whole IR spec fits in an hour of reading.
-* Compiles to native code via LLVM, QBE, or C. 
+* Compiles to native code via LLVM, QBE, GM or C. 
 * Fast compilation, "zero" overhead (I hope). 
 * ~9000 lines in Crystal.
 * Includes mycc: a C11-like compiler built on myc (~4000 lines).
@@ -31,6 +31,7 @@
 * Currently performs one transformation: inlining. More may come later.
 * Two modes: default (fast, Go-like) and final (slow compile, ~5-15% faster runtime).
 * QBE has a bug on Apple aarch64 with globals.
+* GM backend x86-64 only.
 
 ## How it looks like?
 
@@ -84,6 +85,11 @@ crystal build src/cli/llvm.cr --release -o myc-llvm
 git clone https://github.com/kostya/qbe.git plugins/qbe
 cd plugins/qbe; make; cd -
 crystal build src/cli/qbe.cr --release -o myc-qbe
+
+# compile Myc IR GM backend
+git clone https://github.com/vishvananda/cppgm-extended plugins/cppgm-extended
+cd plugins/cppgm-extended; CC=clang make; cd -
+crystal build src/cli/gm.cr --release -o myc-gm
 ```
 
 ## Examples:
@@ -116,7 +122,7 @@ As a proof of concept, I built mycc (with assist of LLM): a compiler for a subse
 
 ## How it works:
 
-`C source -> SyntaxTree(libclang/clang.cr) -> TypedAST(mycc) -> IR(myc) -> [LLVM/QBE/C] -> binary`
+`C source -> SyntaxTree(libclang/clang.cr) -> TypedAST(mycc) -> IR(myc) -> [LLVM/QBE/GM/C] -> binary`
 
 The most challenging part was `SyntaxTree -> TypedAST`. In the file [ast_builder.cr](https://github.com/kostya/myc/blob/master/src/mycc/ast_builder.cr) - 2400 LOC. libclang returns a non-normalized Tree with many edge cases that need to be transformed into a consistent form. Additionally, C has a ton of implicit behavior.
 
@@ -184,3 +190,4 @@ Licensed under the Apache License, Version 2.0.
 - [QBE](https://c9x.me/compile/)
 - [LLVM](https://llvm.org/)
 - [clang.cr](https://github.com/crystal-lang/clang.cr)
+- [GM](https://github.com/vishvananda/cppgm-extended)

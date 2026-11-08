@@ -1,0 +1,10 @@
+FUNC :main
+  BODY
+    PUSH 0
+    PUSH :name
+    AS :i64
+    UNARY :neg
+    BINARY :eq
+    INSPECT
+ENDFUNC
+

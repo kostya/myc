@@ -1,0 +1,44 @@
+class Myc::Backend::GM::Backend < Myc::Backend::AbstractBackend
+  CPPGM = ENV["CPPGM"]? || Process.find_executable("cppgm++") ||
+          File.join(File.dirname(__FILE__), "..", "..", "..", "plugins", "cppgm-extended", "dev", "cppgm++")
+
+  def name
+    "CppGM"
+  end
+
+  def self.version_string
+    "CppGM"
+  end
+
+  def new_builder : AbstractBuilder
+    Builder.new(self, new_layout)
+  end
+
+  def obj(mod : Mod, header_mod : Mod, output : String)
+    tmp = new_tmp_path("myc", "lowir")
+    build(mod, header_mod, tmp)
+
+    Myc.measure("backend:lowir2obj") do
+      args = ["-c", tmp, "-o", output]
+
+      if common_options.final
+        args.unshift "-O3"
+      elsif common_options.debug
+      else
+        args.unshift "-O1"
+      end
+
+      run_cmd(CPPGM, args)
+    end
+  end
+
+  def dump(mod : Mod, header_mod : Mod, output : String)
+    build(mod, header_mod, output)
+  end
+
+  def build(mod : Mod, header_mod : Mod, output : String) : Builder
+    build_mod(mod, header_mod, new_builder).as(Builder).tap do |builder|
+      builder.save(output)
+    end
+  end
+end
