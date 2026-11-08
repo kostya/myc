@@ -16,11 +16,10 @@ jobs:
       fail-fast: false
       matrix:
         os: [ ubuntu-26.04, macos-latest ]
-        backend: [ llvm, qbe, c ]
+        backend: [ "llvm,qbe", c ]
         cc: [ clang, gcc ]
         exclude:
-          - { backend: llvm, cc: gcc }
-          - { backend: qbe,  cc: gcc }
+          - { backend: "llvm,qbe", cc: gcc }
           - { os: macos-latest, cc: gcc }
 
     steps:
@@ -45,13 +44,26 @@ jobs:
 
       - name: Configure LLVM (macOS)
         if: runner.os == 'macOS'
-        run: echo "LLVM_CONFIG=$(brew --prefix llvm)/bin/llvm-config" >> $GITHUB_ENV
+        run: |
+          LLVM_PREFIX=$(brew --prefix llvm 2>/dev/null || true)
+          if [ -z "$LLVM_PREFIX" ] || [ ! -x "$LLVM_PREFIX/bin/llvm-config" ]; then
+            LLVM_PREFIX=$(brew --prefix llvm@20 2>/dev/null || true)
+          fi
+          if [ -z "$LLVM_PREFIX" ] || [ ! -x "$LLVM_PREFIX/bin/llvm-config" ]; then
+            LLVM_PREFIX=$(brew --prefix llvm@18 2>/dev/null || true)
+          fi
+          if [ -n "$LLVM_PREFIX" ] && [ -x "$LLVM_PREFIX/bin/llvm-config" ]; then
+            echo "LLVM_CONFIG=$LLVM_PREFIX/bin/llvm-config" >> $GITHUB_ENV
+          else
+            brew install llvm
+            echo "LLVM_CONFIG=$(brew --prefix llvm)/bin/llvm-config" >> $GITHUB_ENV
+          fi
 
       - name: Shards install
         run: shards install
 
       - name: Restore QBE cache
-        if: startsWith(matrix.backend, 'qbe')
+        if: contains(matrix.backend, 'qbe')
         id: qbe-cache
         uses: actions/cache@v4
         with:
@@ -59,7 +71,7 @@ jobs:
           key: qbe-${{ runner.os }}-${{ env.QBE_SHA }}
 
       - name: Clone and build QBE (skip if cached)
-        if: startsWith(matrix.backend, 'qbe') && steps.qbe-cache.outputs.cache-hit != 'true'
+        if: contains(matrix.backend, 'qbe') && steps.qbe-cache.outputs.cache-hit != 'true'
         run: |
           git clone https://github.com/kostya/qbe.git plugins/qbe
           cd plugins/qbe
