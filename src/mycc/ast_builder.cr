@@ -1,3 +1,9 @@
+struct Clang::Cursor
+  def attribute?
+    LibC.clang_isAttribute(@cursor.kind) != 0
+  end
+end
+
 class Myc::Mycc::ASTBuilder
   getter source : Source
   getter tu : Clang::TranslationUnit
@@ -556,9 +562,6 @@ class Myc::Mycc::ASTBuilder
       else
         return nil
       end
-    when .first_attr?, .visibility_attr?, .packed_attr?, .aligned_attr?
-      puts "mycc: build_node ignore #{cursor.inspect}"
-      return nil
     else
       return nil
     end
@@ -807,27 +810,26 @@ class Myc::Mycc::ASTBuilder
 
     unless init
       children(cursor).each do |child|
-        unless child.kind.parm_decl? || child.kind.type_ref? ||
-               child.kind.struct_decl? || child.kind.union_decl? ||
-               child.kind.enum_decl? || child.kind.visibility_attr? ||
-               child.kind.asm_label_attr?
-          if child.kind.init_list_expr?
-            init = build_init_list(child, var_type, is_global: is_global)
-            break
-          elsif var_type.is_a?(Type::FlatType) && child.kind.string_literal?
-            node = build_node(child)
-            init = auto_cast(node, var_type, location(cursor))
-            break
-          elsif var_type.is_a?(Type::FlatType)
-            next
-          else
-            node = if is_global && (ast = try_evaluate(child))
-                     ast
-                   else
-                     build_node(child)
-                   end
-            init = node
-          end
+        next if child.attribute?
+        next if child.kind.parm_decl? || child.kind.type_ref? ||
+                child.kind.struct_decl? || child.kind.union_decl? ||
+                child.kind.enum_decl?
+        if child.kind.init_list_expr?
+          init = build_init_list(child, var_type, is_global: is_global)
+          break
+        elsif var_type.is_a?(Type::FlatType) && child.kind.string_literal?
+          node = build_node(child)
+          init = auto_cast(node, var_type, location(cursor))
+          break
+        elsif var_type.is_a?(Type::FlatType)
+          next
+        else
+          node = if is_global && (ast = try_evaluate(child))
+                   ast
+                 else
+                   build_node(child)
+                 end
+          init = node
         end
       end
 
