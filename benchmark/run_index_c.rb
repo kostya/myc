@@ -36,7 +36,7 @@ def myc_run(backend, final)
 end
 
 RES = []
-%w{llvm c gm}.each do |backend|
+%w{llvm c gm qbe}.each do |backend|
   {false => "", true => "--final"}.each do |final, flag|
     RES << ["mycc", backend, flag, *myc_run(backend, final)]
   end
@@ -55,18 +55,19 @@ def c_run(compiler, flags)
 end
 
 %w{clang gcc}.each do |compiler|
+  backend = compiler == "clang" ? "llvm" : "-"
   %w{-O0 -O1 -O2 -O3}.each do |flag|
-    RES << ["c", compiler, flag, *c_run(compiler, flag)]
+    RES << [compiler, backend, flag, *c_run(compiler, flag)]
   end
 end
 
-RES << ["c", "cproc", "", *c_run("cproc", "")]
+RES << ["cproc", "qbe", "", *c_run("cproc", "")]
 
 puts
-puts "| Tool | Backend/Compiler | Flags | Compile (s) | Run (s) | Status |"
-puts "|------|------------------|-------|-------------|---------|--------|"
-RES.each do |tool, backend, flags, compile_time, run_time, status|
-  ct = compile_time ? compile_time.round(4) : "—"
-  rt = run_time ? run_time.round(4) : "—"
-  puts "| #{tool} | #{backend} | #{flags.empty? ? '—' : flags} | #{ct} | #{rt} | #{status} |"
+puts "| Compiler | Backend | Flags | Compile (s) | Run (s) | Status |"
+puts "|----------|---------|-------|-------------|---------|--------|"
+RES.each do |compiler, backend, flags, compile_time, run_time, status|
+  ct = compile_time ? compile_time.round(4) : ""
+  rt = run_time ? run_time.round(4) : ""
+  puts "| #{compiler} | #{backend} | #{flags} | #{ct} | #{rt} | #{status} |"
 end
