@@ -8,7 +8,7 @@ on:
 
 env:
   QBE_SHA: "fab6d40620ac8e23fa42cc9b945688ca5edeb091"
-  CPPGM_SHA: "04d2857867b5818d7af63b659039c796ca842ddc"
+  CPPGM_SHA: "1ddd7507ee861649d43d1e72dcde7bb17a85a691"
 
 jobs:
   spec:
