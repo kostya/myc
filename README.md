@@ -49,7 +49,7 @@ ENDFUNC
 
 ![plot](https://github.com/kostya/myc-benchmarks/blob/master/plot1.png?raw=true)
 
-This scatter plot shows the tradeoff between compile time and runtime. The ideal is the bottom-left corner: fast compiles, fast runtime. This is the Pareto frontier - you can't improve one without sacrificing the other. [Link to benchmark and reproduce steps](https://github.com/kostya/myc-benchmarks#1-c-compilers-on-index-c-clang-gcc-mycc-cproc).
+This scatter plot shows the tradeoff between compile time and runtime. The ideal is the bottom-left corner: fast compiles, fast runtime. [Link to benchmark and reproduce steps](https://github.com/kostya/myc-benchmarks#1-c-compilers-on-index-c-clang-gcc-mycc-cproc).
 
 ## mycIR
 
