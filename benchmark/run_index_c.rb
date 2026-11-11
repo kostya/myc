@@ -23,23 +23,16 @@ def run_and_check(binary)
   [rt, ok]
 end
 
-def myc_run(backend, final)
-  printf "Run mycc #{backend} #{final} ... "
-  binary = "./bin_mycc_index_#{backend}_#{final}"
-  cmd = "../mycc ../plugins/index-c/index.c c --backend #{backend} #{final ? "--final" : ""} #{binary}"
+def myc_run(backend, flag)
+  printf "Run mycc #{backend} #{flag} ... "
+  binary = "./bin_mycc_index_#{backend}_#{flag.gsub(/[^a-zA-Z0-9]/, '_')}"
+  cmd = "../mycc ../plugins/index-c/index.c c --backend #{backend} #{flag} #{binary}"
   `rm -f #{binary}`
   compile_time = measure { `#{cmd}` }
   run_time, ok = run_and_check(binary)
   res = [compile_time, run_time, ok ? "OK" : "ERR"]
   p res
   res
-end
-
-RES = []
-%w{llvm c gm qbe}.each do |backend|
-  {false => "", true => "--final"}.each do |final, flag|
-    RES << ["mycc", backend, flag, *myc_run(backend, final)]
-  end
 end
 
 def c_run(compiler, flags)
@@ -54,14 +47,41 @@ def c_run(compiler, flags)
   res
 end
 
-%w{clang gcc}.each do |compiler|
-  backend = compiler == "clang" ? "llvm" : "-"
-  %w{-O0 -O1 -O2 -O3}.each do |flag|
-    RES << [compiler, backend, flag, *c_run(compiler, flag)]
+ALL_FLAGS = []
+%w{llvm c gm qbe}.each do |backend|
+  ["", "--final"].each do |flag|
+    ALL_FLAGS << ["mycc", backend, flag]
   end
 end
 
-RES << ["cproc", "qbe", "", *c_run("cproc", "")]
+%w{clang gcc}.each do |compiler|
+  backend = compiler == "clang" ? "llvm" : "-"
+  %w{-O0 -O1 -O2 -O3}.each do |flag|
+    ALL_FLAGS << [compiler, backend, flag]
+  end
+end
+
+ALL_FLAGS << ["cproc", "qbe", ""]
+
+if ENV["MYC_CI"] == "1"
+  ALL_FLAGS = [
+    ["mycc", "llvm", "--final"],
+    ["mycc", "gm", "--final"],
+    ["mycc", "gm", ""],
+    ["mycc", "qbe", ""],
+    ["clang", "llvm", "-O3"],
+  ]
+end
+
+RES = []
+
+ALL_FLAGS.each do |(compiler, backend, flag)|
+  if compiler == "mycc"
+    RES << [compiler, backend, flag, *myc_run(backend, flag)]
+  else
+    RES << [compiler, backend, flag, *c_run(compiler, flag)]
+  end
+end
 
 puts
 puts "| Compiler | Backend | Flags | Compile (s) | Run (s) | Status |"

@@ -4,7 +4,7 @@ Brainfuck to LowIR (GM / cppgm-extended) translator.
 Usage: python3 bf2gm.py input.bf [output.lowir]
 
 python3 bf2gm.py mandel.bf mandel.lowir
-time ../../plugins/cppgm-extended/dev/cppgm++ -O1 -c mandel.lowir -o mandel.o
+time ../../plugins/cppgm-extended/dev/cppgm++ -O3 -c mandel.lowir -o mandel.o
 time cc mandel.o -o bin_bf_gm
 """
 

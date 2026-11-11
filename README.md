@@ -10,7 +10,7 @@
 * The whole IR spec fits within an hour of reading.
 * Compiles to native code via LLVM, QBE, GM or C. 
 * Fast compilation, "zero" overhead (I hope). 
-* ~9000 lines in Crystal.
+* ~10000 lines in Crystal.
 * Includes mycc: a C11-like compiler built on myc (~4000 lines).
 
 ### Why?
@@ -89,7 +89,7 @@ crystal build src/cli/qbe.cr --release -o myc-qbe
 # compile Myc IR GM backend
 git clone --depth 1 --filter=blob:none --sparse https://github.com/vishvananda/cppgm-extended.git plugins/cppgm-extended
 git -C plugins/cppgm-extended sparse-checkout set dev
-make -C plugins/cppgm-extended/dev cppgm++ CXX=g++ CPPGM_HOST_CXX=g++
+make -C plugins/cppgm-extended/dev cppgm++ CXX=clang++ CPPGM_HOST_CXX=clang++ -j6
 crystal build src/cli/gm.cr --release -o myc-gm
 ```
 
