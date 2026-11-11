@@ -1,6 +1,7 @@
 require "../c/all"
 require "../llvm/all"
 require "../qbe/all"
+require "../gm/all"
 
 class Myc::Backend::Mycc::Backend < Myc::Backend::AbstractBackend
   def name
@@ -49,6 +50,8 @@ class Myc::Backend::Mycc::Backend < Myc::Backend::AbstractBackend
                   Myc::Backend::C::Backend.new(data)
                 when "QBE"
                   Myc::Backend::QBE::Backend.new(data)
+                when "GM"
+                  Myc::Backend::GM::Backend.new(data)
                 else
                   raise "unknown backend #{name}"
                 end
@@ -123,8 +126,12 @@ class Myc::Backend::Mycc::Backend < Myc::Backend::AbstractBackend
 
   private def get_backend_string? : String?
     name = (data.options["backend"]? || ENV["MYCC_BACKEND"]?).try(&.upcase).try(&.strip)
-    if %w{LLVM QBE C}.includes?(name)
+    if %w{LLVM QBE C GM}.includes?(name)
       name
     end
+  end
+
+  protected def additional_linker_flags : Array(String)
+    myc_backend.additional_linker_flags
   end
 end

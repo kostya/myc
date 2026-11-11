@@ -1,0 +1,8 @@
+FUNC :main
+  BODY
+    PUSH :name
+    PUSH 0 :ptr<u8>
+    BINARY :not_eq
+    INSPECT
+ENDFUNC
+

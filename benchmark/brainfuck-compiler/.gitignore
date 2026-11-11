@@ -1,2 +1,3 @@
 *.myc
 *.c
+*.lowir

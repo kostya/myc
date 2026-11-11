@@ -198,6 +198,15 @@ runs << Myc.new(
 )
 
 runs << Myc.new(
+  name: "mycc(gm)",
+  cmd: "../mycc o --backend gm",
+  build_dir: "/tmp/myc_bench_la/mycc-gm",
+  output: "./bin_la_myc_gm",
+  version: "../mycc --backend gm --version",
+  env: "",
+)
+
+runs << Myc.new(
   name: "mycc(c, clang)",
   cmd: "../mycc o --backend c",
   build_dir: "/tmp/myc_bench_la/mycc-c-clang",
@@ -234,6 +243,15 @@ runs << Myc.new(
 )
 
 runs << Myc.new(
+  name: "mycc(gm, final)",
+  cmd: "../mycc o --final --backend gm",
+  build_dir: "/tmp/myc_bench_la/mycc-gm-final",
+  output: "./bin_la_myc_gm_final",
+  version: "../mycc --backend gm --version",
+  env: "",
+)
+
+runs << Myc.new(
   name: "mycc(c, final, clang)",
   cmd: "../mycc o --final --backend c",
   build_dir: "/tmp/myc_bench_la/mycc-c-clang-final",
@@ -257,7 +275,7 @@ end
 
 if ENV["MYC_CI"] == "1"
   runs.select! do |r|
-    r.name == "mycc(qbe)" || r.name == "mycc(c, clang)" || r.name == "mycc(llvm)"
+    r.name == "mycc(qbe)" || r.name == "mycc(c, clang)" || r.name == "mycc(llvm)" || r.name == "mycc(gm)"
   end
 end
 

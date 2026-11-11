@@ -355,8 +355,12 @@ abstract class Myc::Backend::AbstractBackend
         objs += link_flags.split(" ").reject(&.blank?)
       end
 
-      run_cmd(CC, objs + ["-lm", "-o", output])
+      run_cmd(CC, objs + additional_linker_flags + ["-lm", "-o", output])
     end
+  end
+
+  protected def additional_linker_flags : Array(String)
+    [] of String
   end
 
   protected def show_error(error : Error)

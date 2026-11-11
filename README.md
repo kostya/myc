@@ -4,11 +4,11 @@
 
 ### What is it?
 
-* Simple DSL over LLVM/QBE.
-* Your language AST -> mycIR -> [LLVM / QBE / C] -> binary.
+* A simple DSL over LLVM/QBE/GM.
+* Your language AST -> mycIR -> [LLVM / QBE / GM / C] -> binary.
 * ~31 stack-based opcodes.
-* The whole IR spec fits in an hour of reading.
-* Compiles to native code via LLVM, QBE, or C. 
+* The whole IR spec fits within an hour of reading.
+* Compiles to native code via LLVM, QBE, GM or C. 
 * Fast compilation, "zero" overhead (I hope). 
 * ~9000 lines in Crystal.
 * Includes mycc: a C11-like compiler built on myc (~4000 lines).
@@ -16,21 +16,22 @@
 ### Why?
 
 * I was writing my own language and got tired of fighting with LLVM IR. SSA and basic blocks - X(.
-* Usually when you write your own language, you first build a parser and generate an AST. Then comes the hell stage: translating your AST into LLVM or another backend. Myc takes on all that complexity.
+* Usually, when you write your own language, you first build a parser and generate an AST. Then comes the hell stage: translating your AST into LLVM or another backend. Myc takes on all that complexity.
 * LLVM is complex. 
 * Myc is simple and fun.
-* Stack-based opcodes are easy to emit from AST with a simple one-pass tree walk.
-* You're not locked into one backend. LLVM for speed, QBE for fast compiles, C for anywhere.
+* Stack-based opcodes are easy to emit from an AST with a simple one-pass tree walk.
+* You're not locked into one backend. LLVM for speed, QBE for fast compiles, C for anywhere, GM for both fast compile and speed (best of QBE and LLVM).
 
 ### Current status
 
 * Alpha.
-* All 3 backends work smoothly.
-* ~900 tests × 9 backend modes - passed.
+* All 4 backends work smoothly.
+* ~900 tests × 12 backend modes - passed.
 * Mycc compiles 9000 lines of C from LangArena and 26/34 C files of the Lua interpreter.
 * Currently performs one transformation: inlining. More may come later.
 * Two modes: default (fast, Go-like) and final (slow compile, ~5-15% faster runtime).
 * QBE has a bug on Apple aarch64 with globals.
+* The GM backend is x86-64 only.
 
 ## How it looks like?
 
@@ -84,6 +85,12 @@ crystal build src/cli/llvm.cr --release -o myc-llvm
 git clone https://github.com/kostya/qbe.git plugins/qbe
 cd plugins/qbe; make; cd -
 crystal build src/cli/qbe.cr --release -o myc-qbe
+
+# compile Myc IR GM backend
+git clone --depth 1 --filter=blob:none --sparse https://github.com/vishvananda/cppgm-extended.git plugins/cppgm-extended
+git -C plugins/cppgm-extended sparse-checkout set dev
+make -C plugins/cppgm-extended/dev cppgm++ CXX=g++ CPPGM_HOST_CXX=g++
+crystal build src/cli/gm.cr --release -o myc-gm
 ```
 
 ## Examples:
@@ -101,6 +108,9 @@ crystal build src/cli/qbe.cr --release -o myc-qbe
 # show qbe IR
 ./myc-qbe examples/ir/loop.myc d
 
+# show gm IR
+./myc-gm examples/ir/loop.myc d
+
 # explain myc IR
 ./myc-llvm examples/ir/bf.myc e
 
@@ -116,7 +126,7 @@ As a proof of concept, I built mycc (with assist of LLM): a compiler for a subse
 
 ## How it works:
 
-`C source -> SyntaxTree(libclang/clang.cr) -> TypedAST(mycc) -> IR(myc) -> [LLVM/QBE/C] -> binary`
+`C source -> SyntaxTree(libclang/clang.cr) -> TypedAST(mycc) -> IR(myc) -> [LLVM/QBE/GM/C] -> binary`
 
 The most challenging part was `SyntaxTree -> TypedAST`. In the file [ast_builder.cr](https://github.com/kostya/myc/blob/master/src/mycc/ast_builder.cr) - 2400 LOC. libclang returns a non-normalized Tree with many edge cases that need to be transformed into a consistent form. Additionally, C has a ton of implicit behavior.
 
@@ -145,6 +155,7 @@ crystal build src/cli/mycc.cr --release -o ./mycc
 ./mycc c --backend llvm examples/mycc/sieve.c
 ./mycc c --backend qbe examples/mycc/sieve.c
 ./mycc c --backend c examples/mycc/sieve.c
+./mycc c --backend gm examples/mycc/sieve.c
 
 # show myc dump
 ./mycc examples/mycc/sieve.c d
@@ -154,6 +165,9 @@ crystal build src/cli/mycc.cr --release -o ./mycc
 
 # show qbe dump
 ./mycc examples/mycc/sieve.c d | ./myc-qbe d
+
+# show gm dump
+./mycc examples/mycc/sieve.c d | ./myc-gm d
 
 # include paths example
 MYCC_INCLUDE='/opt/homebrew/include,/usr/local/include' ./mycc examples/mycc/sieve.c c
@@ -184,3 +198,4 @@ Licensed under the Apache License, Version 2.0.
 - [QBE](https://c9x.me/compile/)
 - [LLVM](https://llvm.org/)
 - [clang.cr](https://github.com/crystal-lang/clang.cr)
+- [GM](https://github.com/vishvananda/cppgm-extended)

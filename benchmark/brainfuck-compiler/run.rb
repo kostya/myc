@@ -2,9 +2,11 @@
 
 CC = ENV["CC"] || "cc"
 QBE = ENV["QBE"] || "../../plugins/qbe/qbe"
+GM = ENV["GM"] || "../../plugins/cppgm-extended/dev/cppgm++"
 MYC_LLVM = "../../myc-llvm"
 MYC_C = "../../myc-c"
 MYC_QBE = "../../myc-qbe"
+MYC_GM = "../../myc-gm"
 
 CFG = {
 	"llvm": {
@@ -69,6 +71,30 @@ CFG = {
 		"src": "mandel.myc",
 		"cmd": "#{MYC_C} c --final mandel.myc bin_bf_myc_c_final",
 		"run": "./bin_bf_myc_c_final",
+		"py": "python3 bf2myc.py mandel.bf mandel.myc"
+	},
+	"gm": {
+		"ir": "lowir",
+		"compiler": "cppgm++",
+		"src": "mandel.lowir",
+		"cmd": "bash -c '#{GM} -O3 -c mandel.lowir -o mandel_gm.o; cc mandel_gm.o -o ./bin_bf_gm'",
+		"run": "./bin_bf_gm",
+		"py": "python3 bf2gm.py mandel.bf mandel.lowir"
+	}, 
+	"myc-gm": {
+		"ir": "myc",
+		"compiler": "myc-gm(default)",
+		"src": "mandel.myc",
+		"cmd": "#{MYC_GM} c mandel.myc bin_bf_myc_gm",
+		"run": "./bin_bf_myc_gm",
+		"py": "python3 bf2myc.py mandel.bf mandel.myc"
+	},
+	"myc-gm-final": {
+		"ir": "myc",
+		"compiler": "myc-gm(final)",
+		"src": "mandel.myc",
+		"cmd": "#{MYC_GM} c --final mandel.myc bin_bf_myc_gm_final",
+		"run": "./bin_bf_myc_gm_final",
 		"py": "python3 bf2myc.py mandel.bf mandel.myc"
 	},
 }

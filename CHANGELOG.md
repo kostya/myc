@@ -1,4 +1,5 @@
 ## 0.12.0-dev
+* added GM backend
 
 ## 0.11.0 (14.10.2026)
 * added VA opcode and :valist type for working with varargs

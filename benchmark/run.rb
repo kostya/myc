@@ -12,10 +12,12 @@ BACKENDS = {
   "myc-llvm"  => "../myc-llvm",
   "myc-qbe"   => "../myc-qbe",
   "myc-c"     => "../myc-c",
+  "myc-gm"     => "../myc-gm",
 
   "myc-llvm-final"  => "../myc-llvm --final",
   "myc-qbe-final"   => "../myc-qbe --final",
   "myc-c-final"     => "../myc-c --final",
+  "myc-gm-final"     => "../myc-gm --final",
 }
 
 MYCC = "../mycc"

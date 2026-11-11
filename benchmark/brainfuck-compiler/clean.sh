@@ -1,1 +1,1 @@
-rm *.o *.ssa *.ll *.c *.myc *.s ./bin* 
+rm *.o *.ssa *.ll *.c *.myc *.s *.lowir ./bin* 
