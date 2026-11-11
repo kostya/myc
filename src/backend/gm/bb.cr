@@ -621,10 +621,18 @@ class Myc::Backend::GM::BB < Myc::Backend::AbstractBB
   def offset(value : Value, target_type : Type, offset : Value) : Value
     ptr_val = lowir_val(value)
     idx = lowir_val(offset)
-    idx_val = if offset.pp.is_a?(Value::PP::Primitive)
-                idx
+    idx_val = case index_type = offset.type
+              when Type::IntType
+                if index_type.bytes_count < 8
+                  extension = index_type.signed ? "sext" : "zext"
+                  new_temp.tap { |l| emit "#{l} = convert #{extension} i64 #{lowir_type(index_type)} #{idx}" }
+                elsif index_type.bytes_count > 8
+                  new_temp.tap { |l| emit "#{l} = convert trunc i64 #{lowir_type(index_type)} #{idx}" }
+                else
+                  idx
+                end
               else
-                new_temp.tap { |l| emit "#{l} = convert sext i64 i32 #{idx}" }
+                idx
               end
     t = new_temp
     emit "#{t} = index #{lowir_type(target_type)} #{ptr_val}, #{idx_val}"

@@ -757,10 +757,18 @@ class Myc::Backend::QBE::BB < Myc::Backend::AbstractBB
     idx = qbe_val(offset)
     elem_size = @builder.layout.size_of(target_type)
 
-    idx_l = if offset.pp.is_a?(Value::PP::Primitive)
-              idx
+    idx_l = case index_type = offset.type
+            when Type::IntType
+              if index_type.bytes_count < 8
+                extension = index_type.signed ? "extsw" : "extuw"
+                new_temp.tap { |l| emit "#{l} =l #{extension} #{idx}" }
+              elsif index_type.bytes_count > 8
+                new_temp.tap { |l| emit "#{l} =l copy #{idx}" }
+              else
+                idx
+              end
             else
-              new_temp.tap { |l| emit "#{l} =l extsw #{idx}" }
+              idx
             end
 
     addr = if elem_size == 1
