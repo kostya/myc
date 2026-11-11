@@ -1,13 +1,13 @@
 class Myc::Backend::GM::Backend < Myc::Backend::AbstractBackend
-  CPPGM = ENV["CPPGM"]? || Process.find_executable("cppgm++") ||
-          File.join(File.dirname(__FILE__), "..", "..", "..", "plugins", "cppgm-extended", "dev", "cppgm++")
+  GM = ENV["GM"]? || Process.find_executable("cppgm++") ||
+       File.join(File.dirname(__FILE__), "..", "..", "..", "plugins", "cppgm-extended", "dev", "cppgm++")
 
   def name
-    "CppGM"
+    "GM"
   end
 
   def self.version_string
-    "CppGM"
+    "GM"
   end
 
   def new_builder : AbstractBuilder
@@ -30,7 +30,7 @@ class Myc::Backend::GM::Backend < Myc::Backend::AbstractBackend
         args.unshift "-O1"
       end
 
-      run_cmd(CPPGM, args)
+      run_cmd(GM, args)
     end
   end
 

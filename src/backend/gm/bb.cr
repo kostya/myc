@@ -182,13 +182,10 @@ class Myc::Backend::GM::BB < Myc::Backend::AbstractBB
     case op
     when .add?
       emit "#{t} = binary add #{lowir_type} #{l}, #{r}"
-      t = wrap_int_result(t, ltype)
     when .sub?
       emit "#{t} = binary sub #{lowir_type} #{l}, #{r}"
-      t = wrap_int_result(t, ltype)
     when .mul?
       emit "#{t} = binary mul #{lowir_type} #{l}, #{r}"
-      t = wrap_int_result(t, ltype)
     when .div?
       op_name = case ltype
                 when Type::IntType
@@ -199,14 +196,14 @@ class Myc::Backend::GM::BB < Myc::Backend::AbstractBB
                   return
                 end
       emit "#{t} = binary #{op_name} #{lowir_type} #{l}, #{r}"
-      t = wrap_int_result(t, ltype)
+
       return wrap_res(t, ltype, lhs.pp)
     when .rem?
       case ltype
       when Type::IntType
         op_name = ltype.signed ? "mod" : "umod"
         emit "#{t} = binary #{op_name} #{lowir_type} #{l}, #{r}"
-        t = wrap_int_result(t, ltype)
+
         return wrap_res(t, ltype, lhs.pp)
       else
         return
@@ -216,7 +213,6 @@ class Myc::Backend::GM::BB < Myc::Backend::AbstractBB
     when .xor? then emit "#{t} = binary xor #{lowir_type} #{l}, #{r}"
     when .shl?
       emit "#{t} = binary shl #{lowir_type} #{l}, #{r}"
-      t = wrap_int_result(t, ltype)
     when .shr?
       op_name = ltype.is_a?(Type::IntType) && !ltype.signed ? "ushr" : "shr"
       emit "#{t} = binary #{op_name} #{lowir_type} #{l}, #{r}"
@@ -306,7 +302,6 @@ class Myc::Backend::GM::BB < Myc::Backend::AbstractBB
         emit "#{shl_temp} = binary shl #{lowir_type} #{l}, #{r}"
         emit "#{shr_temp} = binary shr #{lowir_type} #{l}, #{sub_temp}"
         emit "#{t} = binary or #{lowir_type} #{shl_temp}, #{shr_temp}"
-        t = wrap_int_result(t, ltype)
       end
       return wrap_res(t, ltype, lhs.pp)
     when .rotr?
@@ -320,7 +315,6 @@ class Myc::Backend::GM::BB < Myc::Backend::AbstractBB
         emit "#{shr_temp} = binary shr #{lowir_type} #{l}, #{r}"
         emit "#{shl_temp} = binary shl #{lowir_type} #{l}, #{sub_temp}"
         emit "#{t} = binary or #{lowir_type} #{shl_temp}, #{shr_temp}"
-        t = wrap_int_result(t, ltype)
       end
       return wrap_res(t, ltype, lhs.pp)
     else
@@ -346,11 +340,9 @@ class Myc::Backend::GM::BB < Myc::Backend::AbstractBB
       case type
       when Type::IntType
         emit "#{t} = unary bitnot #{lowir_type} #{val}"
-        t = wrap_int_result(t, type)
       end
     when .neg?
       emit "#{t} = unary neg #{lowir_type} #{val}"
-      t = wrap_int_result(t, type) if type.is_a?(Type::IntType)
     when .sqrt?
       case type
       when Type::FloatType
@@ -388,7 +380,6 @@ class Myc::Backend::GM::BB < Myc::Backend::AbstractBB
         emit "#{cmp} = cmp lt #{lowir_type} #{val}, 0"
         emit "#{neg} = unary neg #{lowir_type} #{val}"
         emit "#{t} = select #{lowir_type} #{cmp}, #{neg}, #{val}"
-        t = wrap_int_result(t, type)
       when Type::FloatType
         func_name = type.bytes_count == 8 ? "fabs" : "fabsf"
         t = libm_call(func_name, type, [rhs])
@@ -422,7 +413,6 @@ class Myc::Backend::GM::BB < Myc::Backend::AbstractBB
           emit "#{sub_t} = binary sub u32 #{clz_t}, #{32 - width}"
           emit "#{t} = select i32 #{cmp}, #{width}, #{sub_t}"
         end
-        t = wrap_int_result(t, type)
       end
     when .ctz?
       case type
@@ -451,7 +441,6 @@ class Myc::Backend::GM::BB < Myc::Backend::AbstractBB
           emit "#{ctz_t} = unary ctz u32 #{ext_val}"
           emit "#{t} = select i32 #{cmp}, #{width}, #{ctz_t}"
         end
-        t = wrap_int_result(t, type)
       end
     when .popcnt?
       case type
@@ -467,23 +456,12 @@ class Myc::Backend::GM::BB < Myc::Backend::AbstractBB
           emit "#{ext_val} = convert #{ext} u32 #{lowir_type} #{val}"
           emit "#{t} = unary popcount u32 #{ext_val}"
         end
-        t = wrap_int_result(t, type)
       end
     else
       return nil
     end
 
     wrap_res(t, type, rhs.pp)
-  end
-
-  private def libm_call(name : String, ret_type : Type, args : Array(Value)) : String
-    arg_types = args.map { |a| a.type }
-    type_fn = Type::Fn.new(Location.new("", 0), arg_types, ret_type)
-    builder.func_link(name, type_fn)
-    t = new_temp
-    arg_str = args.map { |a| lowir_val(a) }.join(", ")
-    emit "#{t} = call #{lowir_type(ret_type)} @#{name}(#{arg_str})"
-    t
   end
 
   def switch(index : Value, case_values : Array(Value), case_bbs : Array(AbstractBB), default_bb : AbstractBB)
@@ -712,7 +690,13 @@ class Myc::Backend::GM::BB < Myc::Backend::AbstractBB
     @func_def.mod.typer
   end
 
-  private def wrap_int_result(t : String, type : Type) : String
+  private def libm_call(name : String, ret_type : Type, args : Array(Value)) : String
+    arg_types = args.map { |a| a.type }
+    type_fn = Type::Fn.new(Location.new("", 0), arg_types, ret_type)
+    builder.func_link(name, type_fn)
+    t = new_temp
+    arg_str = args.map { |a| lowir_val(a) }.join(", ")
+    emit "#{t} = call #{lowir_type(ret_type)} @#{name}(#{arg_str})"
     t
   end
 

@@ -87,8 +87,9 @@ cd plugins/qbe; make; cd -
 crystal build src/cli/qbe.cr --release -o myc-qbe
 
 # compile Myc IR GM backend
-git clone https://github.com/vishvananda/cppgm-extended plugins/cppgm-extended
-cd plugins/cppgm-extended; CC=clang make; cd -
+git clone --depth 1 --filter=blob:none --sparse https://github.com/vishvananda/cppgm-extended.git plugins/cppgm-extended
+git -C plugins/cppgm-extended sparse-checkout set dev
+make -C plugins/cppgm-extended/dev cppgm++ CXX=g++ CPPGM_HOST_CXX=g++
 crystal build src/cli/gm.cr --release -o myc-gm
 ```
 
@@ -154,6 +155,7 @@ crystal build src/cli/mycc.cr --release -o ./mycc
 ./mycc c --backend llvm examples/mycc/sieve.c
 ./mycc c --backend qbe examples/mycc/sieve.c
 ./mycc c --backend c examples/mycc/sieve.c
+./mycc c --backend gm examples/mycc/sieve.c
 
 # show myc dump
 ./mycc examples/mycc/sieve.c d
