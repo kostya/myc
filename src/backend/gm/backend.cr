@@ -11,7 +11,9 @@ class Myc::Backend::GM::Backend < Myc::Backend::AbstractBackend
   end
 
   def new_builder : AbstractBuilder
-    Builder.new(self, new_layout)
+    layout = new_layout
+    raise data.error("GM backend is only supported on x86-64 targets, current: #{layout.target.inspect}") unless layout.target.arch.x86_64?
+    Builder.new(self, layout)
   end
 
   def obj(mod : Mod, header_mod : Mod, output : String)
