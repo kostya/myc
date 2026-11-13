@@ -4,6 +4,7 @@ class Myc::Backend::Layout
   def initialize(@target)
     @size_cache = Hash(Type, UInt64).new
     @alignment_cache = Hash(Type, UInt64).new
+    @struct_offsets = Hash(Type::StructType, Array(UInt64)).new
   end
 
   def size_of(type : Type) : UInt64
@@ -49,19 +50,24 @@ class Myc::Backend::Layout
     end
   end
 
-  private def compute_struct_size(type : Type::StructType) : UInt64
-    offset = 0_u64
-    struct_alignment = type.explicit_alignment
-
-    type.data.each do |field_type|
-      align = struct_alignment || alignment_of(field_type)
-      offset = align_to(offset, align)
-      offset += size_of(field_type)
+  # Types are finalized before a Layout is built, just like size/alignment
+  # caching requires. Compute every field offset once instead of rescanning
+  # all preceding fields at each access. The last entry is the unpadded end.
+  private def struct_offsets(type : Type::StructType) : Array(UInt64)
+    @struct_offsets[type] ||= begin
+      offsets = Array(UInt64).new(type.data.size + 1)
+      offset = 0_u64
+      type.data.each do |field|
+        offset = align_to(offset, type.explicit_alignment || alignment_of(field))
+        offsets << offset
+        offset += size_of(field)
+      end
+      offsets << offset
     end
+  end
 
-    final_alignment = struct_alignment ||
-                      (type.data.any? ? type.data.max_of { |t| alignment_of(t) } : 1_u64)
-    align_to(offset, final_alignment)
+  private def compute_struct_size(type : Type::StructType) : UInt64
+    align_to(struct_offsets(type).last, alignment_of(type))
   end
 
   private def compute_struct_alignment(type : Type::StructType) : UInt64
@@ -77,22 +83,8 @@ class Myc::Backend::Layout
   end
 
   def field_offset(type : Type::StructType, index : UInt64) : UInt64
-    offset = 0_u64
-    return offset if index == 0
-
-    struct_alignment = type.explicit_alignment
-
-    0.upto(index - 1) do |i|
-      field = type.data[i]
-
-      align = struct_alignment || alignment_of(field)
-      offset = align_to(offset, align)
-      offset += size_of(field)
-    end
-
-    field = type.data[index]
-    align = struct_alignment || alignment_of(field)
-    align_to(offset, align)
+    return 0_u64 if index == 0
+    struct_offsets(type)[index]
   end
 
   def field_offset(type : Type::FlatType, index : UInt64) : UInt64

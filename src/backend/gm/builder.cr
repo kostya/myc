@@ -94,11 +94,19 @@ class Myc::Backend::GM::Builder < Myc::Backend::AbstractBuilder
         vp = AbstractBuilder::ValuesParser.new(global.initial_values, global.type, mod, Location.new(mod.filename, global.node.offset))
         flatten(items, vp.parse)
       else
-        zero_flatten(items, global.type)
+        size = layout.size_of(global.type)
+        items << zero_data(size) if size > 0
       end
     end
-    check(NativeAPI.global(handle, id, declaration ? lowir_type(global.type) : 0_u64,
-      global.private_flag ? 1 : 2, 0, items.to_unsafe, items.size, declaration ? 1 : 0))
+    check(NativeAPI.global(handle, id, declaration ? lowir_type(global.type) : global_storage_type(global.type),
+      global.private_flag ? 1 : 2, global.constant ? 1 : 0, items.to_unsafe, items.size, declaration ? 1 : 0))
+  end
+
+  private def global_storage_type(type : Type) : UInt64
+    bytes = layout.size_of(type)
+    return 0_u64 if bytes == 0
+    align = {layout.alignment_of(type), 1_u64}.max
+    GM.ir_type(IRType::Obj) | (align.trailing_zeros_count.to_u64 << 8) | (bytes << 16)
   end
 
   private def zero_data(size) : LibGM::DataItem
@@ -111,28 +119,6 @@ class Myc::Backend::GM::Builder < Myc::Backend::AbstractBuilder
 
   private def address_data(id : UInt32) : LibGM::DataItem
     LibGM::DataItem.new(type: GM.ir_type(IRType::Ptr), kind: 1, symbol: id)
-  end
-
-  private def zero_flatten(items : Array(LibGM::DataItem), type : Type)
-    case type
-    when Type::StructType
-      size = layout.size_of(type)
-      items << zero_data(size) if size > 0
-    when Type::FlatType
-      type.elements_count.times { zero_flatten(items, type.target_type) }
-    when Type::EnumType
-      if index = type.index_type
-        zero_flatten(items, index)
-      end
-      payload = type.payload_type.not_nil!
-      payload.elements_count.times { items << scalar_data(lowir_type(payload.target_type), 0_u64) }
-    when Type::PtrType, Type::Fn
-      items << scalar_data(GM.ir_type(IRType::Ptr), 0_u64)
-    when Type::IntType, Type::FloatType, Type::BoolType
-      items << scalar_data(lowir_type(type), 0_u64)
-    else
-      raise "unexpected GM zero initializer #{type.class}"
-    end
   end
 
   private def flatten(res : Array(LibGM::DataItem), init : InitValue)
@@ -197,8 +183,7 @@ class Myc::Backend::GM::Builder < Myc::Backend::AbstractBuilder
           else
             raise "unexpected GM immediate #{ival.class}"
           end
-    address = ival.is_a?(InitValue::Str) || ival.is_a?(InitValue::GlobalRef) || ival.is_a?(InitValue::FnRef)
-    Value.new(BBVal.new(raw, address), ival.type, Value::MM::Val, Value::PP::Primitive.new)
+    Value.new(BBVal.new(raw), ival.type, Value::MM::Val, Value::PP::Primitive.new)
   end
 
   def string_constant(str : String) : LibGM::Value

@@ -51,6 +51,10 @@ class Myc::Backend::GM::BB < Myc::Backend::AbstractBB
       extra_first: first, extra_count: ((bbs.size - 1) * 2).to_u32)
   end
 
+  def unreachable
+    emit(none, IROp::Unreachable)
+  end
+
   def ret(val : Value?)
     if val
       emit(none, IROp::Return, lowir_type(val.type), lowir_val(val))
@@ -533,7 +537,7 @@ class Myc::Backend::GM::BB < Myc::Backend::AbstractBB
     else
       base = addr_or_val(value)
       field_ptr = none
-      field_ptr = emit_value(IROp::Index, GM.ir_type(IRType::I8), base, byte_offset)
+      field_ptr = emit_value(IROp::Index, GM.ir_type(IRType::I8), base, byte_offset, order: IRIndexBounds::InBounds.value)
       wrap_ref(field_ptr, field_type, value.pp)
     end
   end
@@ -567,7 +571,7 @@ class Myc::Backend::GM::BB < Myc::Backend::AbstractBB
                 idx
               end
     t = none
-    t = emit_value(IROp::Index, lowir_type(target_type), ptr_val, idx_val)
+    t = emit_value(IROp::Index, lowir_type(target_type), ptr_val, idx_val, order: IRIndexBounds::InBounds.value)
     wrap_val(t, value.type, value.pp)
   end
 
@@ -611,37 +615,31 @@ class Myc::Backend::GM::BB < Myc::Backend::AbstractBB
   def emit_value(op : IROp, type : UInt64 = 0_u64,
                  a : LibGM::Value | Int = LibGM::Value.new, b : LibGM::Value | Int = LibGM::Value.new,
                  c : LibGM::Value | Int = LibGM::Value.new, sub : UInt8 = 0_u8,
-                 immediate : Int64 = 0_i64, flags : UInt8 = 0_u8,
+                 immediate : Int64 = 0_i64, flags : UInt8 = 0_u8, order : UInt8 = 0_u8,
                  extra_first : UInt32 = 0_u32, extra_count : UInt32 = 0_u32) : LibGM::Value
     return none if @terminated || @id == NO_ID
     # Materialize operands before allocating the result: they may append
     # literals or addresses and grow the same native buffers.
     aa, bb, cc = operand(a), operand(b), operand(c)
     result = func.new_temp
-    emit_record(result.index, op, type, aa, bb, cc, sub, immediate, flags, extra_first, extra_count)
+    emit_record(result.index, op, type, aa, bb, cc, sub, immediate, flags, order, extra_first, extra_count)
     result
   end
 
   def emit(result : LibGM::Value, op : IROp, type : UInt64 = 0_u64,
            a : LibGM::Value | Int = LibGM::Value.new, b : LibGM::Value | Int = LibGM::Value.new,
            c : LibGM::Value | Int = LibGM::Value.new, sub : UInt8 = 0_u8,
-           immediate : Int64 = 0_i64, flags : UInt8 = 0_u8,
+           immediate : Int64 = 0_i64, flags : UInt8 = 0_u8, order : UInt8 = 0_u8,
            extra_first : UInt32 = 0_u32, extra_count : UInt32 = 0_u32)
     return if @terminated || @id == NO_ID
-    emit_record(NO_ID, op, type, operand(a), operand(b), operand(c), sub, immediate, flags, extra_first, extra_count)
+    emit_record(NO_ID, op, type, operand(a), operand(b), operand(c), sub, immediate, flags, order, extra_first, extra_count)
     @terminated = true if op.value >= IROp::Throw.value
   end
 
-  private def emit_record(result, op, type, a, b, c, sub, immediate, flags, extra_first, extra_count)
-    func.append_instruction(LibGM::Instruction.new(op: op.value, sub: sub, flags: flags,
+  private def emit_record(result, op, type, a, b, c, sub, immediate, flags, order, extra_first, extra_count)
+    func.append_instruction(LibGM::Instruction.new(op: op.value, sub: sub, flags: flags, order: order,
       result: result, next: NO_ID, location: @id, type: type, ops: StaticArray[a, b, c],
       extra_first: extra_first, extra_count: extra_count, immediate: immediate))
-  end
-
-  def load_return(value : Value) : Value
-    return load_ref(value) unless value.type.is_a?(Type::BoolType)
-    temp = emit_value(IROp::Load, GM.ir_type(IRType::U8), lowir_val(value))
-    wrap_val(temp, value.type, value.pp)
   end
 
   def copy_object(source : LibGM::Value, target : LibGM::Value, bytes : UInt64, align : UInt64)
@@ -693,17 +691,14 @@ class Myc::Backend::GM::BB < Myc::Backend::AbstractBB
   end
 
   def lowir_val(value : Value) : LibGM::Value
-    operand = value.bbval.as(BBVal)
-    if operand.address
-      emit_value(IROp::Addr, GM.ir_type(IRType::Ptr), operand.val)
-    else
-      operand.val
-    end
+    # A symbol operand already denotes its address in LowIR. Do not emit
+    # a temporary Addr for strings, function pointers or global addresses.
+    _lowir_val(value)
   end
 
   private def addr_or_val(value : Value) : LibGM::Value
     raw = _lowir_val(value)
-    if raw.kind == IRKind::Slot.value || raw.kind == IRKind::Symbol.value
+    if raw.kind == IRKind::Slot.value
       emit_value(IROp::Addr, GM.ir_type(IRType::Ptr), raw)
     else
       raw

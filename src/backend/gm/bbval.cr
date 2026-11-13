@@ -1,8 +1,7 @@
 class Myc::Backend::GM::BBVal < Myc::Backend::AbstractBBVal
   getter val : LibGM::Value
-  getter address : Bool
 
-  def initialize(@val, @address = false)
+  def initialize(@val)
   end
 
   def to_s

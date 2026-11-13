@@ -72,6 +72,11 @@ module Myc::Backend::GM
     Unreachable           = 47
   end
 
+  enum IRIndexBounds : UInt8
+    None     = 0
+    InBounds = 1
+  end
+
   enum IRUnary : UInt8
     Neg                = 0
     Not                = 1

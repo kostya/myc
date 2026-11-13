@@ -7,6 +7,9 @@ class Myc::Backend::GM::Func < Myc::Backend::AbstractFunc
   @block_count = 0_u32
   @buffers = LibGM::BodyBuffers.new
   @symbol : UInt32
+  @zero_literal = NO_ID
+  @one_literal = NO_ID
+  @minus_one_literal = NO_ID
 
   def initialize(@builder : Builder, @func_def : Mod::FuncDef, @header_mod : Mod)
     @temp_counter = @func_def.type_fn.args.size.to_u32
@@ -24,6 +27,21 @@ class Myc::Backend::GM::Func < Myc::Backend::AbstractFunc
     minimum = LibGM::BodyCounts.new(instructions: instructions.to_u32, operands: operands.to_u32,
       literals: literals.to_u32, slots: slots.to_u32, blocks: blocks.to_u32)
     @builder.as(Builder).check(NativeAPI.reserve(@builder.as(Builder).handle, @symbol, pointerof(minimum), pointerof(@buffers)))
+  end
+
+  protected def new_body_bb : AbstractBB
+    # Slots are function-owned records, not entry-block instructions. Incoming
+    # aggregate copies are emitted by params before visiting the body, so both
+    # kinds of setup can share the first block with ordinary instructions.
+    alloca_bb
+  end
+
+  protected def new_return_bb : AbstractBB?
+    new_raw_bb("ret") if needs_result_slot?
+  end
+
+  protected def needs_result_slot? : Bool
+    @func_def.have_ret? && @func_def.type_fn.ret.needs_blit?
   end
 
   def bb_class : AbstractBB.class
@@ -64,12 +82,28 @@ class Myc::Backend::GM::Func < Myc::Backend::AbstractFunc
   end
 
   def literal(kind : IRKind, low : UInt64, high = 0_u64, float_type = IRType::Void) : LibGM::Value
+    # Pool entries contain only bits: integer and floating uses can share
+    # them. Cache the frequent bit patterns without a hash table per function.
+    cached = if high == 0
+               low == 0 ? @zero_literal : (low == 1 ? @one_literal : NO_ID)
+             elsif high == UInt64::MAX && low == UInt64::MAX
+               @minus_one_literal
+             else
+               NO_ID
+             end
+    return LibGM::Value.new(kind: kind.value, float_kind: float_type.value, index: cached) unless cached == NO_ID
     if @literal_count == @buffers.capacity.literals
       reserve(@instruction_count, @operand_count, @literal_count + 1, @slot_count, @block_count)
     end
     id = @literal_count
     @buffers.literals.as(LibGM::Literal*)[id] = LibGM::Literal.new(low: low, high: high)
     @literal_count += 1
+    if high == 0
+      @zero_literal = id if low == 0
+      @one_literal = id if low == 1
+    elsif high == UInt64::MAX && low == UInt64::MAX
+      @minus_one_literal = id
+    end
     LibGM::Value.new(kind: kind.value, float_kind: float_type.value, index: id)
   end
 
@@ -116,13 +150,16 @@ class Myc::Backend::GM::Func < Myc::Backend::AbstractFunc
     begin
       visitor = new_visitor
       visitor.visit
-      alloca_bb.jmp(body_bb)
-      visitor.bb.jmp(ret_bb)
-      ret = ret_bb.as(BB)
       if res = result
-        ret.ret(res.type.needs_blit? ? ret.copy_result(res) : ret.load_return(res))
+        visitor.bb.jmp(ret_bb)
+        ret = ret_bb.as(BB)
+        ret.ret(ret.copy_result(res))
+      elsif @func_def.have_ret?
+        # A reachable fallthrough of a value-returning function had an
+        # undefined result already. Do not create a separate block for it.
+        visitor.bb.as(BB).unreachable
       else
-        ret.ret(nil)
+        visitor.bb.ret(nil)
       end
       submit
     ensure
@@ -134,16 +171,17 @@ class Myc::Backend::GM::Func < Myc::Backend::AbstractFunc
     # Only the layout is finalized here. Records are already in cppgm's
     # pools; IDs were allocated when definitions were emitted, with no holes.
     layout = @buffers.layout.as(UInt32*)
-    layout[0] = alloca_bb.as(BB).id
-    layout[1] = body_bb.as(BB).id
-    at = 2
-    @bbs.each do |name, bb|
-      next if {"alloca", "body", "ret", "__myc_dummy_bb__"}.includes?(name)
+    layout[0] = body_bb.as(BB).id
+    at = 1
+    @bbs.each_value do |bb|
       layout[at] = bb.as(BB).id
       at += 1
     end
-    layout[at] = ret_bb.as(BB).id
-    raise "GM block layout mismatch" unless at + 1 == @block_count
+    if ret = @ret_bb
+      layout[at] = ret.as(BB).id
+      at += 1
+    end
+    raise "GM block layout mismatch" unless at == @block_count
     counts = LibGM::BodyCounts.new(instructions: @instruction_count, operands: @operand_count,
       literals: @literal_count, slots: @slot_count, blocks: @block_count)
     builder.check(NativeAPI.commit(builder.handle, @symbol, pointerof(counts), @temp_counter))

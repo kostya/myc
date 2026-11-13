@@ -101,6 +101,14 @@ existing instruction counts as capacity hints, allocates temporary IDs on
 emission, and commits each function without flattening, copying or remapping
 its IR arrays. Capacity growth can relocate buffers; global initializer data
 still uses a copying adapter.
+GM preserves readonly globals, object size/alignment and the same pointer
+bounds facts used by the LLVM lowering. Scalar results return directly as SSA
+values in the body entry block; aggregate results retain their owned storage
+and shared return block. GM does not create separate empty prologue or scalar
+exit blocks. Symbols are address operands directly, common literal bits share
+pool entries, and scalar type
+encodings avoid string-keyed cache lookups. Struct field layout is cached once
+per finalized type and reused by all backends.
 
 GM uses cppgm O1 by default and O3 with `--final`. Both run Myc's normal
 inliner; `--debug` disables it and selects cppgm O0.

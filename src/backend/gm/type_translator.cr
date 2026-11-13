@@ -3,11 +3,18 @@ class Myc::Backend::GM::TypeTranslator
   getter typer : Typer
 
   def initialize(@builder, @typer)
-    @cache = Hash(String, UInt64).new
+    @cache = Hash(Type, UInt64).new
   end
 
   def translate(type : Type) : UInt64
-    @cache[type.id_name] ||= do_translate(type)
+    # Scalar encodings are cheaper than hashing their type names. Only
+    # composite layout queries need a cache; types already have identity.
+    case type
+    when Type::VoidType, Type::BoolType, Type::IntType, Type::FloatType, Type::PtrType, Type::Fn, Type::IndirectType
+      do_translate(type)
+    else
+      @cache[type] ||= do_translate(type)
+    end
   end
 
   private def object_type(bytes : UInt64, align : UInt64) : UInt64

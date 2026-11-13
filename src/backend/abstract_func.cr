@@ -13,14 +13,26 @@ abstract class Myc::Backend::AbstractFunc
   def initialize(@builder, @func_def, @header_mod)
     @bbs = Hash(String, AbstractBB).new
     @alloca_bb = new_raw_bb("alloca")
-    @body_bb = new_raw_bb("body")
-    @ret_bb = new_raw_bb("ret")
+    @body_bb = new_body_bb
+    @ret_bb = new_return_bb
 
-    if func_def.have_ret?
+    if needs_result_slot?
       name = "__myc_result"
       @result = res = alloca_bb.alloca(name, func_def.type_fn.ret)
       res.pp = Value::PP::Local.new(name)
     end
+  end
+
+  protected def new_body_bb : AbstractBB
+    new_raw_bb("body")
+  end
+
+  protected def new_return_bb : AbstractBB?
+    new_raw_bb("ret")
+  end
+
+  protected def needs_result_slot? : Bool
+    func_def.have_ret?
   end
 
   def build
