@@ -1,149 +1,110 @@
 class Myc::Backend::GM::BB < Myc::Backend::AbstractBB
+  getter id : UInt32
+  @terminated = false
+
   def initialize(@name, @builder, @func, @func_def)
     super
-    @temp_counter = 0
-    @body_io = IO::Memory.new
-    @slots_io = IO::Memory.new
-    @slot_counter = 0
+    @id = @name == "__myc_dummy_bb__" ? NO_ID : @func.as(Func).next_block
   end
 
   def alloca(name : String, type : Type) : Value
-    slot_name = "$#{name}"
-    lowir_type = lowir_type(type)
-    @slots_io << "  slot #{slot_name} : #{lowir_type}\n"
-    wrap_ref(slot_name, type, Value::PP::LocalUninitialized.new(name))
+    slot = func.slot(lowir_type(type))
+    wrap_ref(slot, type, Value::PP::LocalUninitialized.new(name))
   end
 
   def vla(type : Type, ptr_type : Type, size : Value) : Value
     elem_size = @builder.layout.size_of(type)
-    bytes = new_temp
-    emit "#{bytes} = binary mul i64 #{lowir_val(size)}, #{elem_size}"
-    temp = new_temp
-    emit "#{temp} = stack_alloc #{bytes}"
+    bytes = none
+    bytes = emit_value(IROp::Binary, GM.ir_type(IRType::I64), lowir_val(size), elem_size, sub: IRBinary::Mul.value)
+    temp = none
+    temp = emit_value(IROp::StackAlloc, GM.ir_type(IRType::Ptr), bytes)
     wrap_val(temp, ptr_type, Value::PP::Vla.new)
   end
 
   def load_ref(value : Value) : Value
-    if value.type.needs_blit?
-      t = new_temp
-      emit "#{t} = load #{lowir_type(value)} #{lowir_val(value)}"
-      return wrap_val(t, value.type, value.pp)
+    type = lowir_type(value)
+    flags = value.type.needs_blit? ? 0_u8 : 64_u8
+    if value.type.is_a?(Type::BoolType)
+      type = GM.ir_type(IRType::I8)
+      flags = 0_u8
+    elsif (integer = value.type).is_a?(Type::IntType) && (integer.bytes_count == 1 || (integer.bytes_count == 2 && !integer.signed))
+      flags = 0_u8
     end
-
-    lowir_type = lowir_type(value)
-    load_op = case type = value.type
-              when Type::IntType
-                case type.bytes_count
-                when 1 then type.signed ? "load i8" : "load u8"
-                when 2 then type.signed ? "load typed i16" : "load u16"
-                else        "load typed #{lowir_type}"
-                end
-              when Type::BoolType
-                "load i8"
-              else
-                "load typed #{lowir_type}"
-              end
-
-    temp = new_temp
-    emit "#{temp} = #{load_op} #{lowir_val(value)}"
+    temp = none
+    temp = emit_value(IROp::Load, type, lowir_val(value), flags: flags)
     wrap_val(temp, value.type, value.pp)
   end
 
   def jmp(other : AbstractBB)
-    emit "jump ^#{other.name}"
+    emit(none, IROp::Jump, a: block_value(other))
   end
 
   def indirect_jmp(bb_addr : Value, bbs : Array(AbstractBB))
-    idx = lowir_val(bb_addr)
-    arms = bbs[0..-2].map { |bb| "#{bb.number}:^#{bb.name}" }.join(", ")
-    default = bbs[-1].name
-    if arms.empty?
-      emit "jump ^#{default}"
-    else
-      emit "switch #{idx}, ^#{default}, #{arms}"
+    return jmp(bbs[-1]) if bbs.size == 1
+    first = func.operand_count
+    bbs.each_with_index do |bb, i|
+      break if i == bbs.size - 1
+      func.append_operand(func.integer(bb.number))
+      func.append_operand(block_value(bb))
     end
+    emit(none, IROp::Switch, a: lowir_val(bb_addr), b: block_value(bbs[-1]),
+      extra_first: first, extra_count: ((bbs.size - 1) * 2).to_u32)
   end
 
   def ret(val : Value?)
     if val
-      emit "return #{lowir_type(val.type)} #{lowir_val(val)}"
+      emit(none, IROp::Return, lowir_type(val.type), lowir_val(val))
     else
-      emit "return void"
+      emit(none, IROp::Return)
     end
   end
 
   def call(name : String, type_fn : Type::Fn, args : Array(Value)) : Value?
     builder.func_link(name, type_fn)
-
-    ret_type = type_fn.ret
-    ret_lowir = lowir_type(ret_type)
-
-    arg_str = String.build do |s|
-      args.each_with_index do |arg, index|
-        s << ", " if index != 0
-        s << lowir_val(arg)
-      end
-    end
-
-    if ret_type.eq?(func_def.mod.typer.void)
-      emit "call void @#{name}(#{arg_str})"
-      nil
-    else
-      t = new_temp
-      emit "#{t} = call #{ret_lowir} @#{name}(#{arg_str})"
-      wrap_val(t, ret_type, Value::PP::CallResult.new(name))
-    end
+    call_value(GM.ir_value(IRKind::Symbol, builder.symbol(name)), type_fn, args, name)
   end
 
   def invoke(fn : Value, type_fn : Type::Fn, args : Array(Value)) : Value?
+    call_value(lowir_val(fn), type_fn, args, "invoke", builder.signature(type_fn))
+  end
+
+  private def call_value(callee : LibGM::Value, type_fn : Type::Fn, args : Array(Value), name : String, signature = NO_ID) : Value?
+    first = func.operand_count
+    args.each { |arg| func.append_operand(lowir_val(arg)) }
     ret_type = type_fn.ret
-    ret_lowir = lowir_type(ret_type)
-    fn_val = lowir_val(fn)
-
-    args_str = String.build do |s|
-      args.each_with_index do |arg, index|
-        s << ", " if index != 0
-        s << lowir_val(arg)
-      end
-    end
-
-    params_str = type_fn.args.map_with_index { |t, i| "%a#{i} : #{lowir_type(t)}" }.join(", ")
-    meta = [] of String
-    meta << "arity=variadic" if type_fn.vaarg
-    sig = "as (#{params_str}) -> #{ret_lowir}"
-    sig += " [#{meta.join(", ")}]" unless meta.empty?
-
-    if ret_type.eq?(func_def.mod.typer.void)
-      emit "call void #{fn_val}(#{args_str}) #{sig}"
+    flags = signature == NO_ID ? 0_u8 : 2_u8
+    if ret_type.eq?(typer.void)
+      emit(none, IROp::Call, lowir_type(ret_type), callee, extra_first: first, extra_count: args.size.to_u32,
+        flags: flags, immediate: signature.to_i64)
       nil
     else
-      t = new_temp
-      emit "#{t} = call #{ret_lowir} #{fn_val}(#{args_str}) #{sig}"
-      wrap_val(t, ret_type, Value::PP::CallResult.new("invoke"))
+      result = emit_value(IROp::Call, lowir_type(ret_type), callee, extra_first: first, extra_count: args.size.to_u32,
+        flags: flags, immediate: signature.to_i64)
+      wrap_val(result, ret_type, Value::PP::CallResult.new(name))
     end
   end
 
   def fn_addr(name : String, type_fn : Type::Fn) : Value
     builder.func_link(name, type_fn)
-    val = "@#{name}"
+    val = GM.ir_value(IRKind::Symbol, builder.symbol(name))
     wrap_val(val, type_fn, Value::PP::FnAddress.new(name))
   end
 
   def bb_addr(bb : AbstractBB) : Value
-    wrap_val(bb.number.to_s, typer.indirect, Value::PP::LabelAddress.new(bb.name))
+    wrap_val(func.integer(bb.number), typer.indirect, Value::PP::LabelAddress.new(bb.name))
   end
 
   def cond(cond : Value, then_bb : AbstractBB, else_bb : AbstractBB)
-    emit "branch #{lowir_val(cond)}, ^#{then_bb.name}, ^#{else_bb.name}"
+    emit(none, IROp::Branch, a: lowir_val(cond), b: block_value(then_bb), c: block_value(else_bb))
   end
 
   def select(cond : Value, arg_true : Value, arg_false : Value) : Value
     result_type = lowir_type(arg_true.type)
-    t = new_temp
+    t = none
     cond_v = lowir_val(cond)
     true_v = lowir_val(arg_true)
     false_v = lowir_val(arg_false)
-    emit "#{t} = select #{result_type} #{cond_v}, #{true_v}, #{false_v}"
+    t = emit_value(IROp::Select, result_type, cond_v, true_v, false_v)
     wrap_val(t, arg_true.type, arg_true.pp)
   end
 
@@ -151,122 +112,111 @@ class Myc::Backend::GM::BB < Myc::Backend::AbstractBB
     if lhs.type.needs_blit?
       size = builder.layout.size_of(lhs.type)
       return if size == 0
-      align = builder.layout.alignment_of(lhs.type)
-
-      emit "copyobj #{size}x#{align} #{lowir_val(rhs)}, #{lowir_val(lhs)}"
+      copy_object(lowir_val(rhs), lowir_val(lhs), size, builder.layout.alignment_of(lhs.type))
     else
-      lowir_type = lowir_type(lhs.type)
-      store_op = case type = lhs.type
-                 when Type::IntType
-                   case type.bytes_count
-                   when 1 then "store i8"
-                   when 2 then "store i16"
-                   else        "store #{lowir_type}"
-                   end
-                 when Type::BoolType
-                   "store i1"
-                 else
-                   "store #{lowir_type}"
-                 end
-      emit "#{store_op} #{lowir_val(rhs)}, #{lowir_val(lhs)}"
+      type = lowir_type(lhs.type)
+      # Preserve the text producer's signed byte/halfword storage view.
+      type = GM.ir_type(IRType::I8) if type == GM.ir_type(IRType::U8)
+      type = GM.ir_type(IRType::I16) if type == GM.ir_type(IRType::U16)
+      emit(none, IROp::Store, type, lowir_val(rhs), lowir_val(lhs))
     end
   end
 
   def binary(op : Opcode::Binary::Op, lhs : Value, rhs : Value) : Value?
     l = lowir_val(lhs)
     r = lowir_val(rhs)
-    t = new_temp
+    t = none
     ltype = lhs.type
     lowir_type = lowir_type(ltype)
 
     case op
     when .add?
-      emit "#{t} = binary add #{lowir_type} #{l}, #{r}"
+      t = emit_value(IROp::Binary, lowir_type, l, r, sub: IRBinary::Add.value)
     when .sub?
-      emit "#{t} = binary sub #{lowir_type} #{l}, #{r}"
+      t = emit_value(IROp::Binary, lowir_type, l, r, sub: IRBinary::Sub.value)
     when .mul?
-      emit "#{t} = binary mul #{lowir_type} #{l}, #{r}"
+      t = emit_value(IROp::Binary, lowir_type, l, r, sub: IRBinary::Mul.value)
     when .div?
       op_name = case ltype
                 when Type::IntType
-                  ltype.signed ? "div" : "udiv"
+                  ltype.signed ? IRBinary::Div : IRBinary::UDiv
                 when Type::FloatType
-                  "div"
+                  IRBinary::Div
                 else
                   return
                 end
-      emit "#{t} = binary #{op_name} #{lowir_type} #{l}, #{r}"
+      t = emit_value(IROp::Binary, lowir_type, l, r, sub: op_name.value)
 
       return wrap_res(t, ltype, lhs.pp)
     when .rem?
       case ltype
       when Type::IntType
-        op_name = ltype.signed ? "mod" : "umod"
-        emit "#{t} = binary #{op_name} #{lowir_type} #{l}, #{r}"
+        op_name = ltype.signed ? IRBinary::Mod : IRBinary::UMod
+        t = emit_value(IROp::Binary, lowir_type, l, r, sub: op_name.value)
 
         return wrap_res(t, ltype, lhs.pp)
       else
         return
       end
-    when .and? then emit "#{t} = binary and #{lowir_type} #{l}, #{r}"
-    when .or?  then emit "#{t} = binary or #{lowir_type} #{l}, #{r}"
-    when .xor? then emit "#{t} = binary xor #{lowir_type} #{l}, #{r}"
+    when .and? then t = emit_value(IROp::Binary, lowir_type, l, r, sub: IRBinary::And.value)
+    when .or?  then t = emit_value(IROp::Binary, lowir_type, l, r, sub: IRBinary::Or.value)
+    when .xor? then t = emit_value(IROp::Binary, lowir_type, l, r, sub: IRBinary::Xor.value)
     when .shl?
-      emit "#{t} = binary shl #{lowir_type} #{l}, #{r}"
+      t = emit_value(IROp::Binary, lowir_type, l, r, sub: IRBinary::Shl.value)
     when .shr?
-      op_name = ltype.is_a?(Type::IntType) && !ltype.signed ? "ushr" : "shr"
-      emit "#{t} = binary #{op_name} #{lowir_type} #{l}, #{r}"
+      op_name = ltype.is_a?(Type::IntType) && !ltype.signed ? IRBinary::UShr : IRBinary::Shr
+      t = emit_value(IROp::Binary, lowir_type, l, r, sub: op_name.value)
     when .sar?
-      emit "#{t} = binary shr #{lowir_type} #{l}, #{r}"
+      t = emit_value(IROp::Binary, lowir_type, l, r, sub: IRBinary::Shr.value)
     when .eq?
-      emit "#{t} = cmp eq #{lowir_type} #{l}, #{r}"
+      t = emit_value(IROp::Compare, lowir_type, l, r, sub: IRCmp::Eq.value)
       return wrap_res(t, typer.bool, lhs.pp)
     when .not_eq?
-      emit "#{t} = cmp ne #{lowir_type} #{l}, #{r}"
+      t = emit_value(IROp::Compare, lowir_type, l, r, sub: IRCmp::Ne.value)
       return wrap_res(t, typer.bool, lhs.pp)
     when .less?
       pred = case ltype
              when Type::IntType
-               ltype.signed ? "lt" : "ult"
+               ltype.signed ? IRCmp::Lt : IRCmp::Ult
              else
-               "lt"
+               IRCmp::Lt
              end
-      emit "#{t} = cmp #{pred} #{lowir_type} #{l}, #{r}"
+      t = emit_value(IROp::Compare, lowir_type, l, r, sub: pred.value)
       return wrap_res(t, typer.bool, lhs.pp)
     when .less_eq?
       pred = case ltype
              when Type::IntType
-               ltype.signed ? "le" : "ule"
+               ltype.signed ? IRCmp::Le : IRCmp::Ule
              else
-               "le"
+               IRCmp::Le
              end
-      emit "#{t} = cmp #{pred} #{lowir_type} #{l}, #{r}"
+      t = emit_value(IROp::Compare, lowir_type, l, r, sub: pred.value)
       return wrap_res(t, typer.bool, lhs.pp)
     when .more?
       pred = case ltype
              when Type::IntType
-               ltype.signed ? "gt" : "ugt"
+               ltype.signed ? IRCmp::Gt : IRCmp::Ugt
              else
-               "gt"
+               IRCmp::Gt
              end
-      emit "#{t} = cmp #{pred} #{lowir_type} #{l}, #{r}"
+      t = emit_value(IROp::Compare, lowir_type, l, r, sub: pred.value)
       return wrap_res(t, typer.bool, lhs.pp)
     when .more_eq?
       pred = case ltype
              when Type::IntType
-               ltype.signed ? "ge" : "uge"
+               ltype.signed ? IRCmp::Ge : IRCmp::Uge
              else
-               "ge"
+               IRCmp::Ge
              end
-      emit "#{t} = cmp #{pred} #{lowir_type} #{l}, #{r}"
+      t = emit_value(IROp::Compare, lowir_type, l, r, sub: pred.value)
       return wrap_res(t, typer.bool, lhs.pp)
     when .min?
       case ltype
       when Type::IntType
-        pred = ltype.signed ? "lt" : "ult"
-        cmp = new_temp
-        emit "#{cmp} = cmp #{pred} #{lowir_type} #{l}, #{r}"
-        emit "#{t} = select #{lowir_type} #{cmp}, #{l}, #{r}"
+        pred = ltype.signed ? IRCmp::Lt : IRCmp::Ult
+        cmp = none
+        cmp = emit_value(IROp::Compare, lowir_type, l, r, sub: pred.value)
+        t = emit_value(IROp::Select, lowir_type, cmp, l, r)
       when Type::FloatType
         func_name = ltype.bytes_count == 8 ? "fmin" : "fminf"
         t = libm_call(func_name, ltype, [lhs, rhs])
@@ -275,10 +225,10 @@ class Myc::Backend::GM::BB < Myc::Backend::AbstractBB
     when .max?
       case ltype
       when Type::IntType
-        pred = ltype.signed ? "gt" : "ugt"
-        cmp = new_temp
-        emit "#{cmp} = cmp #{pred} #{lowir_type} #{l}, #{r}"
-        emit "#{t} = select #{lowir_type} #{cmp}, #{l}, #{r}"
+        pred = ltype.signed ? IRCmp::Gt : IRCmp::Ugt
+        cmp = none
+        cmp = emit_value(IROp::Compare, lowir_type, l, r, sub: pred.value)
+        t = emit_value(IROp::Select, lowir_type, cmp, l, r)
       when Type::FloatType
         func_name = ltype.bytes_count == 8 ? "fmax" : "fmaxf"
         t = libm_call(func_name, ltype, [lhs, rhs])
@@ -295,26 +245,26 @@ class Myc::Backend::GM::BB < Myc::Backend::AbstractBB
       case ltype
       when Type::IntType
         width = ltype.bytes_count * 8
-        shl_temp = new_temp
-        shr_temp = new_temp
-        sub_temp = new_temp
-        emit "#{sub_temp} = binary sub #{lowir_type} #{width}, #{r}"
-        emit "#{shl_temp} = binary shl #{lowir_type} #{l}, #{r}"
-        emit "#{shr_temp} = binary shr #{lowir_type} #{l}, #{sub_temp}"
-        emit "#{t} = binary or #{lowir_type} #{shl_temp}, #{shr_temp}"
+        shl_temp = none
+        shr_temp = none
+        sub_temp = none
+        sub_temp = emit_value(IROp::Binary, lowir_type, width, r, sub: IRBinary::Sub.value)
+        shl_temp = emit_value(IROp::Binary, lowir_type, l, r, sub: IRBinary::Shl.value)
+        shr_temp = emit_value(IROp::Binary, lowir_type, l, sub_temp, sub: IRBinary::Shr.value)
+        t = emit_value(IROp::Binary, lowir_type, shl_temp, shr_temp, sub: IRBinary::Or.value)
       end
       return wrap_res(t, ltype, lhs.pp)
     when .rotr?
       case ltype
       when Type::IntType
         width = ltype.bytes_count * 8
-        shr_temp = new_temp
-        shl_temp = new_temp
-        sub_temp = new_temp
-        emit "#{sub_temp} = binary sub #{lowir_type} #{width}, #{r}"
-        emit "#{shr_temp} = binary shr #{lowir_type} #{l}, #{r}"
-        emit "#{shl_temp} = binary shl #{lowir_type} #{l}, #{sub_temp}"
-        emit "#{t} = binary or #{lowir_type} #{shl_temp}, #{shr_temp}"
+        shr_temp = none
+        shl_temp = none
+        sub_temp = none
+        sub_temp = emit_value(IROp::Binary, lowir_type, width, r, sub: IRBinary::Sub.value)
+        shr_temp = emit_value(IROp::Binary, lowir_type, l, r, sub: IRBinary::Shr.value)
+        shl_temp = emit_value(IROp::Binary, lowir_type, l, sub_temp, sub: IRBinary::Shl.value)
+        t = emit_value(IROp::Binary, lowir_type, shl_temp, shr_temp, sub: IRBinary::Or.value)
       end
       return wrap_res(t, ltype, lhs.pp)
     else
@@ -328,25 +278,25 @@ class Myc::Backend::GM::BB < Myc::Backend::AbstractBB
     val = lowir_val(rhs)
     type = rhs.type
     lowir_type = lowir_type(type)
-    t = new_temp
+    t = none
 
     case op
     when .lnot?
       case type
       when Type::IntType, Type::BoolType
-        emit "#{t} = cmp eq #{lowir_type} #{val}, 0"
+        t = emit_value(IROp::Compare, lowir_type, val, func.integer(0), sub: IRCmp::Eq.value)
       end
     when .bnot?
       case type
       when Type::IntType
-        emit "#{t} = unary bitnot #{lowir_type} #{val}"
+        t = emit_value(IROp::Unary, lowir_type, val, sub: IRUnary::BitNot.value)
       end
     when .neg?
-      emit "#{t} = unary neg #{lowir_type} #{val}"
+      t = emit_value(IROp::Unary, lowir_type, val, sub: IRUnary::Neg.value)
     when .sqrt?
       case type
       when Type::FloatType
-        emit "#{t} = unary sqrt #{lowir_type} #{val}"
+        t = emit_value(IROp::Unary, lowir_type, val, sub: IRUnary::Sqrt.value)
       end
     when .ceil?
       case type
@@ -375,11 +325,11 @@ class Myc::Backend::GM::BB < Myc::Backend::AbstractBB
     when .abs?
       case type
       when Type::IntType
-        cmp = new_temp
-        neg = new_temp
-        emit "#{cmp} = cmp lt #{lowir_type} #{val}, 0"
-        emit "#{neg} = unary neg #{lowir_type} #{val}"
-        emit "#{t} = select #{lowir_type} #{cmp}, #{neg}, #{val}"
+        cmp = none
+        neg = none
+        cmp = emit_value(IROp::Compare, lowir_type, val, func.integer(0), sub: IRCmp::Lt.value)
+        neg = emit_value(IROp::Unary, lowir_type, val, sub: IRUnary::Neg.value)
+        t = emit_value(IROp::Select, lowir_type, cmp, neg, val)
       when Type::FloatType
         func_name = type.bytes_count == 8 ? "fabs" : "fabsf"
         t = libm_call(func_name, type, [rhs])
@@ -390,28 +340,28 @@ class Myc::Backend::GM::BB < Myc::Backend::AbstractBB
         width = type.bytes_count * 8
 
         if width == 64
-          cmp = new_temp
-          emit "#{cmp} = cmp eq i64 #{val}, 0"
-          clz_t = new_temp
-          emit "#{clz_t} = unary clz i64 #{val}"
-          emit "#{t} = select i64 #{cmp}, 64, #{clz_t}"
+          cmp = none
+          cmp = emit_value(IROp::Compare, GM.ir_type(IRType::I64), val, func.integer(0), sub: IRCmp::Eq.value)
+          clz_t = none
+          clz_t = emit_value(IROp::Unary, GM.ir_type(IRType::I64), val, sub: IRUnary::CountLeadingZeros.value)
+          t = emit_value(IROp::Select, GM.ir_type(IRType::I64), cmp, func.integer(64), clz_t)
         elsif width == 32
-          cmp = new_temp
-          emit "#{cmp} = cmp eq i32 #{val}, 0"
-          clz_t = new_temp
-          emit "#{clz_t} = unary clz i32 #{val}"
-          emit "#{t} = select i32 #{cmp}, 32, #{clz_t}"
+          cmp = none
+          cmp = emit_value(IROp::Compare, GM.ir_type(IRType::I32), val, func.integer(0), sub: IRCmp::Eq.value)
+          clz_t = none
+          clz_t = emit_value(IROp::Unary, GM.ir_type(IRType::I32), val, sub: IRUnary::CountLeadingZeros.value)
+          t = emit_value(IROp::Select, GM.ir_type(IRType::I32), cmp, func.integer(32), clz_t)
         else
-          ext = type.signed ? "sext" : "zext"
-          ext_val = new_temp
-          emit "#{ext_val} = convert #{ext} u32 #{lowir_type} #{val}"
-          cmp = new_temp
-          emit "#{cmp} = cmp eq u32 #{ext_val}, 0"
-          clz_t = new_temp
-          emit "#{clz_t} = unary clz u32 #{ext_val}"
-          sub_t = new_temp
-          emit "#{sub_t} = binary sub u32 #{clz_t}, #{32 - width}"
-          emit "#{t} = select i32 #{cmp}, #{width}, #{sub_t}"
+          ext = type.signed ? IRConvert::SExt : IRConvert::ZExt
+          ext_val = none
+          ext_val = emit_value(IROp::Convert, GM.ir_type(IRType::U32), val, sub: ext.value, immediate: lowir_type.to_i64!)
+          cmp = none
+          cmp = emit_value(IROp::Compare, GM.ir_type(IRType::U32), ext_val, func.integer(0), sub: IRCmp::Eq.value)
+          clz_t = none
+          clz_t = emit_value(IROp::Unary, GM.ir_type(IRType::U32), ext_val, sub: IRUnary::CountLeadingZeros.value)
+          sub_t = none
+          sub_t = emit_value(IROp::Binary, GM.ir_type(IRType::U32), clz_t, 32 - width, sub: IRBinary::Sub.value)
+          t = emit_value(IROp::Select, GM.ir_type(IRType::I32), cmp, width, sub_t)
         end
       end
     when .ctz?
@@ -420,26 +370,26 @@ class Myc::Backend::GM::BB < Myc::Backend::AbstractBB
         width = type.bytes_count * 8
 
         if width == 64
-          cmp = new_temp
-          emit "#{cmp} = cmp eq i64 #{val}, 0"
-          ctz_t = new_temp
-          emit "#{ctz_t} = unary ctz i64 #{val}"
-          emit "#{t} = select i64 #{cmp}, 64, #{ctz_t}"
+          cmp = none
+          cmp = emit_value(IROp::Compare, GM.ir_type(IRType::I64), val, func.integer(0), sub: IRCmp::Eq.value)
+          ctz_t = none
+          ctz_t = emit_value(IROp::Unary, GM.ir_type(IRType::I64), val, sub: IRUnary::CountTrailingZeros.value)
+          t = emit_value(IROp::Select, GM.ir_type(IRType::I64), cmp, func.integer(64), ctz_t)
         elsif width == 32
-          cmp = new_temp
-          emit "#{cmp} = cmp eq i32 #{val}, 0"
-          ctz_t = new_temp
-          emit "#{ctz_t} = unary ctz i32 #{val}"
-          emit "#{t} = select i32 #{cmp}, 32, #{ctz_t}"
+          cmp = none
+          cmp = emit_value(IROp::Compare, GM.ir_type(IRType::I32), val, func.integer(0), sub: IRCmp::Eq.value)
+          ctz_t = none
+          ctz_t = emit_value(IROp::Unary, GM.ir_type(IRType::I32), val, sub: IRUnary::CountTrailingZeros.value)
+          t = emit_value(IROp::Select, GM.ir_type(IRType::I32), cmp, func.integer(32), ctz_t)
         else
-          ext = type.signed ? "sext" : "zext"
-          ext_val = new_temp
-          emit "#{ext_val} = convert #{ext} u32 #{lowir_type} #{val}"
-          cmp = new_temp
-          emit "#{cmp} = cmp eq u32 #{ext_val}, 0"
-          ctz_t = new_temp
-          emit "#{ctz_t} = unary ctz u32 #{ext_val}"
-          emit "#{t} = select i32 #{cmp}, #{width}, #{ctz_t}"
+          ext = type.signed ? IRConvert::SExt : IRConvert::ZExt
+          ext_val = none
+          ext_val = emit_value(IROp::Convert, GM.ir_type(IRType::U32), val, sub: ext.value, immediate: lowir_type.to_i64!)
+          cmp = none
+          cmp = emit_value(IROp::Compare, GM.ir_type(IRType::U32), ext_val, func.integer(0), sub: IRCmp::Eq.value)
+          ctz_t = none
+          ctz_t = emit_value(IROp::Unary, GM.ir_type(IRType::U32), ext_val, sub: IRUnary::CountTrailingZeros.value)
+          t = emit_value(IROp::Select, GM.ir_type(IRType::I32), cmp, width, ctz_t)
         end
       end
     when .popcnt?
@@ -447,14 +397,14 @@ class Myc::Backend::GM::BB < Myc::Backend::AbstractBB
       when Type::IntType
         width = type.bytes_count * 8
         if width == 64
-          emit "#{t} = unary popcount i64 #{val}"
+          t = emit_value(IROp::Unary, GM.ir_type(IRType::I64), val, sub: IRUnary::CountOnes.value)
         elsif width == 32
-          emit "#{t} = unary popcount #{type.signed ? "i32" : "u32"} #{val}"
+          t = emit_value(IROp::Unary, type.signed ? GM.ir_type(IRType::I32) : GM.ir_type(IRType::U32), val, sub: IRUnary::CountOnes.value)
         else
-          ext = type.signed ? "sext" : "zext"
-          ext_val = new_temp
-          emit "#{ext_val} = convert #{ext} u32 #{lowir_type} #{val}"
-          emit "#{t} = unary popcount u32 #{ext_val}"
+          ext = type.signed ? IRConvert::SExt : IRConvert::ZExt
+          ext_val = none
+          ext_val = emit_value(IROp::Convert, GM.ir_type(IRType::U32), val, sub: ext.value, immediate: lowir_type.to_i64!)
+          t = emit_value(IROp::Unary, GM.ir_type(IRType::U32), ext_val, sub: IRUnary::CountOnes.value)
         end
       end
     else
@@ -465,16 +415,20 @@ class Myc::Backend::GM::BB < Myc::Backend::AbstractBB
   end
 
   def switch(index : Value, case_values : Array(Value), case_bbs : Array(AbstractBB), default_bb : AbstractBB)
-    idx = lowir_val(index)
-    arms = case_values.each_with_index.map { |val, i| "#{lowir_val(val)}:^#{case_bbs[i].name}" }.join(", ")
-    emit "switch #{idx}, ^#{default_bb.name}, #{arms}"
+    first = func.operand_count
+    case_values.each_with_index do |value, i|
+      func.append_operand(lowir_val(value))
+      func.append_operand(block_value(case_bbs[i]))
+    end
+    emit(none, IROp::Switch, a: lowir_val(index), b: block_value(default_bb),
+      extra_first: first, extra_count: (case_values.size * 2).to_u32)
   end
 
   def cast?(value : Value, from_type : Type, to_type : Type) : Value?
     from_lowir = lowir_type(from_type)
     to_lowir = lowir_type(to_type)
     val = lowir_val(value)
-    t = new_temp
+    t = none
 
     case {from_type, to_type}
     when {Type::IntType, Type::IntType}
@@ -483,45 +437,45 @@ class Myc::Backend::GM::BB < Myc::Backend::AbstractBB
       if to_size == from_size
         wrap_res(val, to_type, value.pp)
       elsif to_size > from_size
-        op = from_type.signed ? "sext" : "zext"
-        emit "#{t} = convert #{op} #{to_lowir} #{from_lowir} #{val}"
+        op = from_type.signed ? IRConvert::SExt : IRConvert::ZExt
+        t = emit_value(IROp::Convert, to_lowir, val, sub: op.value, immediate: from_lowir.to_i64!)
         wrap_res(t, to_type, value.pp)
       else
-        emit "#{t} = convert trunc #{to_lowir} #{from_lowir} #{val}"
+        t = emit_value(IROp::Convert, to_lowir, val, sub: IRConvert::Trunc.value, immediate: from_lowir.to_i64!)
         wrap_res(t, to_type, value.pp)
       end
     when {Type::IntType, Type::FloatType}
-      op = from_type.signed ? "sitofp" : "uitofp"
-      emit "#{t} = convert #{op} #{to_lowir} #{from_lowir} #{val}"
+      op = from_type.signed ? IRConvert::SIToFP : IRConvert::UIToFP
+      t = emit_value(IROp::Convert, to_lowir, val, sub: op.value, immediate: from_lowir.to_i64!)
       wrap_res(t, to_type, value.pp)
     when {Type::FloatType, Type::IntType}
-      op = to_type.signed ? "fptosi" : "fptoui"
-      emit "#{t} = convert #{op} #{to_lowir} #{from_lowir} #{val}"
+      op = to_type.signed ? IRConvert::FPToSI : IRConvert::FPToUI
+      t = emit_value(IROp::Convert, to_lowir, val, sub: op.value, immediate: from_lowir.to_i64!)
       wrap_res(t, to_type, value.pp)
     when {Type::FloatType, Type::FloatType}
       if to_type.bytes_count > from_type.bytes_count
-        emit "#{t} = convert fpext #{to_lowir} #{from_lowir} #{val}"
+        t = emit_value(IROp::Convert, to_lowir, val, sub: IRConvert::FPExt.value, immediate: from_lowir.to_i64!)
       else
-        emit "#{t} = convert fptrunc #{to_lowir} #{from_lowir} #{val}"
+        t = emit_value(IROp::Convert, to_lowir, val, sub: IRConvert::FPTrunc.value, immediate: from_lowir.to_i64!)
       end
       wrap_res(t, to_type, value.pp)
     when {Type::BoolType, Type::IntType}
-      emit "#{t} = convert zext #{to_lowir} i1 #{val}"
+      t = emit_value(IROp::Convert, to_lowir, val, sub: IRConvert::ZExt.value, immediate: GM.ir_type(IRType::I1).to_i64!)
       wrap_res(t, to_type, value.pp)
     when {Type::PtrType, Type::PtrType}
       wrap_res(val, to_type, value.pp)
     when {Type::IntType, Type::PtrType}
-      emit "#{t} = copy ptr #{val}"
+      t = emit_value(IROp::Copy, GM.ir_type(IRType::Ptr), val)
       wrap_res(t, to_type, value.pp)
     when {Type::PtrType, Type::IntType}
-      emit "#{t} = copy #{to_lowir} #{val}"
+      t = emit_value(IROp::Copy, to_lowir, val)
       wrap_res(t, to_type, value.pp)
     when {Type::IntType, Type::Fn}
-      emit "#{t} = copy ptr #{val}"
+      t = emit_value(IROp::Copy, GM.ir_type(IRType::Ptr), val)
       wrap_res(t, to_type, value.pp)
     when {Type::Fn, Type::IntType}
       if to_type.bytes_count >= builder.layout.target.pointer_size
-        emit "#{t} = copy #{to_lowir} #{val}"
+        t = emit_value(IROp::Copy, to_lowir, val)
         wrap_res(t, to_type, value.pp)
       end
     when {Type::PtrType, Type::Fn}
@@ -535,28 +489,28 @@ class Myc::Backend::GM::BB < Myc::Backend::AbstractBB
     from_lowir = lowir_type(from_type)
     to_lowir = lowir_type(to_type)
     val = lowir_val(value)
-    t = new_temp
+    t = none
 
     case {from_type, to_type}
     when {Type::IntType, Type::IntType}
       from_size = from_type.bytes_count
       to_size = to_type.bytes_count
       if to_size > from_size
-        op = from_type.signed ? "sext" : "zext"
-        emit "#{t} = convert #{op} #{to_lowir} #{from_lowir} #{val}"
+        op = from_type.signed ? IRConvert::SExt : IRConvert::ZExt
+        t = emit_value(IROp::Convert, to_lowir, val, sub: op.value, immediate: from_lowir.to_i64!)
         wrap_res(t, to_type, value.pp)
       elsif to_size == from_size && from_type.signed == to_type.signed
         wrap_res(val, to_type, value.pp)
       end
     when {Type::IntType, Type::FloatType}
       if to_type.bytes_count >= from_type.bytes_count
-        op = from_type.signed ? "sitofp" : "uitofp"
-        emit "#{t} = convert #{op} #{to_lowir} #{from_lowir} #{val}"
+        op = from_type.signed ? IRConvert::SIToFP : IRConvert::UIToFP
+        t = emit_value(IROp::Convert, to_lowir, val, sub: op.value, immediate: from_lowir.to_i64!)
         wrap_res(t, to_type, value.pp)
       end
     when {Type::FloatType, Type::FloatType}
       if to_type.bytes_count > from_type.bytes_count
-        emit "#{t} = convert fpext #{to_lowir} #{from_lowir} #{val}"
+        t = emit_value(IROp::Convert, to_lowir, val, sub: IRConvert::FPExt.value, immediate: from_lowir.to_i64!)
         wrap_res(t, to_type, value.pp)
       elsif to_type.bytes_count == from_type.bytes_count
         wrap_res(val, to_type, value.pp)
@@ -578,8 +532,8 @@ class Myc::Backend::GM::BB < Myc::Backend::AbstractBB
       wrap_ref(lowir_val(value), field_type, value.pp)
     else
       base = addr_or_val(value)
-      field_ptr = new_temp
-      emit "#{field_ptr} = index i8 #{base}, #{byte_offset}"
+      field_ptr = none
+      field_ptr = emit_value(IROp::Index, GM.ir_type(IRType::I8), base, byte_offset)
       wrap_ref(field_ptr, field_type, value.pp)
     end
   end
@@ -602,18 +556,18 @@ class Myc::Backend::GM::BB < Myc::Backend::AbstractBB
     idx_val = case index_type = offset.type
               when Type::IntType
                 if index_type.bytes_count < 8
-                  extension = index_type.signed ? "sext" : "zext"
-                  new_temp.tap { |l| emit "#{l} = convert #{extension} i64 #{lowir_type(index_type)} #{idx}" }
+                  extension = index_type.signed ? IRConvert::SExt : IRConvert::ZExt
+                  emit_value(IROp::Convert, GM.ir_type(IRType::I64), idx, sub: extension.value, immediate: lowir_type(index_type).to_i64!)
                 elsif index_type.bytes_count > 8
-                  new_temp.tap { |l| emit "#{l} = convert trunc i64 #{lowir_type(index_type)} #{idx}" }
+                  emit_value(IROp::Convert, GM.ir_type(IRType::I64), idx, sub: IRConvert::Trunc.value, immediate: lowir_type(index_type).to_i64!)
                 else
                   idx
                 end
               else
                 idx
               end
-    t = new_temp
-    emit "#{t} = index #{lowir_type(target_type)} #{ptr_val}, #{idx_val}"
+    t = none
+    t = emit_value(IROp::Index, lowir_type(target_type), ptr_val, idx_val)
     wrap_val(t, value.type, value.pp)
   end
 
@@ -622,15 +576,15 @@ class Myc::Backend::GM::BB < Myc::Backend::AbstractBB
   end
 
   def va_start(arg : Value, val : Value)
-    emit "va_start #{addr_or_val(arg)}"
+    emit(none, IROp::VaStart, a: addr_or_val(arg))
   end
 
   def va_end(arg : Value)
   end
 
   def va_arg(arg : Value, type : Type) : Value
-    t = new_temp
-    emit "#{t} = va_arg #{lowir_type(type)} #{addr_or_val(arg)}"
+    t = none
+    t = emit_value(IROp::VaArg, lowir_type(type), addr_or_val(arg))
     wrap_res(t, type, arg.pp)
   end
 
@@ -638,31 +592,74 @@ class Myc::Backend::GM::BB < Myc::Backend::AbstractBB
     @builder.as(Builder)
   end
 
-  def emit(str : String)
-    @body_io << "    " << str << '\n'
+  private def none : LibGM::Value
+    GM.ir_value(IRKind::None)
   end
 
-  def copy_slots(to : IO)
-    @slots_io.rewind
-    IO.copy(@slots_io, to)
+  private def block_value(bb : AbstractBB) : LibGM::Value
+    GM.ir_value(IRKind::Block, bb.as(BB).id)
   end
 
-  def copy_data(to : IO, _emit_label : Bool)
-    emit_label(@name, to) if _emit_label
-    builder.copy_io(@body_io, to)
+  private def operand(value : LibGM::Value) : LibGM::Value
+    value
   end
 
-  private def emit_label(name : String, io = @body_io)
-    io << "  block ^"
-    io << name
-    io << ":\n"
+  private def operand(value : Int) : LibGM::Value
+    func.integer(value)
   end
 
-  private def lowir_type(v : Value) : String
+  def emit_value(op : IROp, type : UInt64 = 0_u64,
+                 a : LibGM::Value | Int = LibGM::Value.new, b : LibGM::Value | Int = LibGM::Value.new,
+                 c : LibGM::Value | Int = LibGM::Value.new, sub : UInt8 = 0_u8,
+                 immediate : Int64 = 0_i64, flags : UInt8 = 0_u8,
+                 extra_first : UInt32 = 0_u32, extra_count : UInt32 = 0_u32) : LibGM::Value
+    return none if @terminated || @id == NO_ID
+    # Materialize operands before allocating the result: they may append
+    # literals or addresses and grow the same native buffers.
+    aa, bb, cc = operand(a), operand(b), operand(c)
+    result = func.new_temp
+    emit_record(result.index, op, type, aa, bb, cc, sub, immediate, flags, extra_first, extra_count)
+    result
+  end
+
+  def emit(result : LibGM::Value, op : IROp, type : UInt64 = 0_u64,
+           a : LibGM::Value | Int = LibGM::Value.new, b : LibGM::Value | Int = LibGM::Value.new,
+           c : LibGM::Value | Int = LibGM::Value.new, sub : UInt8 = 0_u8,
+           immediate : Int64 = 0_i64, flags : UInt8 = 0_u8,
+           extra_first : UInt32 = 0_u32, extra_count : UInt32 = 0_u32)
+    return if @terminated || @id == NO_ID
+    emit_record(NO_ID, op, type, operand(a), operand(b), operand(c), sub, immediate, flags, extra_first, extra_count)
+    @terminated = true if op.value >= IROp::Throw.value
+  end
+
+  private def emit_record(result, op, type, a, b, c, sub, immediate, flags, extra_first, extra_count)
+    func.append_instruction(LibGM::Instruction.new(op: op.value, sub: sub, flags: flags,
+      result: result, next: NO_ID, location: @id, type: type, ops: StaticArray[a, b, c],
+      extra_first: extra_first, extra_count: extra_count, immediate: immediate))
+  end
+
+  def load_return(value : Value) : Value
+    return load_ref(value) unless value.type.is_a?(Type::BoolType)
+    temp = emit_value(IROp::Load, GM.ir_type(IRType::U8), lowir_val(value))
+    wrap_val(temp, value.type, value.pp)
+  end
+
+  def copy_object(source : LibGM::Value, target : LibGM::Value, bytes : UInt64, align : UInt64)
+    return if bytes == 0
+    emit(none, IROp::CopyObject, a: source, b: target, sub: align.trailing_zeros_count.to_u8, immediate: bytes.to_i64)
+  end
+
+  def copy_result(value : Value) : Value
+    t = none
+    t = emit_value(IROp::Copy, lowir_type(value.type), lowir_val(value))
+    wrap_val(t, value.type, value.pp)
+  end
+
+  private def lowir_type(v : Value) : UInt64
     lowir_type(v.type)
   end
 
-  private def lowir_type(t : Type) : String
+  private def lowir_type(t : Type) : UInt64
     builder.lowir_type(t)
   end
 
@@ -670,19 +667,15 @@ class Myc::Backend::GM::BB < Myc::Backend::AbstractBB
     @func.as(Func)
   end
 
-  def new_temp : String
-    func.new_temp
-  end
-
-  private def wrap_val(val : String, type : Type, pp : Value::PP) : Value
+  private def wrap_val(val : LibGM::Value, type : Type, pp : Value::PP) : Value
     Value.new(BBVal.new(val), type, Value::MM::Val, pp)
   end
 
-  private def wrap_ref(val : String, type : Type, pp : Value::PP) : Value
+  private def wrap_ref(val : LibGM::Value, type : Type, pp : Value::PP) : Value
     Value.new(BBVal.new(val), type, Value::MM::Ref, pp)
   end
 
-  private def wrap_res(val : String, type : Type, pp : Value::PP) : Value
+  private def wrap_res(val : LibGM::Value, type : Type, pp : Value::PP) : Value
     wrap_val(val, type, pp)
   end
 
@@ -690,39 +683,30 @@ class Myc::Backend::GM::BB < Myc::Backend::AbstractBB
     @func_def.mod.typer
   end
 
-  private def libm_call(name : String, ret_type : Type, args : Array(Value)) : String
-    arg_types = args.map { |a| a.type }
-    type_fn = Type::Fn.new(Location.new("", 0), arg_types, ret_type)
-    builder.func_link(name, type_fn)
-    t = new_temp
-    arg_str = args.map { |a| lowir_val(a) }.join(", ")
-    emit "#{t} = call #{lowir_type(ret_type)} @#{name}(#{arg_str})"
-    t
+  private def libm_call(name : String, ret_type : Type, args : Array(Value)) : LibGM::Value
+    type_fn = Type::Fn.new(Location.new("", 0), args.map(&.type), ret_type)
+    call(name, type_fn, args).not_nil!.bbval.as(BBVal).val
   end
 
-  def _lowir_val(v : Value) : String
-    v.bbval.as(BBVal).val
+  def _lowir_val(value : Value) : LibGM::Value
+    value.bbval.as(BBVal).val
   end
 
-  def lowir_val(arg : Value) : String
-    val = _lowir_val(arg)
-    if val.starts_with?("addr ")
-      t = new_temp
-      emit "#{t} = #{val}"
-      t
+  def lowir_val(value : Value) : LibGM::Value
+    operand = value.bbval.as(BBVal)
+    if operand.address
+      emit_value(IROp::Addr, GM.ir_type(IRType::Ptr), operand.val)
     else
-      val
+      operand.val
     end
   end
 
-  private def addr_or_val(value : Value) : String
-    val = _lowir_val(value)
-    if val.starts_with?("$") || val.starts_with?("@")
-      t = new_temp
-      emit "#{t} = addr #{val}"
-      t
+  private def addr_or_val(value : Value) : LibGM::Value
+    raw = _lowir_val(value)
+    if raw.kind == IRKind::Slot.value || raw.kind == IRKind::Symbol.value
+      emit_value(IROp::Addr, GM.ir_type(IRType::Ptr), raw)
     else
-      val
+      raw
     end
   end
 end

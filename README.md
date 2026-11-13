@@ -89,8 +89,40 @@ crystal build src/cli/qbe.cr --release -o myc-qbe
 # compile Myc IR GM backend
 git clone --depth 1 --filter=blob:none --sparse https://github.com/vishvananda/cppgm-extended.git plugins/cppgm-extended
 git -C plugins/cppgm-extended sparse-checkout set dev
-make -C plugins/cppgm-extended/dev cppgm++ CXX=clang++ CPPGM_HOST_CXX=clang++ -j6
+make -C plugins/cppgm-extended/dev lowir-library CXX=clang++ CPPGM_HOST_CXX=clang++
+export GM_LIBRARY="$PWD/plugins/cppgm-extended/dev/libcppgm_lowir.so" # .dylib on macOS
 crystal build src/cli/gm.cr --release -o myc-gm
+crystal build src/cli/mycc.cr --release -o mycc
+```
+
+The GM integration requires cppgm's LowIR C ABI v2 (`dev/src/lowir_interface.h`). It constructs numeric,
+typed LowIR scaffold records directly in backend-owned buffers. It uses the frontend's
+existing instruction counts as capacity hints, allocates temporary IDs on
+emission, and commits each function without flattening, copying or remapping
+its IR arrays. Capacity growth can relocate buffers; global initializer data
+still uses a copying adapter.
+
+GM uses cppgm O1 by default and O3 with `--final`. Both run Myc's normal
+inliner; `--debug` disables it and selects cppgm O0.
+
+Object generation stays in process; the `GM` executable setting is no longer
+used. Text dumps use the library's writer. Static linking is also supported
+with `-Dgm_static` and `--link-flags` containing the archive path and
+`-lstdc++ -pthread` (use the matching C++ standard library on macOS).
+The default build loads cppgm only when GM is selected, so C, LLVM and QBE
+users do not need the library. Lookup uses `GM_LIBRARY`, the system loader,
+a library beside the executable, or the bundled development checkout.
+
+The current native library serializes optimization and emission because the
+compiler reuses process-wide scratch buffers. Construction is per module and
+can run concurrently. Build and test this integration with the shared library
+available through GM_LIBRARY, or select static linking:
+
+```sh
+# LLVM_CONFIG selects the installed LLVM used by mycc.
+BACKEND=gm crystal spec
+# Static mode used by GM CI (Linux):
+BACKEND=gm crystal spec -Dgm_static --link-flags "$PWD/plugins/cppgm-extended/dev/libcppgm_lowir.a -lstdc++ -pthread"
 ```
 
 ## Examples:

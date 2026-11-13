@@ -1,10 +1,11 @@
 class Myc::Backend::GM::BBVal < Myc::Backend::AbstractBBVal
-  getter val : String
+  getter val : LibGM::Value
+  getter address : Bool
 
-  def initialize(@val)
+  def initialize(@val, @address = false)
   end
 
   def to_s
-    "gm(#{@val})"
+    "gm(#{@val.kind}:#{@val.index})"
   end
 end

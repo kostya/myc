@@ -1,7 +1,4 @@
 class Myc::Backend::GM::Backend < Myc::Backend::AbstractBackend
-  GM = ENV["GM"]? || Process.find_executable("cppgm++") ||
-       File.join(File.dirname(__FILE__), "..", "..", "..", "plugins", "cppgm-extended", "dev", "cppgm++")
-
   def name
     "GM"
   end
@@ -17,30 +14,25 @@ class Myc::Backend::GM::Backend < Myc::Backend::AbstractBackend
   end
 
   def obj(mod : Mod, header_mod : Mod, output : String)
-    tmp = new_tmp_path("myc", "lowir")
-    build(mod, header_mod, tmp)
-
-    Myc.measure("backend:lowir2obj") do
-      args = ["-c", tmp, "-o", output]
-
-      if common_options.final
-        args.unshift "-O3"
-      elsif common_options.debug
-      else
-        args.unshift "-O1"
+    builder = new_builder.as(Builder)
+    begin
+      build_mod(mod, header_mod, builder)
+      Myc.measure("backend:lowir2obj") do
+        level = common_options.final ? 3 : (common_options.debug ? 0 : 1)
+        builder.compile(output, level)
       end
-
-      run_cmd(GM, args)
+    ensure
+      builder.close
     end
   end
 
   def dump(mod : Mod, header_mod : Mod, output : String)
-    build(mod, header_mod, output)
-  end
-
-  def build(mod : Mod, header_mod : Mod, output : String) : Builder
-    build_mod(mod, header_mod, new_builder).as(Builder).tap do |builder|
+    builder = new_builder.as(Builder)
+    begin
+      build_mod(mod, header_mod, builder)
       builder.save(output)
+    ensure
+      builder.close
     end
   end
 end
