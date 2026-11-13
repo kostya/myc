@@ -674,20 +674,24 @@ abstract class Myc::Backend::AbstractVisitor
 
   def visit(op : Opcode::Ret)
     if res = @func.result
-      @was_ret = true
-      value = pop_rhs
-      unless res.type.eq?(value.type)
-        if value2 = @bb.to?(value, value.type, res.type)
-          value = value2
-        else
-          raise error("type mismatch: expected #{res.type}, got #{value.type}")
-        end
-      end
-      res.store(self, value)
+      res.store(self, pop_return_value(res.type))
     end
 
     @bb.jmp(@func.ret_bb)
     @bb = dummy_bb
+  end
+
+  protected def pop_return_value(type : Type) : Value
+    @was_ret = true
+    value = pop_rhs
+    unless type.eq?(value.type)
+      if coerced = @bb.to?(value, value.type, type)
+        value = coerced
+      else
+        raise error("type mismatch: expected #{type}, got #{value.type}")
+      end
+    end
+    value
   end
 
   def visit(op : Opcode::Malloc)

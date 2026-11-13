@@ -8,7 +8,7 @@ on:
 
 env:
   QBE_SHA: "fab6d40620ac8e23fa42cc9b945688ca5edeb091"
-  CPPGM_SHA: "1ddd7507ee861649d43d1e72dcde7bb17a85a691"
+  CPPGM_SHA: "b858d4082cddcb8e1e930d786f3f1139c6996e6d"
 
 jobs:
   spec:
@@ -81,24 +81,32 @@ jobs:
           git checkout ${{ env.QBE_SHA }}
           make
 
+      # Build the optional static library only in the GM test cell.
       - name: Restore cppgm-extended cache
         if: contains(matrix.backend, 'gm')
         id: cppgm-cache
         uses: actions/cache@v4
         with:
           path: plugins/cppgm-extended
-          key: cppgm-${{ runner.os }}-${{ env.CPPGM_SHA }}
+          key: cppgm-static-library-${{ runner.os }}-${{ runner.arch }}-${{ env.CPPGM_SHA }}
 
-      - name: Clone and build cppgm-extended (skip if cached)
+      - name: Build cppgm static library (skip if cached)
         if: contains(matrix.backend, 'gm') && steps.cppgm-cache.outputs.cache-hit != 'true'
         run: |
           git clone https://github.com/vishvananda/cppgm-extended plugins/cppgm-extended
           cd plugins/cppgm-extended
           git checkout ${{ env.CPPGM_SHA }}
-          CC=clang make
+          make -C dev libcppgm_lowir.a CXX=clang++ CPPGM_HOST_CXX=clang++
 
       - name: Run specs
         env:
           BACKEND: ${{ matrix.backend }}
           CC: ${{ matrix.cc }}
-        run: crystal spec
+          GM_LIBRARY: /not-installed/cppgm-lowir
+        run: |
+          if [ "${{ matrix.backend }}" = gm ]; then
+            gm_lib="$GITHUB_WORKSPACE/plugins/cppgm-extended/dev/libcppgm_lowir.a"
+            crystal spec -Dgm_static --link-flags "$gm_lib -lstdc++ -pthread"
+          else
+            crystal spec
+          fi

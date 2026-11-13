@@ -3,76 +3,88 @@ class Myc::Backend::GM::TypeTranslator
   getter typer : Typer
 
   def initialize(@builder, @typer)
-    @cache = Hash(String, String).new
+    @cache = Hash(Type, UInt64).new
   end
 
-  def translate(type : Type) : String
-    @cache[type.id_name] ||= do_translate(type)
+  def translate(type : Type) : UInt64
+    # Scalar encodings are cheaper than hashing their type names. Only
+    # composite layout queries need a cache; types already have identity.
+    case type
+    when Type::VoidType, Type::BoolType, Type::IntType, Type::FloatType, Type::PtrType, Type::Fn, Type::IndirectType
+      do_translate(type)
+    else
+      @cache[type] ||= do_translate(type)
+    end
+  end
+
+  private def object_type(bytes : UInt64, align : UInt64) : UInt64
+    align = 1_u64 if align == 0
+    GM.ir_type(IRType::Obj) | (align.trailing_zeros_count.to_u64 << 8) | ({bytes, 1_u64}.max << 16)
   end
 
   private def do_translate(type : Type::VoidType)
-    "void"
+    GM.ir_type(IRType::Void)
   end
 
   private def do_translate(type : Type::BoolType)
-    "i1"
+    GM.ir_type(IRType::I1)
   end
 
   private def do_translate(type : Type::IntType)
     case type.bytes_count
-    when  8 then "i64"
-    when  4 then type.signed ? "i32" : "u32"
-    when  2 then type.signed ? "i16" : "u16"
-    when  1 then type.signed ? "i8" : "u8"
-    when 16 then "i128"
-    else         "i32"
+    when  8 then GM.ir_type(IRType::I64)
+    when  4 then type.signed ? GM.ir_type(IRType::I32) : GM.ir_type(IRType::U32)
+    when  2 then type.signed ? GM.ir_type(IRType::I16) : GM.ir_type(IRType::U16)
+    when  1 then type.signed ? GM.ir_type(IRType::I8) : GM.ir_type(IRType::U8)
+    when 16 then GM.ir_type(IRType::I128)
+    else         GM.ir_type(IRType::I32)
     end
   end
 
   private def do_translate(type : Type::FloatType)
     case type.bytes_count
-    when  8 then "f64"
-    when 16 then "f80"
-    else         "f32"
+    when  8 then GM.ir_type(IRType::F64)
+    when 16 then GM.ir_type(IRType::F80)
+    else         GM.ir_type(IRType::F32)
     end
   end
 
   private def do_translate(type : Type::PtrType)
-    "ptr"
+    GM.ir_type(IRType::Ptr)
   end
 
   private def do_translate(type : Type::Fn)
-    "ptr"
+    GM.ir_type(IRType::Ptr)
   end
 
   private def do_translate(type : Type::IndirectType)
-    "ptr"
+    GM.ir_type(IRType::Ptr)
   end
 
   private def do_translate(type : Type::VaListType)
-    "obj<32x8>"
+    object_type(32_u64, 8_u64)
   end
 
   private def do_translate(type : Type::StructType)
     bytes = @builder.layout.size_of(type)
-    bytes = 1 if bytes == 0
+    bytes = 1_u64 if bytes == 0
     align = @builder.layout.alignment_of(type)
-    align = 1 if align < 1
-    "obj<#{bytes}x#{align}>"
+    align = 1_u64 if align < 1
+    object_type(bytes, align)
   end
 
   private def do_translate(type : Type::FlatType)
     bytes = @builder.layout.size_of(type)
     align = @builder.layout.alignment_of(type)
-    align = 1 if align < 1
-    "obj<#{bytes}x#{align}>"
+    align = 1_u64 if align < 1
+    object_type(bytes, align)
   end
 
   private def do_translate(type : Type::EnumType)
     bytes = @builder.layout.size_of(type)
     align = @builder.layout.alignment_of(type)
-    align = 1 if align < 1
-    "obj<#{bytes}x#{align}>"
+    align = 1_u64 if align < 1
+    object_type(bytes, align)
   end
 
   private def do_translate(type : Type::EnumVariantType)

@@ -51,6 +51,7 @@ class Myc::Mod::Inliner
   end
 
   class Stats
+    getter inst_count : Int32
     getter can_inline : Bool
     getter private_dependency : Bool
     property calls = Hash(String, Int32).new(0)
