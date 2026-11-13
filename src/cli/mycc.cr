@@ -15,6 +15,8 @@ class Myc::Cli::Mycc < Myc::Cli
       Myc::Backend::QBE::Backend.version_string
     when "llvm"
       Myc::Backend::Llvm::Backend.version_string
+    when "gm"
+      Myc::Backend::GM::Backend.version_string
     else
       "unknown"
     end
