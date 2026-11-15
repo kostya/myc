@@ -7,7 +7,7 @@ class Myc::Backend::GM::Backend < Myc::Backend::AbstractBackend
   end
 
   def self.version_string
-    "GM"
+    "GM v0.9.0"
   end
 
   def new_builder : AbstractBuilder
