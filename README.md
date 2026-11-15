@@ -87,8 +87,12 @@ cd plugins/qbe; make; cd -
 crystal build src/cli/qbe.cr --release -o myc-qbe
 
 # compile Myc IR GM backend
-mkdir -p plugins/cppgm && wget -qO- https://github.com/vishvananda/cppgm/releases/download/v0.9.0/cppgm-v0.9.0-linux-x86_64.tar.gz | tar -xz -C plugins/cppgm --strip-components=1
+# requires cppgm 0.9.2 or later; GM loads lib/libcppgm_lowir from plugins/cppgm,
+# or the library given by the GM_LIBRARY env variable, only when GM is selected
+mkdir -p plugins/cppgm && wget -qO- https://github.com/vishvananda/cppgm/releases/download/v0.9.2/cppgm-v0.9.2-linux-x86_64.tar.gz | tar -xz -C plugins/cppgm --strip-components=1
 crystal build src/cli/gm.cr --release -o myc-gm
+# or link the library statically
+crystal build src/cli/gm.cr --release -Dgm_static --link-flags "$PWD/plugins/cppgm/lib/libcppgm_lowir.a -lstdc++ -pthread" -o myc-gm
 ```
 
 ## Examples:

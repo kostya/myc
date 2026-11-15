@@ -1,13 +1,14 @@
 class Myc::Backend::GM::Backend < Myc::Backend::AbstractBackend
-  GM = ENV["GM"]? || Process.find_executable("cppgm") ||
-       File.join(File.dirname(__FILE__), "..", "..", "..", "plugins", "cppgm", "bin", "cppgm")
-
   def name
     "GM"
   end
 
+  # The release of the cppgm library in use. The library loads on the first
+  # call, so a build without it still states the backend.
   def self.version_string
-    "GM v0.9.0"
+    "GM v#{NativeAPI.version}"
+  rescue
+    "GM (cppgm library not found)"
   end
 
   def new_builder : AbstractBuilder
@@ -17,30 +18,30 @@ class Myc::Backend::GM::Backend < Myc::Backend::AbstractBackend
   end
 
   def obj(mod : Mod, header_mod : Mod, output : String)
-    tmp = new_tmp_path("myc", "lowir")
-    build(mod, header_mod, tmp)
-
-    Myc.measure("backend:lowir2obj") do
-      args = ["-c", tmp, "-o", output]
-
-      if common_options.final
-        args.unshift "-O3"
-      elsif common_options.debug
-      else
-        args.unshift "-O1"
+    builder = new_builder.as(Builder)
+    begin
+      build_mod(mod, header_mod, builder)
+      Myc.measure("backend:lowir2obj") do
+        builder.compile(output, optimization_level)
       end
-
-      run_cmd(GM, args)
+    ensure
+      builder.close
     end
   end
 
-  def dump(mod : Mod, header_mod : Mod, output : String)
-    build(mod, header_mod, output)
+  # The cppgm optimization level: O3 with --final, O0 with --debug, else O1.
+  private def optimization_level : Int32
+    return 3 if common_options.final
+    common_options.debug ? 0 : 1
   end
 
-  def build(mod : Mod, header_mod : Mod, output : String) : Builder
-    build_mod(mod, header_mod, new_builder).as(Builder).tap do |builder|
+  def dump(mod : Mod, header_mod : Mod, output : String)
+    builder = new_builder.as(Builder)
+    begin
+      build_mod(mod, header_mod, builder)
       builder.save(output)
+    ensure
+      builder.close
     end
   end
 end
