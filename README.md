@@ -87,9 +87,7 @@ cd plugins/qbe; make; cd -
 crystal build src/cli/qbe.cr --release -o myc-qbe
 
 # compile Myc IR GM backend
-git clone --depth 1 --filter=blob:none --sparse https://github.com/vishvananda/cppgm-extended.git plugins/cppgm-extended
-git -C plugins/cppgm-extended sparse-checkout set dev
-make -C plugins/cppgm-extended/dev cppgm++ CXX=clang++ CPPGM_HOST_CXX=clang++ -j6
+mkdir -p plugins/cppgm && wget -qO- https://github.com/vishvananda/cppgm/releases/download/v0.9.0/cppgm-v0.9.0-linux-x86_64.tar.gz | tar -xz -C plugins/cppgm --strip-components=1
 crystal build src/cli/gm.cr --release -o myc-gm
 ```
 

@@ -1,6 +1,6 @@
 class Myc::Backend::GM::Backend < Myc::Backend::AbstractBackend
-  GM = ENV["GM"]? || Process.find_executable("cppgm++") ||
-       File.join(File.dirname(__FILE__), "..", "..", "..", "plugins", "cppgm-extended", "dev", "cppgm++")
+  GM = ENV["GM"]? || Process.find_executable("cppgm") ||
+       File.join(File.dirname(__FILE__), "..", "..", "..", "plugins", "cppgm", "bin", "cppgm")
 
   def name
     "GM"
