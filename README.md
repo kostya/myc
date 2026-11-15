@@ -196,4 +196,4 @@ Licensed under the Apache License, Version 2.0.
 - [QBE](https://c9x.me/compile/)
 - [LLVM](https://llvm.org/)
 - [clang.cr](https://github.com/crystal-lang/clang.cr)
-- [GM](https://github.com/vishvananda/cppgm-extended)
+- [GM](https://github.com/vishvananda/cppgm)
