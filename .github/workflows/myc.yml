@@ -9,6 +9,7 @@ on:
 env:
   QBE_SHA: "fab6d40620ac8e23fa42cc9b945688ca5edeb091"
   CPPGM: "0.9.6"
+  INDEX_C_SHA: "019ddd8f9c4b2cac7d0512ebbf78d5b28aff63f5"
 
 jobs:
   spec:
@@ -16,14 +17,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-26.04, macos-latest ]
-        backend: [ "llvm,qbe", c, gm ]
+        os: [ ubuntu-latest, macos-latest ]
+        backend: [ llvm, qbe, c, gm ]
         cc: [ clang, gcc ]
         exclude:
-          - { backend: "llvm,qbe", cc: gcc }
-          - { os: macos-latest, cc: gcc }
+          - { backend: llvm, cc: gcc }
           - { backend: gm, cc: gcc }
-
+          - { backend: qbe, cc: gcc }
+          - { os: macos-latest, cc: gcc }
+          
     steps:
       - uses: actions/checkout@v4
 
@@ -94,6 +96,20 @@ jobs:
           mkdir -p plugins/cppgm
           wget -qO- https://github.com/vishvananda/cppgm/releases/download/v${{ env.CPPGM }}/cppgm-v${{ env.CPPGM }}-linux-x86_64.tar.gz | tar -xz -C plugins/cppgm --strip-components=1
 
+      - name: Restore INDEX-C cache
+        id: index-c-cache
+        uses: actions/cache@v4
+        with:
+          path: plugins/index-c
+          key: index-c-${{ runner.os }}-${{ env.INDEX_C_SHA }}
+
+      - name: Clone and build INDEX-C (skip if cached)
+        if: steps.index-c-cache.outputs.cache-hit != 'true'
+        run: |
+          git clone https://github.com/kostya/index-c.git plugins/index-c
+          cd plugins/index-c
+          git checkout ${{ env.INDEX_C_SHA }}
+
       - name: Run specs
         env:
           BACKEND: ${{ matrix.backend }}
@@ -106,3 +122,13 @@ jobs:
           else
             crystal spec
           fi
+      
+      - name: Fast test index.c compile and checksums
+        env:
+          CC: ${{ matrix.cc }}
+          TEST: "1"
+        run: |
+          crystal src/cli/mycc.cr --backend ${{ matrix.backend }} plugins/index-c/index.c r
+          crystal src/cli/mycc.cr --backend ${{ matrix.backend }} plugins/index-c/index.c r --final
+          crystal src/cli/mycc.cr --backend ${{ matrix.backend }} plugins/index-c/index.c r --debug
+
