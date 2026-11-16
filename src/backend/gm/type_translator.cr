@@ -10,16 +10,12 @@ class Myc::Backend::GM::TypeTranslator
     @cache[type.id_name] ||= do_translate(type)
   end
 
-  # A record of the fields at their layout offsets. cppgm passes and returns
-  # an object of it as C passes a struct with the same fields, as QBE does
-  # for its aggregate types.
   private def record(type : Type, fields : Array(LibGM::Field)) : UInt64
     bytes = {@builder.layout.size_of(type), 1_u64}.max
     align = {@builder.layout.alignment_of(type), 1_u64}.max
     @builder.record(bytes, align, fields)
   end
 
-  # `count` elements of `type` from `offset`; none of an empty type.
   private def field(fields : Array(LibGM::Field), offset : UInt64, type : Type, count = 1_u64)
     return if count == 0 || @builder.layout.size_of(type) == 0
     fields << LibGM::Field.new(offset: offset, type: translate(type), count: count)
@@ -82,8 +78,6 @@ class Myc::Backend::GM::TypeTranslator
     record(type, fields)
   end
 
-  # The tag, then the payload as an array of integers, as the C and QBE
-  # backends declare an enum: the array starts at its own alignment.
   private def do_translate(type : Type::EnumType)
     fields = [] of LibGM::Field
     payload = type.payload_type.not_nil!

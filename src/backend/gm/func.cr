@@ -11,8 +11,7 @@ class Myc::Backend::GM::Func < Myc::Backend::AbstractFunc
   def initialize(@builder : Builder, @func_def : Mod::FuncDef, @header_mod : Mod)
     @temp_counter = @func_def.type_fn.args.size.to_u32
     @symbol = @builder.as(Builder).symbol(@func_def.name)
-    # Storage belongs to cppgm from the first write. Growing a function may
-    # relocate its buffers; only IDs survive a reserve call, never pointers.
+
     hint = {@func_def.inline_stats.@inst_count + 16, 32}.max
     reserve({hint, 65536}.min, 16, 16, 8, 8)
     super(@builder, @func_def, @header_mod)
@@ -131,8 +130,6 @@ class Myc::Backend::GM::Func < Myc::Backend::AbstractFunc
   end
 
   private def submit
-    # Only the layout is finalized here. Records are already in cppgm's
-    # pools; IDs were allocated when definitions were emitted, with no holes.
     layout = @buffers.layout.as(UInt32*)
     layout[0] = alloca_bb.as(BB).id
     layout[1] = body_bb.as(BB).id

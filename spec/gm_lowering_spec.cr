@@ -1,7 +1,5 @@
 require "./spec_helper"
 
-# Exercise the public LowIR view and owned construction buffers without
-# depending on the host's ability to execute x86 objects (e.g. ARM macOS CI).
 class Myc::Backend::GM::Backend
   def spec_dump_lowir(input : String, output : String)
     mod, header = load_single(input)
@@ -32,7 +30,7 @@ def gm_lowir(source : String) : String
   end
 end
 
-if (ENV["BACKEND"]? || "gm").split(',').any? { |backend| backend.strip.downcase.starts_with?("gm") }
+if GM_ENABLED
   describe "GM LowIR lowering" do
     it "passes objects as C passes structs with the same fields" do
       text = gm_lowir(<<-MYC)
@@ -122,9 +120,9 @@ if (ENV["BACKEND"]? || "gm").split(',').any? { |backend| backend.strip.downcase.
       ENDFUNC
       MYC
       text.should contain("@point(%arg0 : obj<16x8> [classes=sse_sse], %arg1 : obj<16x8> [classes=sse_integer]) -> obj<16x8> [result_classes=sse_sse,")
-      # An enum's payload is an array of integers, as the C backend declares it.
+
       text.should contain("@floats(%arg0 : obj<8x4> [classes=sse], %arg1 : obj<8x8> [classes=integer]) -> obj<16x8> [result_classes=sse_integer,")
-      # An object of more than 16 bytes is passed in memory, cppgm's default.
+
       text.should contain("@defaults(%arg0 : obj<8x4> [classes=integer], %arg1 : obj<24x8>) -> obj<8x4> [result_classes=integer, linkage=c")
       text.should contain("@packed(%arg0 : obj<9x1> [classes=memory])")
     end

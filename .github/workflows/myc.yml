@@ -8,7 +8,7 @@ on:
 
 env:
   QBE_SHA: "fab6d40620ac8e23fa42cc9b945688ca5edeb091"
-  CPPGM: "0.9.2"
+  CPPGM: "0.9.6"
 
 jobs:
   spec:
@@ -22,7 +22,6 @@ jobs:
         exclude:
           - { backend: "llvm,qbe", cc: gcc }
           - { os: macos-latest, cc: gcc }
-          - { os: macos-latest, backend: gm }
           - { backend: gm, cc: gcc }
 
     steps:
@@ -81,7 +80,6 @@ jobs:
           git checkout ${{ env.QBE_SHA }}
           make
 
-      # The release package holds the static library that the GM test cell links.
       - name: Restore cppgm cache
         if: contains(matrix.backend, 'gm')
         id: cppgm-cache

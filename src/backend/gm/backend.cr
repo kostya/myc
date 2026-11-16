@@ -3,8 +3,6 @@ class Myc::Backend::GM::Backend < Myc::Backend::AbstractBackend
     "GM"
   end
 
-  # The release of the cppgm library in use. The library loads on the first
-  # call, so a build without it still states the backend.
   def self.version_string
     "GM v#{NativeAPI.version}"
   rescue
@@ -21,7 +19,7 @@ class Myc::Backend::GM::Backend < Myc::Backend::AbstractBackend
     builder = new_builder.as(Builder)
     begin
       build_mod(mod, header_mod, builder)
-      Myc.measure("backend:lowir2obj") do
+      Myc.measure("backend:compile") do
         builder.compile(output, optimization_level)
       end
     ensure
@@ -29,19 +27,44 @@ class Myc::Backend::GM::Backend < Myc::Backend::AbstractBackend
     end
   end
 
-  # The cppgm optimization level: O3 with --final, O0 with --debug, else O1.
+  def dump(mod : Mod, header_mod : Mod, output : String)
+    builder = new_builder.as(Builder)
+    begin
+      build_mod(mod, header_mod, builder)
+
+      opt_level = optimization_level
+      if (opt_level > 0)
+        if (path = find_cppgm_path)
+          tmp = new_tmp_path("myc", "lowir")
+          Myc.measure("backend:dump") { builder.save(tmp) }
+          Myc.measure("backend:dumpopt") do
+            run_cmd(path, ["-O#{opt_level}", "-S", "-emit-lowir", tmp, "-o", output])
+          end
+        else
+          STDERR.puts "Warning, cppgm not found, dump shown without cppgm optimizations".colorize(:yellow)
+          Myc.measure("backend:dump") { builder.save(output) }
+        end
+      else
+        Myc.measure("backend:dump") { builder.save(output) }
+      end
+    ensure
+      builder.close
+    end
+  end
+
   private def optimization_level : Int32
     return 3 if common_options.final
     common_options.debug ? 0 : 1
   end
 
-  def dump(mod : Mod, header_mod : Mod, output : String)
-    builder = new_builder.as(Builder)
-    begin
-      build_mod(mod, header_mod, builder)
-      builder.save(output)
-    ensure
-      builder.close
+  private def find_cppgm_path : String?
+    if path = Process.find_executable("cppgm")
+      return path
+    end
+
+    path = ENV["CPPGM"]? || File.join(File.dirname(__FILE__), "..", "..", "..", "plugins", "cppgm", "bin", "cppgm")
+    if File.file?(path)
+      return path
     end
   end
 end

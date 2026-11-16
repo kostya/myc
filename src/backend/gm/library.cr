@@ -23,8 +23,6 @@ module Myc::Backend::GM
     alias ObjectDataFn = Proc(LibGM::Module*, UInt8*)
     alias ObjectSizeFn = Proc(LibGM::Module*, UInt64)
 
-    # Resolve once on the first GM call. Keep the handle and functions alive
-    # for the process, including native-module finalizers after ordinary builds.
     {% unless flag?(:gm_static) %}
       @@library : Library?
       @@ready = Atomic(Bool).new(false)
@@ -42,7 +40,6 @@ module Myc::Backend::GM
       end
     {% end %}
 
-    # The ABI version of the loaded library (its CPPGM_LOWIR_ABI_VERSION).
     def self.abi_version : UInt32
       {% if flag?(:gm_static) %}
         LibGM.abi_version
@@ -51,7 +48,6 @@ module Myc::Backend::GM
       {% end %}
     end
 
-    # The cppgm release of the loaded library, for example "0.9.2".
     def self.version : String
       {% if flag?(:gm_static) %}
         String.new(LibGM.version)
@@ -100,8 +96,6 @@ module Myc::Backend::GM
       {% end %}
     end
 
-    # A record type: an object of `bytes` bytes and `alignment` with these fields.
-    # cppgm passes and returns it as C passes a struct with the same fields.
     def self.record(mod : LibGM::Module*, bytes : UInt64, alignment : UInt64, fields : LibGM::Field*, count : Int)
       {% if flag?(:gm_static) %}
         LibGM.record(mod, bytes, alignment.to_u32, fields, count.to_u32)
@@ -110,7 +104,6 @@ module Myc::Backend::GM
       {% end %}
     end
 
-    # A yes-valued fact of a declared symbol.
     def self.symbol_fact(mod : LibGM::Module*, symbol : Int, key : IRKey, value : Bool)
       {% if flag?(:gm_static) %}
         LibGM.symbol_fact(mod, symbol.to_u32, key.value, value ? 1_u32 : 0_u32)
@@ -167,7 +160,6 @@ module Myc::Backend::GM
       {% end %}
     end
 
-    # `level` is the cppgm optimization level, 0 to 3.
     def self.compile(mod : LibGM::Module*, level : Int, code : IRCodeForm)
       {% if flag?(:gm_static) %}
         LibGM.compile(mod, level.to_u32, code.value)

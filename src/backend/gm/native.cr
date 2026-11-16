@@ -1,69 +1,56 @@
-# C ABI v4: include/lowir_interface.h, lowir_c_vocabulary.h and lowir_records.h
-# in the cppgm release package. Each enum states the header's names.
 module Myc::Backend::GM
-  # CPPGM_LOWIR_ABI_VERSION of the headers this binding follows.
   ABI_VERSION = 4_u32
-  # CPPGM_NO_ID: no symbol, signature, block or temporary.
+
   NO_ID = UInt32::MAX
 
-  # CPPGM_TARGET_*: the object format and the platform ABI.
   enum IRTarget : UInt32
     Linux = 0
     MacOS = 1
   end
 
-  # CPPGM_ARITY_*: whether a signature takes variable arguments.
   enum IRArity : UInt32
     Fixed    = 0
     Variadic = 1
   end
 
-  # CPPGM_BINDING_*: the linkage of a function or global.
   enum IRBinding : UInt32
     Internal = 1
     Strong   = 2
   end
 
-  # CPPGM_STORAGE_*: the section kind of a global.
   enum IRStorage : UInt32
     Default  = 0
     ReadOnly = 1
   end
 
-  # CPPGM_FUNCTION_*: whether cppgm_lowir_function declares or defines.
   enum IRFunctionForm : UInt32
     Declaration = 0
     Definition  = 1
   end
 
-  # CPPGM_GLOBAL_*: whether cppgm_lowir_global defines or declares.
   enum IRGlobalForm : UInt32
     Definition  = 0
     Declaration = 1
   end
 
-  # CPPGM_CODE_*: fixed-address or position-independent code.
   enum IRCodeForm : UInt32
     Fixed = 0
   end
 
-  # CPPGM_DATA_*: the kind of one initializer item of a global.
   enum IRDataKind : UInt32
     Scalar  = 0
     Address = 1
     Zero    = 2
   end
 
-  # CPPGM_KEY_*: the facts of a symbol that cppgm_lowir_symbol_fact takes.
   enum IRKey : UInt32
     NoInline = 20
   end
 
-  # CPPGM_FLAG_*: the bits of an instruction's flags.
   @[Flags]
   enum IRFlag : UInt8
-    Signature =  2 # a call's immediate holds its signature ID
-    Typed     = 64 # a load or store accesses an object of exactly this type
+    Signature =  2
+    Typed     = 64
   end
 
   enum IRType : UInt8
@@ -229,7 +216,6 @@ module Myc::Backend::GM
       kind : UInt32
     end
 
-    # CppgmField: `count` elements (0 is one) of `type` from byte `offset` of a record.
     struct Field
       offset : UInt64
       type : UInt64
@@ -258,8 +244,6 @@ module Myc::Backend::GM
     {% end %}
   end
 
-  # Keep the finalizable native owner free of references back to Builder or
-  # Func. Those objects form ordinary GC cycles during recursive lowering.
   class NativeModule
     getter pointer : LibGM::Module*
 

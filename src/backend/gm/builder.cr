@@ -61,16 +61,14 @@ class Myc::Backend::GM::Builder < Myc::Backend::AbstractBuilder
     @defined << func_def.name
     binding = func_def.private? ? IRBinding::Internal : IRBinding::Strong
     check(NativeAPI.function(handle, symbol(func_def.name), signature(func_def.type_fn), binding, IRFunctionForm::Definition))
-    # cppgm has its own inliner; Myc's inliner already skips the function.
+
     check(NativeAPI.symbol_fact(handle, symbol(func_def.name), IRKey::NoInline, true)) if func_def.noinline?
     Func.new(self, func_def, header_mod)
   end
 
   private def finish
     return if @finished
-    # Forward symbol IDs need no declaration while bodies are being built.
-    # Publish only surviving externals once all definitions are known. This
-    # also keeps definition order identical to the original text producer.
+
     @used.each do |name, type_fn|
       next if @defined.includes?(name)
       check(NativeAPI.function(handle, symbol(name), signature(type_fn), IRBinding::Strong, IRFunctionForm::Declaration))
@@ -216,7 +214,7 @@ class Myc::Backend::GM::Builder < Myc::Backend::AbstractBuilder
       id = symbol("str_#{@string_constants.size}")
       items = str.bytes.map { |b| scalar_data(GM.ir_type(IRType::I8), b.to_u64) }
       items << scalar_data(GM.ir_type(IRType::I8), 0_u64)
-      # A void type takes the size of the items: a private read-only string.
+
       check(NativeAPI.global(handle, id, GM.ir_type(IRType::Void), IRBinding::Internal, IRStorage::ReadOnly,
         items.to_unsafe, items.size, IRGlobalForm::Definition))
       GM.ir_value(IRKind::Symbol, id)

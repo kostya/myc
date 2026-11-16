@@ -1,8 +1,6 @@
 require "./spec_helper"
 
-# Backend-specific contracts run in the GM CI cell, where cppgm is installed.
-# Other backend cells deliberately build and run without this dependency.
-if (ENV["BACKEND"]? || "gm").split(',').any? { |backend| backend.strip.downcase.starts_with?("gm") }
+if GM_ENABLED
   describe "GM native library" do
     it "states the ABI version this backend uses and its cppgm release" do
       Myc::Backend::GM::NativeAPI.abi_version.should be >= Myc::Backend::GM::ABI_VERSION

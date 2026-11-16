@@ -115,7 +115,7 @@ class Myc::Backend::GM::BB < Myc::Backend::AbstractBB
       copy_object(lowir_val(rhs), lowir_val(lhs), size, builder.layout.alignment_of(lhs.type))
     else
       type = lowir_type(lhs.type)
-      # Preserve the text producer's signed byte/halfword storage view.
+
       type = GM.ir_type(IRType::I8) if type == GM.ir_type(IRType::U8)
       type = GM.ir_type(IRType::I16) if type == GM.ir_type(IRType::U16)
       emit(none, IROp::Store, type, lowir_val(rhs), lowir_val(lhs))
@@ -613,8 +613,7 @@ class Myc::Backend::GM::BB < Myc::Backend::AbstractBB
                  immediate : Int64 = 0_i64, flags : IRFlag = IRFlag::None,
                  extra_first : UInt32 = 0_u32, extra_count : UInt32 = 0_u32) : LibGM::Value
     return none if @terminated || @id == NO_ID
-    # Materialize operands before allocating the result: they may append
-    # literals or addresses and grow the same native buffers.
+
     aa, bb, cc = operand(a), operand(b), operand(c)
     result = func.new_temp
     emit_record(result.index, op, type, aa, bb, cc, sub, immediate, flags, extra_first, extra_count)
