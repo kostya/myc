@@ -923,7 +923,7 @@ abstract class Myc::Backend::AbstractVisitor
         value = value.field(self, 1)
         @stack << value
         if ct = type.composite_value_type
-          visit Opcode::As.new(ct)
+          self << @bb.enum_variant_cast(pop._to_ref(self), type, ct)
           visit Opcode::Field.new(op.index - 1)
         else
           raise error("no composite type for #{type}, bug")

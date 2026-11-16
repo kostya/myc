@@ -121,7 +121,7 @@ if GM_ENABLED && GM_SPEC_BACKEND
       MYC
       text.should contain("@point(%arg0 : obj<16x8> [classes=sse_sse], %arg1 : obj<16x8> [classes=sse_integer]) -> obj<16x8> [result_classes=sse_sse,")
 
-      text.should contain("@floats(%arg0 : obj<8x4> [classes=sse], %arg1 : obj<8x8> [classes=integer]) -> obj<16x8> [result_classes=sse_integer,")
+      text.should contain("@floats(%arg0 : obj<8x4> [classes=sse], %arg1 : obj<8x8> [classes=sse]) -> obj<16x8> [result_classes=sse_integer,")
 
       text.should contain("@defaults(%arg0 : obj<8x4> [classes=integer], %arg1 : obj<24x8>) -> obj<8x4> [result_classes=integer, linkage=c")
       text.should contain("@packed(%arg0 : obj<9x1> [classes=memory])")

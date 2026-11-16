@@ -1,0 +1,25 @@
+ENUM :U
+  TAG
+    SKIP
+  VARIANT :d
+    TYPE :f64
+  VARIANT :f
+    TYPE :f32
+ENDENUM
+
+FUNC :get
+  ARGS
+    TYPE :U
+  RETURN
+    TYPE :f64
+ENDFUNC
+
+FUNC :test
+  BODY
+    PUSH 6.5
+    CREATE :U::d
+    AS :U
+    CALL :get
+    INSPECT
+ENDFUNC
+

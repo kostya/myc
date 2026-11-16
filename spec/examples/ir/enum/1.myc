@@ -1,0 +1,52 @@
+ENUM :bla
+  VARIANT :f
+    TYPE :f64
+  VARIANT :i
+    TYPE :i64
+ENDENUM
+
+ENUM :bla2
+  TAG
+    SKIP
+  VARIANT :f
+    TYPE :f64
+  VARIANT :i
+    TYPE :i64
+ENDENUM
+
+FUNC :print
+  ARGS
+    TYPE :bla
+  BODY
+    PARAM 0
+    INSPECT
+ENDFUNC
+
+FUNC :print2
+  ARGS
+    TYPE :bla2
+  BODY
+    PARAM 0
+    INSPECT
+ENDFUNC
+
+FUNC :main
+  BODY
+    PUSH 42
+    CREATE :bla::i
+    AS :bla
+    CALL :print
+    PUSH 1.5
+    CREATE :bla::f
+    AS :bla
+    CALL :print
+    PUSH 42
+    CREATE :bla2::i
+    AS :bla2
+    CALL :print2
+    PUSH 1.5
+    CREATE :bla2::f
+    AS :bla2
+    CALL :print2
+ENDFUNC
+

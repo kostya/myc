@@ -29,6 +29,7 @@ abstract class Myc::Backend::AbstractBB
   abstract def addr(value : Value, ptr_type : Type) : Value
   abstract def offset(value : Value, target_type : Type, offset : Value) : Value
   abstract def bitcast(value : Value, to_type : Type) : Value
+  abstract def enum_variant_cast(value : Value, enum_variant_type : Type::EnumVariantType, target_type : Type) : Value
 
   abstract def binary(op : Opcode::Binary::Op, lhs : Value, rhs : Value) : Value?
   abstract def unary(op : Opcode::Unary::Op, rhs : Value) : Value?
