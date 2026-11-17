@@ -68,7 +68,11 @@ class Myc::Backend::Llvm::TypeTranslator
       tag = translate(index_type)
       @context.struct([tag, payload], type.id_name)
     else
-      @context.struct([payload], type.id_name)
+      if scalar_payload?(type)
+        payload
+      else
+        @context.struct([payload], type.id_name)
+      end
     end
   end
 
@@ -103,14 +107,30 @@ class Myc::Backend::Llvm::TypeTranslator
     end
   end
 
+  private def hfa?(values : Array(Type::StructType)) : Bool
+    return false unless values.size <= 4
+    first = values[0].data
+    return false unless first.size == 1 && first[0].is_a?(Type::FloatType)
+    ft = first[0].as(Type::FloatType)
+    values.all? do |v|
+      v.data.size == 1 &&
+        (f = v.data[0]).is_a?(Type::FloatType) &&
+        f.as(Type::FloatType).bytes_count == ft.bytes_count
+    end
+  end
+
   private def abi_kind_for_values(values : Array(Type::StructType), size : UInt64) : Symbol
     return :integer if values.empty?
-
     return :memory if size > 16
-    if values.all? { |v| v.data.all? { |f| abi_class_of(f) == :sse } }
-      :sse
+
+    if @layout.target.arch.arm64?
+      hfa?(values) ? :sse : :integer
     else
-      :integer
+      if values.all? { |v| v.data.all? { |f| abi_class_of(f) == :sse } }
+        :sse
+      else
+        :integer
+      end
     end
   end
 
@@ -121,17 +141,31 @@ class Myc::Backend::Llvm::TypeTranslator
 
     case kind
     when :sse
-      payload_size = payload_size(type)
-      case payload_size
+      psize = payload_size(type)
+      case psize
       when 1..4  then @context.float
       when 5..8  then @context.double
       when 9..16 then @context.struct([@context.double, @context.double])
+      else            fallback_payload(type)
+      end
+    when :integer
+      if type.index_type.nil? && size == 8
+        @context.int64
+      elsif type.index_type.nil? && size == 4
+        @context.int32
       else
         fallback_payload(type)
       end
     else
       fallback_payload(type)
     end
+  end
+
+  private def scalar_payload?(type : Type::EnumType) : Bool
+    return false if type.index_type
+    values = enum_values(type)
+    return false unless values.size == 1
+    values[0].data.size == 1
   end
 
   private def fallback_payload(type : Type::EnumType) : LLVM::Type
@@ -143,7 +177,6 @@ class Myc::Backend::Llvm::TypeTranslator
     full = @layout.size_of(type)
     if index_type = type.index_type
       tag_size = @layout.size_of(index_type)
-
       payload = type.payload_type.not_nil!
       align = @layout.alignment_of(payload.target_type)
       offset = (tag_size + align - 1) // align * align
