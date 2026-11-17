@@ -1,6 +1,6 @@
 require "./spec_helper"
 
-if GM_ENABLED
+if GM_ENABLED && GM_SPEC_BACKEND
   describe "GM native library" do
     it "states the ABI version this backend uses and its cppgm release" do
       Myc::Backend::GM::NativeAPI.abi_version.should be >= Myc::Backend::GM::ABI_VERSION

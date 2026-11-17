@@ -88,13 +88,22 @@ jobs:
         uses: actions/cache@v4
         with:
           path: plugins/cppgm
-          key: cppgm-${{ runner.os }}-${{ env.CPPGM }}
+          key: cppgm-new-${{ runner.os }}-${{ env.CPPGM }}
 
       - name: Download the cppgm release (skip if cached)
         if: contains(matrix.backend, 'gm') && steps.cppgm-cache.outputs.cache-hit != 'true'
         run: |
           mkdir -p plugins/cppgm
-          wget -qO- https://github.com/vishvananda/cppgm/releases/download/v${{ env.CPPGM }}/cppgm-v${{ env.CPPGM }}-linux-x86_64.tar.gz | tar -xz -C plugins/cppgm --strip-components=1
+
+          if [ "${{ runner.os }}" = "Linux" ]; then
+            ARCHIVE="cppgm-v${{ env.CPPGM }}-linux-x86_64.tar.gz"
+            URL="https://github.com/vishvananda/cppgm/releases/download/v${{ env.CPPGM }}/${ARCHIVE}"
+            wget -qO- "$URL" | tar -xz -C plugins/cppgm --strip-components=1
+          elif [ "${{ runner.os }}" = "macOS" ]; then
+            ARCHIVE="cppgm-v${{ env.CPPGM }}-macos-x86_64.tar.gz"
+            URL="https://github.com/vishvananda/cppgm/releases/download/v${{ env.CPPGM }}/${ARCHIVE}"
+            curl -fsSL "$URL" | tar -xz -C plugins/cppgm --strip-components=1
+          fi
 
       - name: Restore INDEX-C cache
         id: index-c-cache

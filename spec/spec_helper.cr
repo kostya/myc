@@ -5,14 +5,19 @@ ENV["MYC_SPEC"] = "1"
 
 GM_ENABLED = begin
   {% if flag?(:x86_64) || flag?(:amd64) %}
-    if (backend = ENV["BACKEND"]?) && (!backend.strip.empty?) && !backend.upcase.includes?("GM")
-      false
-    else
-      true
-    end
+    true
   {% else %}
     false
   {% end %}
+end
+
+GM_SPEC_BACKEND = begin
+  backend = ENV["BACKEND"]? || ""
+  if backend.strip.empty?
+    true
+  else
+    backend.upcase.includes?("GM")
+  end
 end
 
 class Myc::Backend::AbstractBackend

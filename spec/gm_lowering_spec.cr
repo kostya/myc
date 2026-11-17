@@ -30,7 +30,7 @@ def gm_lowir(source : String) : String
   end
 end
 
-if GM_ENABLED
+if GM_ENABLED && GM_SPEC_BACKEND
   describe "GM LowIR lowering" do
     it "passes objects as C passes structs with the same fields" do
       text = gm_lowir(<<-MYC)
