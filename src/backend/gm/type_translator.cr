@@ -3,76 +3,92 @@ class Myc::Backend::GM::TypeTranslator
   getter typer : Typer
 
   def initialize(@builder, @typer)
-    @cache = Hash(String, String).new
+    @cache = Hash(String, UInt64).new
   end
 
-  def translate(type : Type) : String
+  def translate(type : Type) : UInt64
     @cache[type.id_name] ||= do_translate(type)
   end
 
+  private def record(type : Type, fields : Array(LibGM::Field)) : UInt64
+    bytes = {@builder.layout.size_of(type), 1_u64}.max
+    align = {@builder.layout.alignment_of(type), 1_u64}.max
+    @builder.record(bytes, align, fields)
+  end
+
+  private def field(fields : Array(LibGM::Field), offset : UInt64, type : Type, count = 1_u64)
+    return if count == 0 || @builder.layout.size_of(type) == 0
+    fields << LibGM::Field.new(offset: offset, type: translate(type), count: count)
+  end
+
   private def do_translate(type : Type::VoidType)
-    "void"
+    GM.ir_type(IRType::Void)
   end
 
   private def do_translate(type : Type::BoolType)
-    "i1"
+    GM.ir_type(IRType::I1)
   end
 
   private def do_translate(type : Type::IntType)
     case type.bytes_count
-    when  8 then "i64"
-    when  4 then type.signed ? "i32" : "u32"
-    when  2 then type.signed ? "i16" : "u16"
-    when  1 then type.signed ? "i8" : "u8"
-    when 16 then "i128"
-    else         "i32"
+    when  8 then GM.ir_type(IRType::I64)
+    when  4 then type.signed ? GM.ir_type(IRType::I32) : GM.ir_type(IRType::U32)
+    when  2 then type.signed ? GM.ir_type(IRType::I16) : GM.ir_type(IRType::U16)
+    when  1 then type.signed ? GM.ir_type(IRType::I8) : GM.ir_type(IRType::U8)
+    when 16 then GM.ir_type(IRType::I128)
+    else         GM.ir_type(IRType::I32)
     end
   end
 
   private def do_translate(type : Type::FloatType)
     case type.bytes_count
-    when  8 then "f64"
-    when 16 then "f80"
-    else         "f32"
+    when  8 then GM.ir_type(IRType::F64)
+    when 16 then GM.ir_type(IRType::F80)
+    else         GM.ir_type(IRType::F32)
     end
   end
 
   private def do_translate(type : Type::PtrType)
-    "ptr"
+    GM.ir_type(IRType::Ptr)
   end
 
   private def do_translate(type : Type::Fn)
-    "ptr"
+    GM.ir_type(IRType::Ptr)
   end
 
   private def do_translate(type : Type::IndirectType)
-    "ptr"
+    GM.ir_type(IRType::Ptr)
   end
 
   private def do_translate(type : Type::VaListType)
-    "obj<32x8>"
+    @builder.record(32_u64, 8_u64, [LibGM::Field.new(offset: 0_u64, type: GM.ir_type(IRType::I64), count: 4_u64)])
   end
 
   private def do_translate(type : Type::StructType)
-    bytes = @builder.layout.size_of(type)
-    bytes = 1 if bytes == 0
-    align = @builder.layout.alignment_of(type)
-    align = 1 if align < 1
-    "obj<#{bytes}x#{align}>"
+    fields = [] of LibGM::Field
+    type.data.each_with_index do |member, index|
+      field(fields, @builder.layout.field_offset(type, index.to_u64), member)
+    end
+    record(type, fields)
   end
 
   private def do_translate(type : Type::FlatType)
-    bytes = @builder.layout.size_of(type)
-    align = @builder.layout.alignment_of(type)
-    align = 1 if align < 1
-    "obj<#{bytes}x#{align}>"
+    fields = [] of LibGM::Field
+    field(fields, 0_u64, type.target_type, type.elements_count.to_u64)
+    record(type, fields)
   end
 
   private def do_translate(type : Type::EnumType)
-    bytes = @builder.layout.size_of(type)
-    align = @builder.layout.alignment_of(type)
-    align = 1 if align < 1
-    "obj<#{bytes}x#{align}>"
+    fields = [] of LibGM::Field
+    payload = type.payload_type.not_nil!
+    offset = 0_u64
+    if tag = type.index_type
+      field(fields, 0_u64, tag)
+      align = @builder.layout.alignment_of(payload.target_type)
+      offset = (@builder.layout.size_of(tag) + align - 1) // align * align
+    end
+    field(fields, offset, payload.target_type, payload.elements_count.to_u64)
+    record(type, fields)
   end
 
   private def do_translate(type : Type::EnumVariantType)

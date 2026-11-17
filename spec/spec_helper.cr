@@ -3,6 +3,18 @@ require "../src/myc"
 
 ENV["MYC_SPEC"] = "1"
 
+GM_ENABLED = begin
+  {% if flag?(:x86_64) || flag?(:amd64) %}
+    if (backend = ENV["BACKEND"]?) && (!backend.strip.empty?) && !backend.upcase.includes?("GM")
+      false
+    else
+      true
+    end
+  {% else %}
+    false
+  {% end %}
+end
+
 class Myc::Backend::AbstractBackend
   def spec_run
     res = _run
@@ -282,6 +294,10 @@ class Examples
                        res.uniq!
                        res
                      end
+
+    unless GM_ENABLED
+      filtered_modes.reject! { |b, m| b == "GM" }
+    end
 
     puts "Test modes: #{filtered_modes.inspect}, CC: #{ENV["CC"]?}"
     filtered_modes.each do |backend, mode|
