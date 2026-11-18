@@ -6,7 +6,7 @@ class Myc::Backend::C::BB < Myc::Backend::AbstractBB
 
   def alloca(name : String, type : Type) : Value
     emit "#{c_type(type)} #{name};"
-    wrap_ref(name, type, Value::PP::LocalUninitialized.new(name))
+    wrap_ref(name, type, Value::PP::Local.new(name))
   end
 
   def vla(type : Type, ptr_type : Type, size : Value) : Value

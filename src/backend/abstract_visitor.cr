@@ -203,11 +203,6 @@ abstract class Myc::Backend::AbstractVisitor
           fname
         end
 
-    case _pp = arg.pp
-    when Value::PP::LocalUninitialized
-      raise error("cant read from uninitialized local `#{_pp.name}`")
-    end
-
     visit Opcode::Addr.new
     visit Opcode::As.new(mod.typer.voidp)
 
@@ -1046,8 +1041,6 @@ abstract class Myc::Backend::AbstractVisitor
     unless arg.type.eq?(mod.typer.valist)
       raise error("arg type should be :valist, not #{arg.type}")
     end
-
-    arg.if_local_mark_it_as_initialized(self)
 
     case op.op
     in .start?

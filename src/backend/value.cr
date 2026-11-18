@@ -14,17 +14,16 @@ class Myc::Backend::Value
   abstract struct PP
     def short_name
       case self
-      in PP::Primitive          then "Co"
-      in PP::Param              then "Pa"
-      in PP::Global             then "Gl"
-      in PP::GlobalConstant     then "Gc"
-      in PP::LocalUninitialized then "Lu"
-      in PP::Local              then "Lo"
-      in PP::CallResult         then "Ca"
-      in PP::FnAddress          then "Fa"
-      in PP::LabelAddress       then "La"
-      in PP::Vla                then "Vl"
-      in PP::Unknown, PP        then "??"
+      in PP::Primitive      then "Co"
+      in PP::Param          then "Pa"
+      in PP::Global         then "Gl"
+      in PP::GlobalConstant then "Gc"
+      in PP::Local          then "Lo"
+      in PP::CallResult     then "Ca"
+      in PP::FnAddress      then "Fa"
+      in PP::LabelAddress   then "La"
+      in PP::Vla            then "Vl"
+      in PP::Unknown, PP    then "??"
       end
     end
 
@@ -34,7 +33,6 @@ class Myc::Backend::Value
     record Global < PP, name : String
     record GlobalConstant < PP, name : String
     record Local < PP, name : String
-    record LocalUninitialized < PP, name : String
     record CallResult < PP, name : String
     record FnAddress < PP, name : String
     record LabelAddress < PP, name : String
@@ -54,11 +52,6 @@ class Myc::Backend::Value
   end
 
   def to_rhs(visitor : AbstractVisitor) : Value
-    case _pp = pp
-    when PP::LocalUninitialized
-      raise visitor.error("cant read from uninitialized local `#{_pp.name}`")
-    end
-
     case @mm
     in .val? then self
     in .ref? then visitor.bb.load_ref(self)
@@ -86,7 +79,6 @@ class Myc::Backend::Value
 
   def store(visitor : AbstractVisitor, from : Value)
     visitor.bb.store(self, from)
-    if_local_mark_it_as_initialized(visitor)
   end
 
   def field(visitor : AbstractVisitor, index : Int32) : Value
@@ -103,8 +95,6 @@ class Myc::Backend::Value
   end
 
   def addr(visitor : AbstractVisitor) : Value
-    if_local_mark_it_as_initialized(visitor)
-
     case @mm
     in .ref?
       ptr_type = visitor.mod.typer.to_ptr(@type, visitor.loc)
@@ -154,15 +144,6 @@ class Myc::Backend::Value
       raise visitor.error("Cannot bitcast_flat for val")
     in .ref?
       visitor.bb.bitcast(self, to_type)
-    end
-  end
-
-  def if_local_mark_it_as_initialized(visitor : AbstractVisitor)
-    case _pp = @pp
-    when PP::LocalUninitialized
-      if local = visitor.locals[_pp.name]?
-        @pp = local.pp = PP::Local.new(_pp.name)
-      end
     end
   end
 end

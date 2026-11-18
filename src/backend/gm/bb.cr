@@ -9,7 +9,7 @@ class Myc::Backend::GM::BB < Myc::Backend::AbstractBB
 
   def alloca(name : String, type : Type) : Value
     slot = func.slot(lowir_type(type))
-    wrap_ref(slot, type, Value::PP::LocalUninitialized.new(name))
+    wrap_ref(slot, type, Value::PP::Local.new(name))
   end
 
   def vla(type : Type, ptr_type : Type, size : Value) : Value

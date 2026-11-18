@@ -11,7 +11,7 @@ class Myc::Backend::QBE::BB < Myc::Backend::AbstractBB
     alignment = @builder.layout.alignment_of(type)
     alignment = 4 if alignment < 4
     emit "#{name2} =l alloc#{alignment} #{size}"
-    wrap_ref(name2, type, Value::PP::LocalUninitialized.new(name))
+    wrap_ref(name2, type, Value::PP::Local.new(name))
   end
 
   def vla(type : Type, ptr_type : Type, size : Value) : Value

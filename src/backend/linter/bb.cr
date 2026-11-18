@@ -2,7 +2,7 @@ class Myc::Backend::Linter::BB < Myc::Backend::AbstractBB
   FAKE_VAL = BBVal.new
 
   def alloca(name : String, type : Type) : Value
-    wrap_ref(FAKE_VAL, type, Value::PP::LocalUninitialized.new(name))
+    wrap_ref(FAKE_VAL, type, Value::PP::Local.new(name))
   end
 
   def vla(type : Type, ptr_type : Type, size : Value) : Value

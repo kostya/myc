@@ -12,7 +12,7 @@ class Myc::Backend::Llvm::BB < Myc::Backend::AbstractBB
 
   def alloca(name : String, type : Type) : Value
     ltype = type.is_a?(Type::VaListType) ? builder.valist_llvm_type : llvm_type(type)
-    wrap_ref(@llvm_builder.alloca(ltype, name), type, Value::PP::LocalUninitialized.new(name))
+    wrap_ref(@llvm_builder.alloca(ltype, name), type, Value::PP::Local.new(name))
   end
 
   def vla(type : Type, ptr_type : Type, size : Value) : Value
