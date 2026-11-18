@@ -25,6 +25,9 @@ jobs:
           - { backend: gm, cc: gcc }
           - { backend: qbe, cc: gcc }
           - { os: macos-latest, cc: gcc }
+          - { os: macos-latest, backend: gm }
+          - { os: macos-latest, backend: qbe }
+          - { os: macos-latest, backend: c }
           
     steps:
       - uses: actions/checkout@v4
