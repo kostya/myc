@@ -20,4 +20,5 @@
   recursive: arr[0]=3 depth=3
   fn ptr: arr[9]=9
   sc vla: temp[0]=99
+  test_vla_builtin 0 1 2 3 4 
 === DONE ===

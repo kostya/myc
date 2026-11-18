@@ -13,7 +13,7 @@ class Myc::Backend::C::BB < Myc::Backend::AbstractBB
     temp = builder.new_temp
     elem_c_type = c_type(type)
     size_val = c_val(size)
-    emit "#{elem_c_type} *#{temp} = (#{elem_c_type}*)alloca(#{size_val} * sizeof(#{elem_c_type}));"
+    emit "#{elem_c_type} *#{temp} = (#{elem_c_type}*)__builtin_alloca(#{size_val} * sizeof(#{elem_c_type}));"
     wrap_val(temp, ptr_type, Value::PP::Vla.new)
   end
 

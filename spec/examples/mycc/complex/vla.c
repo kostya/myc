@@ -212,6 +212,18 @@ int test_vla_sc(int n, int flag) {
   return 0;
 }
 
+int test_vla_builtin(int n) {
+  int *arr = (int *)__builtin_alloca(n * sizeof(int));
+  for (int i = 0; i < n; i++)
+    arr[i] = i;
+
+  printf("  test_vla_builtin ");
+  for (int i = 0; i < n; i++)
+    printf("%d ", arr[i]);
+  printf("\n");
+  return 0;
+}
+
 int main() {
   printf("=== VLA Tests ===\n");
   test_vla_basic(5);
@@ -232,6 +244,7 @@ int main() {
   test_vla_recursive(3, 4);
   test_vla_fn_ptr();
   test_vla_sc(5, 1);
+  test_vla_builtin(5);
   printf("=== DONE ===\n");
   return 0;
 }

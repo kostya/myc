@@ -116,6 +116,9 @@ class Myc::Mycc::CodeGenerator
       generate_expr(args[1])
       generate_expr(args[0])
       emit("STORE")
+    when "__builtin_alloca"
+      generate_expr(args[0])
+      emit("ALLOCA :u8")
     when "__builtin_isinf", "__builtin_isinff", "__builtin_isinfl"
       case type = args[0].type
       when Type::FloatType
