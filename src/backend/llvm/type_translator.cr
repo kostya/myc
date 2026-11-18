@@ -133,34 +133,48 @@ class Myc::Backend::Llvm::TypeTranslator
     values = enum_values(type)
     size = @layout.size_of(type)
     kind = abi_kind_for_values(values, size)
+    payload_for_kind(type, size, kind)
+  end
 
+  private def payload_for_kind(type : Type::EnumType, size : UInt64, kind : Symbol) : LLVM::Type
     case kind
     when :sse
-      psize = payload_size(type)
-      case psize
-      when 1..4  then @context.float
-      when 5..8  then @context.double
-      when 9..16 then @context.struct([@context.double, @context.double])
-      else            fallback_payload(type)
-      end
+      sse_payload(type, size)
     when :integer
-      if type.index_type.nil? && size == 8
-        @context.int64
-      elsif type.index_type.nil? && size == 4
-        @context.int32
-      else
-        fallback_payload(type)
-      end
+      integer_payload(type, size)
     else
       fallback_payload(type)
     end
   end
 
-  private def scalar_payload?(type : Type::EnumType) : Bool
-    return false if type.index_type
-    values = enum_values(type)
-    return false unless values.size == 1
-    values[0].data.size == 1
+  private def integer_payload(type : Type::EnumType, size : UInt64) : LLVM::Type
+    align = @layout.alignment_of(type)
+    elem = case align
+           when 1 then @context.int8
+           when 2 then @context.int16
+           when 4 then @context.int32
+           else        @context.int64
+           end
+    count = size // align
+    if type.index_type.nil? && count == 1
+      elem
+    else
+      @context.struct(Array.new(count.to_i) { elem })
+    end
+  end
+
+  private def sse_payload(type : Type::EnumType, size : UInt64) : LLVM::Type
+    align = @layout.alignment_of(type)
+    elem = case align
+           when 4 then @context.float
+           else        @context.double
+           end
+    count = size // align
+    if type.index_type.nil? && count == 1
+      elem
+    else
+      @context.struct(Array.new(count.to_i) { elem })
+    end
   end
 
   private def fallback_payload(type : Type::EnumType) : LLVM::Type
