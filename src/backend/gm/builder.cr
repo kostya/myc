@@ -170,7 +170,10 @@ class Myc::Backend::GM::Builder < Myc::Backend::AbstractBuilder
       res << scalar_data(lowir_type(init.type), init.val.unsafe_as(UInt64))
     when InitValue::Str
       res << address_data(string_constant(init.str).index)
-    when InitValue::GlobalRef, InitValue::FnRef
+    when InitValue::GlobalRef
+      res << address_data(symbol(init.name))
+    when InitValue::FnRef
+      @used[init.name] = func_links[init.name]
       res << address_data(symbol(init.name))
     when InitValue::Zero
       if init.type.needs_blit?
