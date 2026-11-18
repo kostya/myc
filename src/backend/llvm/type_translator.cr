@@ -131,24 +131,26 @@ class Myc::Backend::Llvm::TypeTranslator
 
   private def translate_enum_payload(type : Type::EnumType) : LLVM::Type
     values = enum_values(type)
-    size = @layout.size_of(type)
-    kind = abi_kind_for_values(values, size)
-    payload_for_kind(type, size, kind)
+    full_size = @layout.size_of(type)
+    kind = abi_kind_for_values(values, full_size)
+
+    bytes = type.index_type ? payload_size(type) : full_size
+    align = payload_alignment(type)
+    payload_for_kind(type, bytes, align, kind)
   end
 
-  private def payload_for_kind(type : Type::EnumType, size : UInt64, kind : Symbol) : LLVM::Type
+  private def payload_for_kind(type : Type::EnumType, bytes : UInt64, align : UInt64, kind : Symbol) : LLVM::Type
     case kind
     when :sse
-      sse_payload(type, size)
+      sse_payload(type, bytes, align)
     when :integer
-      integer_payload(type, size)
+      integer_payload(type, bytes, align)
     else
       fallback_payload(type)
     end
   end
 
-  private def integer_payload(type : Type::EnumType, size : UInt64) : LLVM::Type
-    align = @layout.alignment_of(type)
+  private def integer_payload(type : Type::EnumType, size : UInt64, align : UInt64) : LLVM::Type
     elem = case align
            when 1 then @context.int8
            when 2 then @context.int16
@@ -163,12 +165,8 @@ class Myc::Backend::Llvm::TypeTranslator
     end
   end
 
-  private def sse_payload(type : Type::EnumType, size : UInt64) : LLVM::Type
-    align = @layout.alignment_of(type)
-    elem = case align
-           when 4 then @context.float
-           else        @context.double
-           end
+  private def sse_payload(type : Type::EnumType, size : UInt64, align : UInt64) : LLVM::Type
+    elem = align == 4 ? @context.float : @context.double
     count = size // align
     if type.index_type.nil? && count == 1
       elem
@@ -193,5 +191,11 @@ class Myc::Backend::Llvm::TypeTranslator
     else
       full
     end
+  end
+
+  private def payload_alignment(type : Type::EnumType) : UInt64
+    values = enum_values(type)
+    return 1_u64 if values.empty?
+    values.max_of { |v| @layout.alignment_of(v) }
   end
 end
