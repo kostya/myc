@@ -10,7 +10,7 @@
 * The whole IR spec fits within an hour of reading.
 * Compiles to native code via LLVM, QBE, GM or C. 
 * Fast compilation, "zero" overhead (I hope). 
-* ~10000 lines in Crystal.
+* ~11000 lines in Crystal.
 * Includes mycc: a C11-like compiler built on myc (~4000 lines).
 
 ### Why?
