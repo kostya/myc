@@ -87,7 +87,11 @@ class Myc::Backend::GM::TypeTranslator
       align = @builder.layout.alignment_of(payload.target_type)
       offset = (@builder.layout.size_of(tag) + align - 1) // align * align
     end
-    field(fields, offset, payload.target_type, payload.elements_count.to_u64)
+    type.data.each_value do |variant|
+      if values = variant.composite_value_type
+        field(fields, offset, values)
+      end
+    end
     record(type, fields)
   end
 

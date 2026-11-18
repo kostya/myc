@@ -149,7 +149,15 @@ class Examples
       end
 
       unless multi_modules.empty?
-        data.values += multi_modules
+        multi_modules.each do |multi_module|
+          if multi_module.ends_with?(".cc")
+            output = multi_module[0..-4] + ".o"
+            Myc::Backend::AbstractBackend.run_cmd(Myc::Backend::AbstractBackend::CC, ["-x", "c", "-c", multi_module, "-o", output])
+            data.values << output
+          else
+            data.values << multi_module
+          end
+        end
       end
 
       runner = if kind.c?
@@ -202,7 +210,14 @@ class Examples
         end
       end
 
-      kind = f.ends_with?(".myc") ? Kind::MYC : Kind::C
+      kind = if f.ends_with?(".myc")
+               Kind::MYC
+             elsif f.ends_with?(".c")
+               Kind::C
+             else
+               raise "Not accept file #{f} as test"
+             end
+
       error = f.ends_with?(".err.myc") || f.ends_with?(".err.c")
       dir = File.dirname(f)
       dirs << dir
@@ -259,12 +274,12 @@ class Examples
     base = main_file.sub(/\.(err\.)?(myc|c)$/, "")
 
     if main_file.includes?(".err.")
-      pattern = "#{base}.*.err.{myc,c}"
+      pattern = "#{base}.*.err.{myc,c,cc}"
     else
-      pattern = "#{base}.*.{myc,c}"
+      pattern = "#{base}.*.{myc,c,cc}"
     end
 
-    Dir.glob(pattern).select { |pf| pf =~ /\.\d+\.(err\.)?(myc|c)$/ }
+    Dir.glob(pattern).select { |pf| pf =~ /\.\d+\.(err\.)?(myc|c|cc)$/ }
   end
 
   def run

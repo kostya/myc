@@ -1,0 +1,21 @@
+ENUM :U
+  TAG
+    SKIP
+  VARIANT :d
+    TYPE :f64
+  VARIANT :f
+    TYPE :f32
+ENDENUM
+
+FUNC :get
+  ARGS
+    TYPE :U
+  RETURN
+    TYPE :f64
+  BODY
+    PARAM 0
+    AS :U::d
+    FIELD 1
+    RET
+ENDFUNC
+

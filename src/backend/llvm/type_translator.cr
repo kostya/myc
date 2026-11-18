@@ -62,16 +62,11 @@ class Myc::Backend::Llvm::TypeTranslator
   end
 
   private def do_translate(type : Type::EnumType)
-    _payload = type.payload_type.not_nil!
-    ptype = _payload.target_type.not_nil!
-    pcount = _payload.elements_count
-
+    payload = translate_enum_payload(type)
     if index_type = type.index_type
       tag = translate(index_type)
-      payload = translate(ptype).array(pcount)
       @context.struct([tag, payload], type.id_name)
     else
-      payload = translate(ptype).array(pcount)
       @context.struct([payload], type.id_name)
     end
   end
@@ -82,5 +77,125 @@ class Myc::Backend::Llvm::TypeTranslator
 
   private def do_translate(type : Type)
     raise "Unknown type: #{type.class} (#{type})"
+  end
+
+  private def enum_values(type : Type::EnumType) : Array(Type::StructType)
+    type.data.values
+      .compact_map(&.composite_value_type.as?(Type::StructType))
+      .reject(&.data.empty?)
+  end
+
+  private def abi_class_of(t : Type) : Symbol
+    case t
+    when Type::FloatType
+      :sse
+    when Type::IntType, Type::BoolType, Type::PtrType
+      :integer
+    when Type::StructType
+      t.data.reduce(:sse) do |acc, f|
+        acc == :sse && abi_class_of(f) == :sse ? :sse : :integer
+      end
+    when Type::FlatType
+      abi_class_of(t.target_type)
+    else
+      :integer
+    end
+  end
+
+  private def hfa?(values : Array(Type::StructType)) : Bool
+    return false unless values.size <= 4
+    first = values[0].data
+    return false unless first.size == 1 && first[0].is_a?(Type::FloatType)
+    ft = first[0].as(Type::FloatType)
+    values.all? do |v|
+      v.data.size == 1 &&
+        (f = v.data[0]).is_a?(Type::FloatType) &&
+        f.as(Type::FloatType).bytes_count == ft.bytes_count
+    end
+  end
+
+  private def abi_kind_for_values(values : Array(Type::StructType), size : UInt64) : Symbol
+    return :integer if values.empty?
+    return :memory if size > 16
+
+    if @layout.target.arch.arm64?
+      hfa?(values) ? :sse : :integer
+    else
+      if values.all? { |v| v.data.all? { |f| abi_class_of(f) == :sse } }
+        :sse
+      else
+        :integer
+      end
+    end
+  end
+
+  private def translate_enum_payload(type : Type::EnumType) : LLVM::Type
+    values = enum_values(type)
+    full_size = @layout.size_of(type)
+    kind = abi_kind_for_values(values, full_size)
+
+    bytes = type.index_type ? payload_size(type) : full_size
+    align = payload_alignment(type)
+    payload_for_kind(type, bytes, align, kind)
+  end
+
+  private def payload_for_kind(type : Type::EnumType, bytes : UInt64, align : UInt64, kind : Symbol) : LLVM::Type
+    case kind
+    when :sse
+      sse_payload(type, bytes, align)
+    when :integer
+      integer_payload(type, bytes, align)
+    else
+      fallback_payload(type)
+    end
+  end
+
+  private def integer_payload(type : Type::EnumType, size : UInt64, align : UInt64) : LLVM::Type
+    elem = case align
+           when 1 then @context.int8
+           when 2 then @context.int16
+           when 4 then @context.int32
+           else        @context.int64
+           end
+    count = size // align
+    if type.index_type.nil? && count == 1
+      elem
+    else
+      @context.struct(Array.new(count.to_i) { elem })
+    end
+  end
+
+  private def sse_payload(type : Type::EnumType, size : UInt64, align : UInt64) : LLVM::Type
+    elem = align == 4 ? @context.float : @context.double
+    count = size // align
+    if type.index_type.nil? && count == 1
+      elem
+    else
+      @context.struct(Array.new(count.to_i) { elem })
+    end
+  end
+
+  private def fallback_payload(type : Type::EnumType) : LLVM::Type
+    payload = type.payload_type.not_nil!
+    translate(payload.target_type).array(payload.elements_count)
+  end
+
+  private def payload_size(type : Type::EnumType) : UInt64
+    full = @layout.size_of(type)
+    if index_type = type.index_type
+      tag_size = @layout.size_of(index_type)
+      payload = type.payload_type.not_nil!
+      align = @layout.alignment_of(payload.target_type)
+      offset = (tag_size + align - 1) // align * align
+      full - offset
+    else
+      full
+    end
+  end
+
+  private def payload_alignment(type : Type::EnumType) : UInt64
+    values = enum_values(type)
+    return 1_u64 if values.empty?
+    values.max_of { |v| @layout.alignment_of(v) }
   end
 end

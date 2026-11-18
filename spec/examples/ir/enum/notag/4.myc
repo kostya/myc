@@ -17,8 +17,8 @@ FUNC :main
     LOCAL :c :bla
     STORE
     LOCAL :c
-    FIELD 1
-    FIELD 1
+    AS :bla::x
+    FIELD 2
     INSPECT
 ENDFUNC
 

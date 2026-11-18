@@ -390,7 +390,7 @@ abstract class Myc::Backend::AbstractBackend
     path
   end
 
-  def run_cmd(cmd : String, args : Array(String), check_status = true, catch_stdout = false) : String?
+  def self.run_cmd(cmd : String, args : Array(String), check_status = true, catch_stdout = false) : String?
     if ENV["MYC_VERBOSE"]? == "1"
       puts "--- '#{cmd} #{args.join(" ")}' ---"
     end
@@ -419,6 +419,10 @@ abstract class Myc::Backend::AbstractBackend
     res
   rescue ex
     raise Error::Cmd.new(ex.message, cmd, args)
+  end
+
+  def run_cmd(cmd : String, args : Array(String), check_status = true, catch_stdout = false) : String?
+    self.class.run_cmd(cmd, args, check_status, catch_stdout)
   end
 
   private def parse_common_options : CommonOptions

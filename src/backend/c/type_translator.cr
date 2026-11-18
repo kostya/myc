@@ -111,8 +111,16 @@ struct Myc::Backend::C::TypeTranslator
         fields += "  #{translate(type.index_type.not_nil!)} field0;\n"
       end
 
-      payload = type.payload_type.not_nil!
-      payload_str = "  #{translate(payload)} field#{type.index_type ? "1" : "0"};\n"
+      payload = ""
+      index = 0
+      type.data.each_value do |variant|
+        if value_type = variant.composite_value_type
+          payload += "    #{translate(value_type)} vrnt#{index};\n"
+        end
+        index += 1
+      end
+
+      payload_str = "  union { \n#{payload} } field#{type.index_type ? "1" : "0"};\n"
       fields += payload_str
 
       "struct #{type.backend_name} {\n#{fields}\n};"

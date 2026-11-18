@@ -395,6 +395,10 @@ class Myc::Backend::C::BB < Myc::Backend::AbstractBB
     wrap_res(t, type, arg.pp)
   end
 
+  def enum_variant_cast(value : Value, enum_variant_type : Type::EnumVariantType, target_type : Type) : Value
+    Value.new(BBVal.new(c_val(value) + ".vrnt#{enum_variant_type.position}"), target_type, value.mm, value.pp)
+  end
+
   def builder
     @builder.as(Builder)
   end
