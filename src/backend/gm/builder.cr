@@ -1,13 +1,14 @@
 class Myc::Backend::GM::Builder < Myc::Backend::AbstractBuilder
+  getter target : IRTarget
   getter func_links : Hash(String, Type::Fn)
   getter global_links : Hash(String, Value)
   @native : NativeModule
   property current_func : Func?
   @type_translator : TypeTranslator?
 
-  def initialize(@backend, @layout)
+  def initialize(@backend, @layout, @target)
     super(@backend, @layout)
-    @native = NativeModule.new(@layout.target.os.darwin? ? IRTarget::MacOS : IRTarget::Linux)
+    @native = NativeModule.new(@target)
     @symbols = Hash(String, UInt32).new
     @signatures = Hash(String, UInt32).new
     @defined = Set(String).new

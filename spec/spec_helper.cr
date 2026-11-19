@@ -4,7 +4,7 @@ require "../src/myc"
 ENV["MYC_SPEC"] = "1"
 
 GM_ENABLED = begin
-  {% if flag?(:x86_64) || flag?(:amd64) %}
+  {% if flag?(:x86_64) || flag?(:amd64) || flag?(:arm64) || flag?(:aarch64) %}
     true
   {% else %}
     false

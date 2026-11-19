@@ -95,6 +95,23 @@ crystal build src/cli/gm.cr --release -o myc-gm
 crystal build src/cli/gm.cr --release -Dgm_static --link-flags "$PWD/plugins/cppgm/lib/libcppgm_lowir.a -lstdc++ -pthread" -o myc-gm
 ```
 
+The GM backend can emit Arm64 objects for Linux and macOS with a cppgm
+library built from sources that provide LowIR ABI 5. Use a library for
+the machine running Crystal, such as the arm64 dylib with native Apple
+Silicon Crystal. `--target=arm64-apple-darwin` selects an Apple Silicon
+object explicitly.
+
+To compile a GM dump produced with `--final`, use the same optimization
+level for native code generation and skip the already-applied LowIR passes.
+
+```sh
+./myc-gm d example.myc --final > example.lowir
+cppgm -O3 -fno-lowir-passes -fno-pic -c example.lowir -o example.o
+```
+
+For a cross-target dump, pass the same output target to cppgm, for example
+`--target=arm64-apple-macos11`.
+
 ## Examples:
 
 ```sh

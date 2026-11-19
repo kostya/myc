@@ -11,8 +11,8 @@ class Myc::Backend::GM::Backend < Myc::Backend::AbstractBackend
 
   def new_builder : AbstractBuilder
     layout = new_layout
-    raise data.error("GM backend is only supported on x86-64 targets, current: #{layout.target.inspect}") unless layout.target.arch.x86_64?
-    Builder.new(self, layout)
+    ir_target = IRTarget.from_target(layout.target) || raise data.error("GM does not support target #{layout.target.triple}")
+    Builder.new(self, layout, ir_target)
   end
 
   def obj(mod : Mod, header_mod : Mod, output : String)
@@ -38,7 +38,7 @@ class Myc::Backend::GM::Backend < Myc::Backend::AbstractBackend
           tmp = new_tmp_path("myc", "lowir")
           Myc.measure("backend:dump") { builder.save(tmp) }
           Myc.measure("backend:dumpopt") do
-            run_cmd(path, ["-O#{opt_level}", "-S", "-emit-lowir", tmp, "-o", output])
+            run_cmd(path, ["--target=#{builder.target.triple}", "-O#{opt_level}", "-S", "-emit-lowir", tmp, "-o", output])
           end
         else
           STDERR.puts "Warning, cppgm not found, dump shown without cppgm optimizations".colorize(:yellow)
@@ -50,6 +50,25 @@ class Myc::Backend::GM::Backend < Myc::Backend::AbstractBackend
     ensure
       builder.close
     end
+  end
+
+  protected def additional_linker_flags : Array(String)
+    target = output_target
+    return [] of String unless target.os.darwin?
+    ["-arch", target.arch.arm64? ? "arm64" : "x86_64"]
+  end
+
+  protected def new_layout : Layout
+    Layout.new(output_target)
+  end
+
+  private def output_target : Target
+    native = detect_native_target
+    target = common_options.target || return native
+    if target.os.unknown? && target.original_triple.try { |triple| !triple.includes?('-') }
+      return Target.new(target.arch, native.os)
+    end
+    target
   end
 
   private def optimization_level : Int32
