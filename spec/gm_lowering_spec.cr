@@ -5,11 +5,20 @@ class Myc::Backend::GM::Backend
     mod, header = load_single(input)
     dump(mod, header, output)
   end
+
+  def spec_compile_object(input : String, output : String)
+    mod, header = load_single(input)
+    obj(mod, header, output)
+  end
+
+  def spec_link_flags
+    additional_linker_flags
+  end
 end
 
-def with_gm_source(source : String, &)
+def with_gm_source(source : String, target = "x86_64-unknown-linux-gnu", &)
   data = Myc::Cli::Data.new
-  data.options["target"] = "x86_64-unknown-linux-gnu"
+  data.options["target"] = target
   data.options["debug"] = ""
   input = Myc::Backend::AbstractBackend.new_tmp_path("gm-lowering", "myc")
   output = Myc::Backend::AbstractBackend.new_tmp_path("gm-lowering", "lowir")
@@ -32,6 +41,32 @@ end
 
 if GM_ENABLED && GM_SPEC_BACKEND
   describe "GM LowIR lowering" do
+    it "emits x86-64 Mach-O and selects an x86-64 Darwin linker" do
+      source = File.read(File.join(__DIR__, "examples/ir/flat/4.myc"))
+      with_gm_source(source, "x86_64-apple-darwin") do |backend, input, output|
+        backend.spec_compile_object(input, output)
+        File.read(output).to_slice[0, 8].to_a.should eq [0xcf_u8, 0xfa_u8, 0xed_u8, 0xfe_u8, 7_u8, 0_u8, 0_u8, 1_u8]
+        backend.spec_link_flags.should eq ["-arch", "x86_64"]
+      end
+    end
+
+    it "uses the Arm64 Mach-O target of LowIR ABI 5" do
+      source = File.read(File.join(__DIR__, "examples/ir/flat/4.myc"))
+      with_gm_source(source, "arm64-apple-darwin") do |backend, input, output|
+        if Myc::Backend::GM::NativeAPI.abi_version < 5
+          expect_raises(Exception, /target needs LowIR ABI v5/) do
+            backend.spec_compile_object(input, output)
+          end
+        else
+          backend.spec_compile_object(input, output)
+          File.read(output).to_slice[0, 8].to_a.should eq [0xcf_u8, 0xfa_u8, 0xed_u8, 0xfe_u8, 12_u8, 0_u8, 0_u8, 1_u8]
+          backend.spec_dump_lowir(input, output)
+          File.read(output).should start_with("target arm64_macos 1\n")
+          backend.spec_link_flags.should eq ["-arch", "arm64"]
+        end
+      end
+    end
+
     it "passes objects as C passes structs with the same fields" do
       text = gm_lowir(<<-MYC)
       STRUCT :Point

@@ -1,11 +1,36 @@
 module Myc::Backend::GM
-  ABI_VERSION = 4_u32
+  ABI_VERSION     = 4_u32
+  ARM_ABI_VERSION = 5_u32
 
   NO_ID = UInt32::MAX
 
   enum IRTarget : UInt32
-    Linux = 0
-    MacOS = 1
+    Linux        = 0
+    MacOS        = 1
+    AArch64Linux = 5
+    AArch64MacOS = 6
+
+    def self.from_target(target : Target) : self?
+      case {target.arch, target.os}
+      when {Target::Arch::X86_64, Target::OS::Linux}  then Linux
+      when {Target::Arch::X86_64, Target::OS::Darwin} then MacOS
+      when {Target::Arch::Arm64, Target::OS::Linux}   then AArch64Linux
+      when {Target::Arch::Arm64, Target::OS::Darwin}  then AArch64MacOS
+      end
+    end
+
+    def abi_version : UInt32
+      self == AArch64Linux || self == AArch64MacOS ? ARM_ABI_VERSION : ABI_VERSION
+    end
+
+    def triple : String
+      case self
+      in Linux        then "x86_64-linux-gnu"
+      in MacOS        then "x86_64-apple-darwin"
+      in AArch64Linux then "aarch64-linux-gnu"
+      in AArch64MacOS then "arm64-apple-macos11"
+      end
+    end
   end
 
   enum IRArity : UInt32
@@ -248,10 +273,11 @@ module Myc::Backend::GM
     getter pointer : LibGM::Module*
 
     def initialize(target : IRTarget)
-      @pointer = NativeAPI.create(ABI_VERSION, target)
+      abi = target.abi_version
+      @pointer = NativeAPI.create(abi, target)
       if @pointer.null?
-        raise "cannot create GM LowIR module: cppgm #{NativeAPI.version} has LowIR ABI v#{NativeAPI.abi_version}, " \
-              "this backend uses ABI v#{ABI_VERSION}"
+        raise "cannot create GM LowIR module for #{target}: this target needs LowIR ABI v#{abi}, " \
+              "cppgm #{NativeAPI.version} provides v#{NativeAPI.abi_version}"
       end
     end
 
