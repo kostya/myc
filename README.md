@@ -29,9 +29,9 @@
 * ~900 tests × 12 backend modes - passed.
 * Mycc compiles 9000 lines of C from LangArena and 26/34 C files of the Lua interpreter.
 * Currently performs one transformation: inlining. More may come later.
-* Two modes: default (fast, Go-like) and final (slow compile, ~5-15% faster runtime).
+* Two modes: default (fast compile, decent runtime, Go-like) and final (slower compile, ~5-15% faster runtime).
 * QBE has a bug on Apple aarch64 with globals.
-* The GM backend is x86-64 only.
+* The GM backend is x86-64 and arm64 only.
 
 ## How it looks like?
 
@@ -87,9 +87,15 @@ cd plugins/qbe; make; cd -
 crystal build src/cli/qbe.cr --release -o myc-qbe
 
 # compile Myc IR GM backend
-# requires cppgm 0.9.6 or later; GM loads lib/libcppgm_lowir from plugins/cppgm,
+# requires cppgm 0.10.0 or later; GM loads lib/libcppgm_lowir from plugins/cppgm,
 # or the library given by the GM_LIBRARY env variable, only when GM is selected
-mkdir -p plugins/cppgm && wget -qO- https://github.com/vishvananda/cppgm/releases/download/v0.9.6/cppgm-v0.9.6-linux-x86_64.tar.gz | tar -xz -C plugins/cppgm --strip-components=1
+
+# on linux x86-64
+mkdir -p plugins/cppgm && wget -qO- https://github.com/vishvananda/cppgm/releases/download/v0.10.0/cppgm-v0.10.0-linux-x86_64.tar.gz | tar -xz -C plugins/cppgm --strip-components=1
+
+# on macos-arm64
+mkdir -p plugins/cppgm && wget -qO- https://github.com/vishvananda/cppgm/releases/download/v0.10.0/cppgm-v0.10.0-macos-arm64.tar.gz | tar -xz -C plugins/cppgm --strip-components=1
+
 crystal build src/cli/gm.cr --release -o myc-gm
 # or link the library statically
 crystal build src/cli/gm.cr --release -Dgm_static --link-flags "$PWD/plugins/cppgm/lib/libcppgm_lowir.a -lstdc++ -pthread" -o myc-gm

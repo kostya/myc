@@ -1,3 +1,6 @@
+## 0.12.3 (20.11.2206)
+* update GM to 0.10.0, support arm64 
+
 ## 0.12.2 (18.11.2206)
 * update GM to 0.9.6
 * fix c unions payloads, #16
