@@ -8,7 +8,7 @@ on:
 
 env:
   QBE_SHA: "fab6d40620ac8e23fa42cc9b945688ca5edeb091"
-  CPPGM: "0.9.6"
+  CPPGM: "0.10.0"
   INDEX_C_SHA: "019ddd8f9c4b2cac7d0512ebbf78d5b28aff63f5"
 
 jobs:
@@ -25,7 +25,6 @@ jobs:
           - { backend: gm, cc: gcc }
           - { backend: qbe, cc: gcc }
           - { os: macos-latest, cc: gcc }
-          - { os: macos-latest, backend: gm }
           - { os: macos-latest, backend: qbe }
           - { os: macos-latest, backend: c }
           
@@ -103,7 +102,7 @@ jobs:
             URL="https://github.com/vishvananda/cppgm/releases/download/v${{ env.CPPGM }}/${ARCHIVE}"
             wget -qO- "$URL" | tar -xz -C plugins/cppgm --strip-components=1
           elif [ "${{ runner.os }}" = "macOS" ]; then
-            ARCHIVE="cppgm-v${{ env.CPPGM }}-macos-x86_64.tar.gz"
+            ARCHIVE="cppgm-v${{ env.CPPGM }}-macos-arm64.tar.gz"
             URL="https://github.com/vishvananda/cppgm/releases/download/v${{ env.CPPGM }}/${ARCHIVE}"
             curl -fsSL "$URL" | tar -xz -C plugins/cppgm --strip-components=1
           fi
