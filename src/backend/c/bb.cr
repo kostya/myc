@@ -103,7 +103,7 @@ class Myc::Backend::C::BB < Myc::Backend::AbstractBB
     if lhs.type.is_a?(Type::VaListType)
       emit("va_copy(#{c_val(lhs)}, #{c_val(rhs)});")
     elsif lhs.type.needs_blit?
-      src_val = if rhs.mm.val? && (rhs.type.is_a?(Type::FlatType))
+      src_val = if rhs.val? && (rhs.type.is_a?(Type::FlatType))
                   c_val(rhs)
                 else
                   "&(#{c_val(rhs)})"

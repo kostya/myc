@@ -47,103 +47,15 @@ class Myc::Backend::Value
   def initialize(@bbval, @type, @mm, @pp)
   end
 
+  def val?
+    @mm.val?
+  end
+
+  def ref?
+    @mm.ref?
+  end
+
   def unsafe_new_with_type(new_type : Type) : Value
     Value.new(@bbval, new_type, @mm, @pp)
-  end
-
-  def to_rhs(visitor : AbstractVisitor) : Value
-    case @mm
-    in .val? then self
-    in .ref? then visitor.bb.load_ref(self)
-    end
-  end
-
-  def to_lhs(visitor : AbstractVisitor) : Value
-    case @mm
-    in .val? then raise visitor.error("cant use #{@pp.short_name} as LHS#{@type.is_a?(Type::PtrType) ? ", maybe forgot DEREF?" : ""}")
-    in .ref? then self
-    end
-  end
-
-  def ensure_ref(visitor : AbstractVisitor) : Value
-    case @mm
-    in .val?
-      tmp_name = visitor.next_unique("__myc_ref_wrapper__")
-      tmp = visitor.func.alloca_bb.alloca(tmp_name, @type)
-      tmp.pp = @pp
-      tmp.store(visitor, self)
-      tmp
-    in .ref? then self
-    end
-  end
-
-  def store(visitor : AbstractVisitor, from : Value)
-    visitor.bb.store(self, from)
-  end
-
-  def field(visitor : AbstractVisitor, index : Int32) : Value
-    ft = @type.field_type?(index)
-    raise visitor.error("no field #{index} in #{@type}") unless ft
-    index, field_type = ft
-
-    case @mm
-    in .val?
-      visitor.bb.extract_value(self, field_type, index)
-    in .ref?
-      visitor.bb.field(self, field_type, index)
-    end
-  end
-
-  def addr(visitor : AbstractVisitor) : Value
-    case @mm
-    in .ref?
-      ptr_type = visitor.mod.typer.to_ptr(@type, visitor.loc)
-      visitor.bb.addr(self, ptr_type)
-    in .val?
-      raise visitor.error("Cannot take address of val, store it to LOCAL before")
-    end
-  end
-
-  def deref(visitor : AbstractVisitor) : Value
-    case @mm
-    in .ref?
-      case t = @type
-      when Type::PtrType
-        v = visitor.bb.load_ref(self)
-        visitor.bb.deref(v, t.target_type)
-      else
-        raise visitor.error("Cannot dereference #{@mm.short_name}")
-      end
-    in .val?
-      case t = @type
-      when Type::PtrType
-        visitor.bb.deref(self, t.target_type)
-      else
-        raise visitor.error("Cannot dereference #{@mm.short_name}")
-      end
-    end
-  end
-
-  def offset(visitor : AbstractVisitor, offset : Value) : Value
-    case @mm
-    in .ref?
-      raise visitor.error("Cannot take offset of ref")
-    in .val?
-      case t = type
-      when Type::PtrType
-        visitor.bb.offset(self, t.target_type, offset)
-      else
-        raise visitor.error("not ptr type")
-      end
-    end
-  end
-
-  def bitcast_flat(visitor : AbstractVisitor, to_type : Type) : Value
-    case @mm
-    in .val?
-      raise visitor.error("Cannot bitcast_flat for val")
-    in .ref?
-      visitor.bb.bitcast(self, to_type)
-    end
   end
 end

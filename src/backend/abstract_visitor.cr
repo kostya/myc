@@ -66,11 +66,11 @@ abstract class Myc::Backend::AbstractVisitor
   end
 
   private def pop_rhs : Value
-    pop.to_rhs(self)
+    to_rhs(pop)
   end
 
   private def pop_lhs : Value
-    pop.to_lhs(self)
+    to_lhs(pop)
   end
 
   private def pop_many_rhs(count)
@@ -448,7 +448,7 @@ abstract class Myc::Backend::AbstractVisitor
           visit Opcode::As.new(mod.typer.i64)
           visit Opcode::Unary.new(:neg) if op.op.sub?
           rhs = pop_rhs
-          self << lhs.offset(self, rhs)
+          self << offset(lhs, rhs)
           return
         end
       when Type::PtrType
@@ -556,7 +556,7 @@ abstract class Myc::Backend::AbstractVisitor
 
     raise error("Global is constant") if lhs.pp.is_a?(Value::PP::GlobalConstant)
 
-    lhs.store(self, rhs)
+    @bb.store(lhs, rhs)
   end
 
   def visit(op : Opcode::Break)
@@ -808,14 +808,14 @@ abstract class Myc::Backend::AbstractVisitor
       from_size = builder.layout.size_of(from_type)
       to_size = builder.layout.size_of(to_type)
       if from_size >= to_size
-        self << value.ensure_ref(self).bitcast_flat(self, to_type)
+        self << bitcast_flat(ensure_ref(value), to_type)
         return
       else
         raise error("#{from_type}(#{from_size}) < #{to_type}(#{to_size})")
       end
     end
 
-    if result = @bb.cast?(value.to_rhs(self), from_type, to_type)
+    if result = @bb.cast?(to_rhs(value), from_type, to_type)
       self << result
     else
       raise error("unknown transform from #{from_type} to #{to_type}")
@@ -832,7 +832,7 @@ abstract class Myc::Backend::AbstractVisitor
       return
     end
 
-    if result = @bb.to?(value.to_rhs(self), from_type, to_type)
+    if result = @bb.to?(to_rhs(value), from_type, to_type)
       self << result
     else
       raise error("unknown safe transform from #{from_type} to #{to_type}, use AS if you sure")
@@ -907,7 +907,7 @@ abstract class Myc::Backend::AbstractVisitor
   end
 
   def visit(op : Opcode::Deref)
-    self << pop.deref(self)
+    self << deref(pop)
   end
 
   def visit(op : Opcode::Addr)
@@ -918,7 +918,7 @@ abstract class Myc::Backend::AbstractVisitor
         self << @bb.bb_addr(find_or_create_label(name))
       end
     else
-      self << pop.ensure_ref(self).addr(self)
+      self << addr(ensure_ref(pop))
     end
   end
 
@@ -930,10 +930,10 @@ abstract class Myc::Backend::AbstractVisitor
     case type = value.type
     when Type::EnumVariantType
       if op.index >= 1 && op.index <= type.value_types.size
-        value = value.field(self, 1)
+        value = field(value, 1)
         @stack << value
         if ct = type.composite_value_type
-          self << @bb.enum_payload_bitcast(pop.ensure_ref(self), type, ct)
+          self << @bb.enum_payload_bitcast(ensure_ref(pop), type, ct)
           visit Opcode::Field.new(op.index - 1)
         else
           raise error("no composite type for #{type}, bug")
@@ -942,7 +942,7 @@ abstract class Myc::Backend::AbstractVisitor
       end
     end
 
-    self << value.field(self, op.index)
+    self << field(value, op.index)
   end
 
   def visit(op : Opcode::Create)
@@ -1137,5 +1137,60 @@ abstract class Myc::Backend::AbstractVisitor
       visit Opcode::Local.new("__myc_result__", func_def.type_fn.ret)
     end
     visit Opcode::Ret.new
+  end
+
+  protected def to_rhs(value : Value) : Value
+    value.val? ? value : @bb.load_ref(value)
+  end
+
+  protected def to_lhs(value : Value) : Value
+    return value if value.ref?
+    raise error("cant use #{value.pp.short_name} as LHS#{value.type.is_a?(Type::PtrType) ? ", maybe forgot DEREF?" : ""}")
+  end
+
+  protected def ensure_ref(value : Value) : Value
+    return value if value.ref?
+
+    tmp_name = next_unique("__myc_ref_wrapper__")
+    tmp = func.alloca_bb.alloca(tmp_name, value.type)
+    tmp.pp = value.pp
+    @bb.store(tmp, value)
+    tmp
+  end
+
+  protected def field(value : Value, index : Int32) : Value
+    ft = value.type.field_type?(index)
+    raise error("no field #{index} in #{value.type}") unless ft
+    index, field_type = ft
+    value.val? ? @bb.extract_value(value, field_type, index) : @bb.field(value, field_type, index)
+  end
+
+  protected def addr(value : Value) : Value
+    raise error("Cannot take address of val, store it to LOCAL before") if value.val?
+    @bb.addr(value, mod.typer.to_ptr(value.type, loc))
+  end
+
+  protected def deref(value : Value) : Value
+    case t = value.type
+    when Type::PtrType
+      @bb.deref(to_rhs(value), t.target_type)
+    else
+      raise error("Cannot dereference #{value.mm.short_name}")
+    end
+  end
+
+  protected def offset(value : Value, offset : Value) : Value
+    raise error("Cannot take offset of ref") if value.ref?
+    case t = value.type
+    when Type::PtrType
+      @bb.offset(value, t.target_type, offset)
+    else
+      raise error("expected ptr type, got #{value.type}")
+    end
+  end
+
+  protected def bitcast_flat(value : Value, to_type : Type) : Value
+    raise error("Cannot bitcast_flat for val") if value.val?
+    @bb.bitcast(value, to_type)
   end
 end
