@@ -116,13 +116,6 @@ class Myc::Backend::GM::Func < Myc::Backend::AbstractFunc
       visitor = new_visitor
       visitor.visit
       alloca_bb.jmp(body_bb)
-      visitor.bb.jmp(ret_bb)
-      ret = ret_bb.as(BB)
-      if res = result
-        ret.ret(res.type.needs_blit? ? ret.copy_result(res) : ret.load_return(res))
-      else
-        ret.ret(nil)
-      end
       submit
     ensure
       builder.current_func = previous
@@ -133,14 +126,8 @@ class Myc::Backend::GM::Func < Myc::Backend::AbstractFunc
     layout = @buffers.layout.as(UInt32*)
     layout[0] = alloca_bb.as(BB).id
     layout[1] = body_bb.as(BB).id
-    at = 2
-    @bbs.each do |name, bb|
-      next if {"alloca", "body", "ret", "__myc_dummy_bb__"}.includes?(name)
-      layout[at] = bb.as(BB).id
-      at += 1
-    end
-    layout[at] = ret_bb.as(BB).id
-    raise "GM block layout mismatch" unless at + 1 == @block_count
+    @all_bbs.each_with_index { |bb, index| layout[index + 2] = bb.as(BB).id }
+    raise "GM block layout mismatch" unless @all_bbs.size + 2 == @block_count
     counts = LibGM::BodyCounts.new(instructions: @instruction_count, operands: @operand_count,
       literals: @literal_count, slots: @slot_count, blocks: @block_count)
     builder.check(NativeAPI.commit(builder.handle, @symbol, pointerof(counts), @temp_counter))

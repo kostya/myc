@@ -1,0 +1,33 @@
+FUNC :test
+  ARGS
+    TYPE :i32
+  RETURN
+    TYPE :i32
+  BODY
+    PARAM 0
+    SWITCH
+      CASE 1
+        PUSH 10
+        RET
+      CASE 2
+        PUSH 20
+        RET
+      ELSE
+        PUSH 30
+        RET
+    ENDSWITCH
+ENDFUNC
+
+FUNC :main
+  BODY
+    PUSH 1
+    CALL :test
+    INSPECT
+    PUSH 2
+    CALL :test
+    INSPECT
+    PUSH 3
+    CALL :test
+    INSPECT
+ENDFUNC
+

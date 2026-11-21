@@ -810,7 +810,7 @@ class Myc::Backend::QBE::BB < Myc::Backend::AbstractBB
     wrap_res(t, type, arg.pp)
   end
 
-  def enum_variant_cast(value : Value, enum_variant_type : Type::EnumVariantType, target_type : Type) : Value
+  def enum_payload_bitcast(value : Value, enum_variant_type : Type::EnumVariantType, target_type : Type) : Value
     bitcast(value, target_type)
   end
 

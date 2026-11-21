@@ -65,10 +65,10 @@ class Myc::Backend::Value
     end
   end
 
-  def _to_ref(visitor : AbstractVisitor) : Value
+  def ensure_ref(visitor : AbstractVisitor) : Value
     case @mm
     in .val?
-      tmp_name = visitor.next_unique("__myc_to_ref_wrapper__")
+      tmp_name = visitor.next_unique("__myc_ref_wrapper__")
       tmp = visitor.func.alloca_bb.alloca(tmp_name, @type)
       tmp.pp = @pp
       tmp.store(visitor, self)

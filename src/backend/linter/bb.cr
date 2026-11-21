@@ -160,7 +160,7 @@ class Myc::Backend::Linter::BB < Myc::Backend::AbstractBB
     wrap_ref(FAKE_VAL, type, arg.pp)
   end
 
-  def enum_variant_cast(value : Value, enum_variant_type : Type::EnumVariantType, target_type : Type) : Value
+  def enum_payload_bitcast(value : Value, enum_variant_type : Type::EnumVariantType, target_type : Type) : Value
     bitcast(value, target_type)
   end
 

@@ -37,9 +37,10 @@ class Myc::Backend::C::BB < Myc::Backend::AbstractBB
 
   def ret(val : Value?)
     if val
-      emit "_result = #{c_val(val)};"
+      emit "return #{c_val(val)};"
+    else
+      emit "return;"
     end
-    emit "goto ret;"
   end
 
   def call(name : String, type_fn : Type::Fn, args : Array(Value)) : Value?
@@ -395,7 +396,7 @@ class Myc::Backend::C::BB < Myc::Backend::AbstractBB
     wrap_res(t, type, arg.pp)
   end
 
-  def enum_variant_cast(value : Value, enum_variant_type : Type::EnumVariantType, target_type : Type) : Value
+  def enum_payload_bitcast(value : Value, enum_variant_type : Type::EnumVariantType, target_type : Type) : Value
     Value.new(BBVal.new(c_val(value) + ".vrnt#{enum_variant_type.position}"), target_type, value.mm, value.pp)
   end
 

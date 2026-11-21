@@ -499,7 +499,7 @@ class Myc::Backend::Llvm::BB < Myc::Backend::AbstractBB
     wrap_res(@llvm_builder.va_arg(llvm_val(arg), llvm_type(type)), type, arg.pp)
   end
 
-  def enum_variant_cast(value : Value, enum_variant_type : Type::EnumVariantType, target_type : Type) : Value
+  def enum_payload_bitcast(value : Value, enum_variant_type : Type::EnumVariantType, target_type : Type) : Value
     bitcast(value, target_type)
   end
 

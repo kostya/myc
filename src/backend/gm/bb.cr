@@ -4,7 +4,7 @@ class Myc::Backend::GM::BB < Myc::Backend::AbstractBB
 
   def initialize(@name, @builder, @func, @func_def)
     super
-    @id = @name == "__myc_dummy_bb__" ? NO_ID : @func.as(Func).next_block
+    @id = @name == AbstractBB::DUMMY ? NO_ID : @func.as(Func).next_block
   end
 
   def alloca(name : String, type : Type) : Value
@@ -587,7 +587,7 @@ class Myc::Backend::GM::BB < Myc::Backend::AbstractBB
     wrap_res(t, type, arg.pp)
   end
 
-  def enum_variant_cast(value : Value, enum_variant_type : Type::EnumVariantType, target_type : Type) : Value
+  def enum_payload_bitcast(value : Value, enum_variant_type : Type::EnumVariantType, target_type : Type) : Value
     bitcast(value, target_type)
   end
 

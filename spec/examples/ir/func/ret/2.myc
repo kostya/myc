@@ -1,0 +1,33 @@
+STRUCT :bla
+  TYPE :i32
+ENDSTRUCT
+
+FUNC :test
+  RETURN
+    TYPE :bla
+  BODY
+    PUSH 42
+    CREATE :bla
+    RET
+ENDFUNC
+
+FUNC :test2
+  RETURN
+    TYPE :bla
+  BODY
+    PUSH 43
+    CREATE :bla
+    LOCAL :x :bla
+    STORE
+    LOCAL :x
+    RET
+ENDFUNC
+
+FUNC :main
+  BODY
+    CALL :test
+    INSPECT
+    CALL :test2
+    INSPECT
+ENDFUNC
+

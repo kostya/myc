@@ -25,7 +25,7 @@ abstract class Myc::Backend::AbstractVisitor
     @was_ret = false
     @pending_labels = Hash(String, AbstractBB).new
     @labels = Hash(String, AbstractBB).new
-    @dummy_bb = func.new_raw_bb("__myc_dummy_bb__")
+    @dummy_bb = func.new_raw_bb(AbstractBB::DUMMY)
     @slots = Deque(Hash(String, Value)).new
     @all_slots = Hash(String, Value).new
     @instruction_id = 0_u32
@@ -41,6 +41,8 @@ abstract class Myc::Backend::AbstractVisitor
     if @pending_labels.any?
       raise error("missing label: #{@pending_labels.keys.join(", ")}")
     end
+
+    add_auto_ret unless @func_def.body.not_nil!.list.last?.is_a?(Opcode::Ret)
 
     self
   end
@@ -162,18 +164,24 @@ abstract class Myc::Backend::AbstractVisitor
     if op.else_seq.list.any?
       then_bb = func.new_bb("then")
       else_bb = func.new_bb("else")
-      endif_bb = func.new_bb("endif")
+      endif_bb = nil
       @bb.cond(cond, then_bb, else_bb)
 
       @bb = then_bb
       visit(op.then_seq)
-      @bb.jmp(endif_bb)
+      unless @bb.dummy?
+        endif_bb ||= func.new_bb("endif")
+        @bb.jmp(endif_bb)
+      end
 
       @bb = else_bb
       visit(op.else_seq)
-      @bb.jmp(endif_bb)
+      unless @bb.dummy?
+        endif_bb ||= func.new_bb("endif")
+        @bb.jmp(endif_bb)
+      end
 
-      @bb = endif_bb
+      @bb = endif_bb || dummy_bb
     else
       then_bb = func.new_bb("then")
       endif_bb = func.new_bb("endif")
@@ -668,20 +676,21 @@ abstract class Myc::Backend::AbstractVisitor
   end
 
   def visit(op : Opcode::Ret)
-    if res = @func.result
+    if @func.func_def.have_ret?
       @was_ret = true
+      ret_type = @func.func_def.type_fn.ret
       value = pop_rhs
-      unless res.type.eq?(value.type)
-        if value2 = @bb.to?(value, value.type, res.type)
+      unless ret_type.eq?(value.type)
+        if value2 = @bb.to?(value, value.type, ret_type)
           value = value2
         else
-          raise error("type mismatch: expected #{res.type}, got #{value.type}")
+          raise error("type mismatch: expected #{ret_type}, got #{value.type}")
         end
       end
-      res.store(self, value)
+      @bb.ret(value)
+    else
+      @bb.ret(nil)
     end
-
-    @bb.jmp(@func.ret_bb)
     @bb = dummy_bb
   end
 
@@ -799,7 +808,7 @@ abstract class Myc::Backend::AbstractVisitor
       from_size = builder.layout.size_of(from_type)
       to_size = builder.layout.size_of(to_type)
       if from_size >= to_size
-        self << value._to_ref(self).bitcast_flat(self, to_type)
+        self << value.ensure_ref(self).bitcast_flat(self, to_type)
         return
       else
         raise error("#{from_type}(#{from_size}) < #{to_type}(#{to_size})")
@@ -843,21 +852,27 @@ abstract class Myc::Backend::AbstractVisitor
 
     case_bbs = op.cases_seq.map { func.new_bb("switch_case") }
     default_bb = func.new_bb("switch_default")
-    end_bb = func.new_bb("switch_end")
+    end_bb = nil
 
     @bb.switch(index, case_values, case_bbs, default_bb)
 
     case_bbs.each_with_index do |case_bb, i|
       @bb = case_bb
       visit(op.cases_seq[i])
-      @bb.jmp(end_bb)
+      unless @bb.dummy?
+        end_bb ||= func.new_bb("switch_end")
+        @bb.jmp(end_bb)
+      end
     end
 
     @bb = default_bb
     visit(op.else_seq)
-    @bb.jmp(end_bb)
+    unless @bb.dummy?
+      end_bb ||= func.new_bb("switch_end")
+      @bb.jmp(end_bb)
+    end
 
-    @bb = end_bb
+    @bb = end_bb || dummy_bb
   end
 
   def visit(op : Opcode::Unary)
@@ -903,7 +918,7 @@ abstract class Myc::Backend::AbstractVisitor
         self << @bb.bb_addr(find_or_create_label(name))
       end
     else
-      self << pop._to_ref(self).addr(self)
+      self << pop.ensure_ref(self).addr(self)
     end
   end
 
@@ -918,7 +933,7 @@ abstract class Myc::Backend::AbstractVisitor
         value = value.field(self, 1)
         @stack << value
         if ct = type.composite_value_type
-          self << @bb.enum_variant_cast(pop._to_ref(self), type, ct)
+          self << @bb.enum_payload_bitcast(pop.ensure_ref(self), type, ct)
           visit Opcode::Field.new(op.index - 1)
         else
           raise error("no composite type for #{type}, bug")
@@ -1115,5 +1130,12 @@ abstract class Myc::Backend::AbstractVisitor
 
   def loc : Location
     Location.new(@mod.filename, current_op.offset)
+  end
+
+  protected def add_auto_ret
+    if func_def.have_ret?
+      visit Opcode::Local.new("__myc_result__", func_def.type_fn.ret)
+    end
+    visit Opcode::Ret.new
   end
 end

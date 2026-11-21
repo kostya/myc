@@ -1,0 +1,51 @@
+FUNC :test
+  RETURN
+    TYPE :i8
+  BODY
+    PUSH 259
+    LOCAL :x :i32
+    STORE
+    LOCAL :x
+    AS :i8
+    RET
+ENDFUNC
+
+FUNC :test2
+  RETURN
+    TYPE :i8
+  BODY
+    PUSH 260
+    AS :i8
+    RET
+ENDFUNC
+
+FUNC :test3
+  RETURN
+    TYPE :bool
+  BODY
+    PUSH false
+    RET
+ENDFUNC
+
+FUNC :test4
+  RETURN
+    TYPE :bool
+  BODY
+    PUSH 1
+    PUSH 1
+    BINARY :eq
+    RET
+ENDFUNC
+
+FUNC :main
+  BODY
+    CALL :test
+    INSPECT
+    CALL :test2
+    INSPECT
+    CALL :test3
+    INSPECT
+    CALL :test4
+    INSPECT
+ENDFUNC
+

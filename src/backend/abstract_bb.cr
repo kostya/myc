@@ -5,7 +5,13 @@ abstract class Myc::Backend::AbstractBB
   getter func_def : Mod::FuncDef
   property number : Int32 = 0
 
+  DUMMY = "__myc_dummy_bb__"
+
   def initialize(@name, @builder, @func, @func_def)
+  end
+
+  def dummy?
+    @name == DUMMY
   end
 
   abstract def alloca(name : String, type : Type) : Value
@@ -29,7 +35,7 @@ abstract class Myc::Backend::AbstractBB
   abstract def addr(value : Value, ptr_type : Type) : Value
   abstract def offset(value : Value, target_type : Type, offset : Value) : Value
   abstract def bitcast(value : Value, to_type : Type) : Value
-  abstract def enum_variant_cast(value : Value, enum_variant_type : Type::EnumVariantType, target_type : Type) : Value
+  abstract def enum_payload_bitcast(value : Value, enum_variant_type : Type::EnumVariantType, target_type : Type) : Value
 
   abstract def binary(op : Opcode::Binary::Op, lhs : Value, rhs : Value) : Value?
   abstract def unary(op : Opcode::Unary::Op, rhs : Value) : Value?

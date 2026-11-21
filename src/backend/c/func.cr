@@ -54,21 +54,8 @@ class Myc::Backend::C::Func < Myc::Backend::AbstractFunc
 
     alloca_bb.as(BB).copy_data(body_io, false)
 
-    v.bb.as(BB).emit "goto ret;"
-
     body_bb.as(BB).copy_data(body_io, false)
-    @bbs.each do |name, bb|
-      bb.as(BB).copy_data(body_io, true)
-    end
-
-    emit("")
-    emit("ret:;")
-
-    if @func_def.have_ret?
-      emit("  return __myc_result;")
-    else
-      emit("  return;")
-    end
+    all_bbs.each &.as(BB).copy_data(body_io, true)
 
     emit("}")
   end
