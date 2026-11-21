@@ -23,3 +23,9 @@ class Clang::TranslationUnit
     end.compact
   end
 end
+
+struct Clang::Cursor
+  def attribute?
+    LibC.clang_isAttribute(@cursor.kind) != 0
+  end
+end

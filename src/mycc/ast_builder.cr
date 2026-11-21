@@ -1,11 +1,5 @@
-struct Clang::Cursor
-  def attribute?
-    LibC.clang_isAttribute(@cursor.kind) != 0
-  end
-end
-
 class Myc::Mycc::ASTBuilder
-  getter source : Source
+  getter source : CSource
   getter tu : Clang::TranslationUnit
   getter mod : Mod
   getter typer : Typer
@@ -204,18 +198,14 @@ class Myc::Mycc::ASTBuilder
       end
     end
 
-    if fn_type = func_type.as?(Type::Fn)
-      fn_type.args.each_with_index do |arg_type, i|
-        param_name = param_names[i]? || "__param_#{i}"
-        if arg_type.is_a?(Type::FlatType)
-          arg_type = typer.to_ptr(arg_type.target_type, location(cursor))
-        end
-        param = TypedAST::Function::ParamInfo.new(param_name, arg_type, @current_function_params.size)
-        if arg_type.eq?(typer.valist)
-          param.changed = true
-        end
-        @current_function_params[param_name] = param
+    fn_type = func_type.as(Type::Fn)
+    fn_type.args.each_with_index do |arg_type, i|
+      param_name = param_names[i]? || "__param_#{i}"
+      param = TypedAST::Function::ParamInfo.new(param_name, arg_type, @current_function_params.size)
+      if arg_type.eq?(typer.valist)
+        param.changed = true
       end
+      @current_function_params[param_name] = param
     end
 
     children(cursor).each do |child|
@@ -241,6 +231,7 @@ class Myc::Mycc::ASTBuilder
       location(cursor),
       vaarg,
       is_static,
+      fn_type,
       @current_function_addr_labels.any? ? @current_function_addr_labels.dup : nil,
     )
   ensure
@@ -2297,7 +2288,13 @@ class Myc::Mycc::ASTBuilder
       get_type(cursor, canonical.named_type, count)
     when .function_proto?
       ret = get_type(cursor, canonical.result_type, count)
-      arg_types = type.arguments.map { |t| get_type(cursor, t, count) }
+      arg_types = type.arguments.map do |t|
+        t2 = get_type(cursor, t, count)
+        if t2.is_a?(Type::FlatType)
+          t2 = typer.to_ptr(t2.target_type, t2.loc)
+        end
+        t2
+      end
       vaarg = canonical.variadic?
 
       type_fn = Type::Fn.new(location(cursor), arg_types, ret, vaarg: vaarg)

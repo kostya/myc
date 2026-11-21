@@ -38,5 +38,6 @@ class Myc::Opcode::Loop < Myc::Opcode
   property step_seq : Seq
 
   def initialize(@init_seq, @cond_seq, @body_seq, @step_seq)
+    @cond_seq.stack_balance = 1
   end
 end

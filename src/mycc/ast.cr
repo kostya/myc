@@ -564,8 +564,9 @@ module Myc::Mycc::TypedAST
     getter vaarg : Bool
     getter is_static : Bool
     getter addr_labels : Array(String)?
+    getter type_fn : Type::Fn
 
-    def initialize(@name, @params, @return_type, @body, @location, @vaarg, @is_static, @addr_labels = nil); end
+    def initialize(@name, @params, @return_type, @body, @location, @vaarg, @is_static, @type_fn, @addr_labels = nil); end
 
     def inspect(io : IO)
       io << "Function " << name << "("

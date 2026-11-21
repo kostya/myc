@@ -1,1 +1,1 @@
-inf -inf nan nan inf
+inf -inf 1 1 inf

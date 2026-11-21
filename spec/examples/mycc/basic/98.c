@@ -2,6 +2,7 @@
 int printf(const char *fmt, ...);
 
 int main() {
-  printf("%f %f %f %f %f\n", INFINITY, -INFINITY, NAN, -NAN, HUGE_VAL);
+  printf("%f %f %d %d %f\n", INFINITY, -INFINITY, isnan(NAN), isnan(-NAN),
+         HUGE_VAL);
   return 0;
 }

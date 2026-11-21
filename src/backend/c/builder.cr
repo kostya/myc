@@ -73,6 +73,14 @@ class Myc::Backend::C::Builder < Myc::Backend::AbstractBuilder
     case init
     when InitValue::Intval
       io << init.val
+      t = init.type.as(Type::IntType)
+      if t.bytes_count == 8
+        if t.signed
+          io << "LL"
+        else
+          io << "ULL"
+        end
+      end
     when InitValue::Boolval
       io << (init.val ? 1 : 0)
     when InitValue::F32

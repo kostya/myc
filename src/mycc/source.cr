@@ -1,4 +1,4 @@
-class Myc::Mycc::Source
+class Myc::Mycc::CSource
   getter filename : String
   getter content : String
   getter name : String

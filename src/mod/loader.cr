@@ -369,7 +369,6 @@ class Myc::Mod::Loader
     if body_seq
       init_seq ||= Opcode::Seq.new
       cond_seq ||= Opcode::Seq.new
-      cond_seq.stack_balance = 1
       step_seq ||= Opcode::Seq.new
       Opcode::Loop.new(init_seq, cond_seq, body_seq, step_seq).with_position(node)
     else

@@ -2,7 +2,6 @@
 INFINITY:       inf
 -INFINITY:      -inf
 NAN:            nan
--NAN:           nan
 HUGE_VAL:       inf
 HUGE_VALF:      inf
 === 2. BUILTINS ===

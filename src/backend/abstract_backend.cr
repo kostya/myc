@@ -57,42 +57,54 @@ abstract class Myc::Backend::AbstractBackend
     input
   end
 
-  protected def parse_files(files : Array(String)) : Array({Mod, Source::Dom})
-    files.map do |input|
-      Myc.measure("load:parse") do
-        src = File.read(input)
-        tokens = Source::Tokenizer.new(src, input).parse
-        parser = Source::Parser.new(input, tokens)
-        parser.parse
-        mod = Mod.new(File.basename(input, ext), input, typer)
-        {mod, parser.dom}
-      end
+  record LoadMod, mod : Mod, dom : Source::Dom? = nil
+
+  protected def parse_files(files : Array(String)) : Array(LoadMod)
+    Myc.measure("load:parse") do
+      files.map { |input| parse_file(input) }
     end
   end
 
-  protected def run_phases(parsed : Array({Mod, Source::Dom})) : Array(Mod)
+  protected def parse_file(input : String) : LoadMod
+    src = File.read(input)
+    tokens = Source::Tokenizer.new(src, input).parse
+    parser = Source::Parser.new(input, tokens)
+    parser.parse
+    mod = Mod.new(File.basename(input, ext), input, typer)
+    LoadMod.new(mod, parser.dom)
+  end
+
+  protected def load_mod(l : LoadMod)
+    loader = Mod::Loader.new(l.dom.not_nil!, l.mod.filename, typer, l.mod)
+    loader.load
+  end
+
+  protected def run_phases(parsed : Array(LoadMod)) : Array(Mod)
     collector = Mod::TypeCollector.new(typer)
     Myc.measure("load:collect_types") do
-      parsed.each { |mod, dom| collector.collect(mod, dom) }
+      parsed.each do |l|
+        if dom = l.dom
+          collector.collect(l.mod, dom)
+        end
+      end
     end
 
     Myc.measure("load:fill_types") do
-      parsed.each do |mod, dom|
-        filler = Mod::TypeFiller.new(typer, mod)
-        filler.fill(dom)
+      parsed.each do |l|
+        if dom = l.dom
+          filler = Mod::TypeFiller.new(typer, l.mod)
+          filler.fill(dom)
+        end
       end
     end
 
     Myc.measure("load:load_mods") do
-      parsed.each do |mod, dom|
-        loader = Mod::Loader.new(dom, mod.filename, typer, mod)
-        loader.load
-      end
+      parsed.each { |l| load_mod(l) }
     end
 
     Myc.measure("load:finalize_enums") do
       layout = new_layout
-      parsed.each { |mod, _| mod.finalize_enums(layout) }
+      parsed.each { |l| l.mod.finalize_enums(layout) }
     end
 
     Myc.measure("load:check_types") do
@@ -108,10 +120,10 @@ abstract class Myc::Backend::AbstractBackend
     end
 
     Myc.measure("load:check_type_recursion") do
-      parsed.each { |mod, _| mod.check_type_recursion! }
+      parsed.each { |l| l.mod.check_type_recursion! }
     end
 
-    parsed.map(&.first)
+    parsed.map(&.mod)
   end
 
   protected def load_all(files : Array(String), force_build_header = false) : Tuple(Array(Mod), Mod)
@@ -236,9 +248,13 @@ abstract class Myc::Backend::AbstractBackend
         print "format #{input} "
         myc_files = resolve_inputs([input])
         parsed = parse_files(myc_files)
-        _, dom = parsed.first
-        File.open(input, "w") { |f| IO.copy(dom.serialize, f) }
-        puts "ok!".colorize(:green)
+        l = parsed.first
+        if dom = l.dom
+          File.open(input, "w") { |f| IO.copy(dom.serialize, f) }
+          puts "ok!".colorize(:green)
+        else
+          puts "error! (no dom)".colorize(:red)
+        end
       rescue ex : Error
         puts "error! (#{ex.message})".colorize(:red)
       end

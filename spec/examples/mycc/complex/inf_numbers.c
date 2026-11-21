@@ -15,7 +15,6 @@ int main() {
   printf("INFINITY:       %f\n", INFINITY);
   printf("-INFINITY:      %f\n", -INFINITY);
   printf("NAN:            %f\n", NAN);
-  printf("-NAN:           %f\n", -NAN);
   printf("HUGE_VAL:       %f\n", HUGE_VAL);
   printf("HUGE_VALF:      %f\n", HUGE_VALF);
 

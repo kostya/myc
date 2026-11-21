@@ -60,20 +60,24 @@ class Myc::Backend::Mycc::Backend < Myc::Backend::AbstractBackend
     end
   end
 
-  protected def resolve_input(input : String) : String
-    return input if input.ends_with?(".myc")
+  protected def parse_file(input : String) : LoadMod
+    if input.ends_with?(".myc")
+      super
+    else
+      mod = Mod.new(File.basename(input, ext), input, @typer)
+      LoadMod.new(mod)
+    end
+  end
 
-    raise data.error("unexpected file extension `#{input}`, expected #{ext}") unless input.ends_with?(ext)
-
-    raise data.error("input not found `#{input}`") unless File.exists?(input)
-    raise data.error("input not file `#{input}`") unless File.file?(input)
+  protected def load_mod(l : LoadMod)
+    return super if l.mod.filename.ends_with?(".myc")
 
     Myc.debug(:mycc) do
       puts "---------------------------- Source ---------------------------------"
-      puts File.read(input)
+      puts File.read(l.mod.filename)
     end
 
-    source = Myc.measure("mycc:new_source") { ::Myc::Mycc::Source.new(input) }
+    source = Myc.measure("mycc:new_source") { ::Myc::Mycc::CSource.new(l.mod.filename) }
     tu = Myc.measure("mycc:clang_parse") { source.clang_parse }
 
     Myc.debug(:mycc) do
@@ -93,29 +97,32 @@ class Myc::Backend::Mycc::Backend < Myc::Backend::AbstractBackend
       builder.mod.finalize_enums(new_layout)
     end
 
-    io, io2 = Myc.measure("mycc:codegen") do
-      c = ::Myc::Mycc::CodeGenerator.new(builder.mod.typer, builder)
+    Myc.measure("mycc:codegen") do
+      c = ::Myc::Mycc::CodeGenerator.new(builder.mod.typer, builder, l.mod)
       c.generate(ast)
-    end
-
-    path = new_tmp_path("mycc", "myc")
-    Myc.measure("mycc:store") do
-      File.open(path, "w") { |f| IO.copy(io, f); IO.copy(io2, f) }
     end
 
     Myc.debug(:mycc) do
       puts "---------------------------- MYC ---------------------------------"
-      io.rewind
-      io2.rewind
-      IO.copy(io, STDOUT)
-      IO.copy(io2, STDOUT)
+      saver = Mod::Saver.new(l.mod)
+      dom = saver.save
+      IO.copy(dom.serialize, STDOUT)
     end
 
     Myc.debug(:mycc) do
       puts "-------------------------------------------------------------"
     end
+  end
 
-    path
+  protected def resolve_input(input : String) : String
+    return input if input.ends_with?(".myc")
+
+    raise data.error("unexpected file extension `#{input}`, expected #{ext}") unless input.ends_with?(ext)
+
+    raise data.error("input not found `#{input}`") unless File.exists?(input)
+    raise data.error("input not file `#{input}`") unless File.file?(input)
+
+    input
   end
 
   @shared_types : SharedTypes?
