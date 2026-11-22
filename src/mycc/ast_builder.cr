@@ -1262,13 +1262,13 @@ class Myc::Mycc::ASTBuilder
         TypedAST::BinaryOp.new(op_name, right, left, right.type, loc)
       elsif left.type.is_a?(Type::FlatType) && right.type.is_a?(Type::IntType)
         elem_type = left.type.as(Type::FlatType).target_type
-        ptr_type = typer.to_ptr(elem_type, loc)
+        ptr_type = typer.to_ptr(elem_type)
         left = auto_cast(left, ptr_type, loc)
         right = auto_cast(right, typer.u64, loc)
         TypedAST::BinaryOp.new(op_name, left, right, ptr_type, loc)
       elsif right.type.is_a?(Type::FlatType) && left.type.is_a?(Type::IntType)
         elem_type = right.type.as(Type::FlatType).target_type
-        ptr_type = typer.to_ptr(elem_type, loc)
+        ptr_type = typer.to_ptr(elem_type)
         right = auto_cast(right, ptr_type, loc)
         left = auto_cast(left, typer.u64, loc)
         TypedAST::BinaryOp.new(op_name, right, left, ptr_type, loc)
@@ -1317,7 +1317,7 @@ class Myc::Mycc::ASTBuilder
       if operand && operand.type.is_a?(Type::Fn)
         operand
       else
-        ptr_type = typer.to_ptr(operand.type, loc)
+        ptr_type = typer.to_ptr(operand.type)
         TypedAST::AddrOf.new(operand, ptr_type, loc)
       end
     when "++", "--"
@@ -1913,7 +1913,7 @@ class Myc::Mycc::ASTBuilder
     name = cursor.spelling
     type = get_type(cursor, cursor.type)
     if @current_function_params.has_key?(name) && type.is_a?(Type::FlatType)
-      type = typer.to_ptr(type.target_type, location(cursor))
+      type = typer.to_ptr(type.target_type)
     end
     if @enum_values.has_key?(name)
       value = @enum_values[name]
@@ -2232,7 +2232,7 @@ class Myc::Mycc::ASTBuilder
       get_type(cursor, canonical.pointee_type, count)
     when .variable_array?
       elem_type = get_type(cursor, canonical.array_element_type, count)
-      typer.to_ptr(elem_type, location(cursor))
+      typer.to_ptr(elem_type)
     when .block_pointer?
       typer.voidp
     when .pointer?
@@ -2240,7 +2240,7 @@ class Myc::Mycc::ASTBuilder
       if pointee.is_a?(Type::Fn)
         pointee
       else
-        typer.to_ptr(get_type(cursor, canonical.pointee_type, count), location(cursor))
+        typer.to_ptr(get_type(cursor, canonical.pointee_type, count))
       end
     when .record?
       spelling = canonical.spelling
@@ -2283,7 +2283,7 @@ class Myc::Mycc::ASTBuilder
       type_name = "flat<#{get_type(cursor, canonical.array_element_type, count)}, #{canonical.array_size}>"
       typer.find(type_name, location(cursor))
     when .incomplete_array?
-      typer.to_ptr(get_type(cursor, canonical.array_element_type, count), location(cursor))
+      typer.to_ptr(get_type(cursor, canonical.array_element_type, count))
     when .elaborated?
       get_type(cursor, canonical.named_type, count)
     when .function_proto?
@@ -2291,7 +2291,7 @@ class Myc::Mycc::ASTBuilder
       arg_types = type.arguments.map do |t|
         t2 = get_type(cursor, t, count)
         if t2.is_a?(Type::FlatType)
-          t2 = typer.to_ptr(t2.target_type, t2.loc)
+          t2 = typer.to_ptr(t2.target_type)
         end
         t2
       end
@@ -2359,7 +2359,7 @@ class Myc::Mycc::ASTBuilder
   private def auto_decay(node : TypedAST::Node) : TypedAST::Node
     if node.type.is_a?(Type::FlatType)
       flat_type = node.type.as(Type::FlatType)
-      ptr_type = @typer.to_ptr(flat_type.target_type, node.location)
+      ptr_type = @typer.to_ptr(flat_type.target_type)
       addr = TypedAST::AddrOf.new(node, ptr_type, node.location)
       return TypedAST::Cast.new(addr, ptr_type, node.location)
     end

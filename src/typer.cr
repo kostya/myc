@@ -68,12 +68,12 @@ class Myc::Typer
     find_in_caches(id_name) || Parser.new(id_name, self, loc).get_type
   end
 
-  def to_ptr(type : Type, loc : Location) : Type
-    find("ptr<#{type.id_name}>", loc)
+  def to_ptr(type : Type) : Type
+    find("ptr<#{type.id_name}>", type.loc)
   end
 
   def to_unsigned(type : Type::IntType) : Type
-    find("u" + type.id_name[1..-1], Location.new("", 0))
+    find("u" + type.id_name[1..-1], type.loc)
   end
 end
 

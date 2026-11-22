@@ -250,7 +250,7 @@ abstract class Myc::Backend::AbstractVisitor
 
     arg = [
       Opcode::Param.new(0),
-      Opcode::As.new(mod.typer.to_ptr(type, loc)),
+      Opcode::As.new(mod.typer.to_ptr(type)),
       Opcode::Deref.new,
     ] of Opcode
 
@@ -301,7 +301,7 @@ abstract class Myc::Backend::AbstractVisitor
           else_seq << Opcode::Printf.new(1)
 
           body << Opcode::Param.new(0)
-          body << Opcode::As.new(mod.typer.to_ptr(type, loc))
+          body << Opcode::As.new(mod.typer.to_ptr(type))
           body << Opcode::Deref.new
           body << Opcode::As.new(ptr_int_type)
           body << push(0_i64, ptr_int_type)
@@ -694,13 +694,13 @@ abstract class Myc::Backend::AbstractVisitor
     visit Opcode::SizeOf.new(op.type)
     visit Opcode::Stack.new(:swap2)
     visit Opcode::Call.new("calloc")
-    visit Opcode::As.new(mod.typer.to_ptr(op.type, loc))
+    visit Opcode::As.new(mod.typer.to_ptr(op.type))
   end
 
   def visit(op : Opcode::Alloca)
     visit Opcode::To.new(mod.typer.u64)
     size = pop_rhs
-    self << @bb.vla(op.type, mod.typer.to_ptr(op.type, loc), size)
+    self << @bb.vla(op.type, mod.typer.to_ptr(op.type), size)
   end
 
   def visit(op : Opcode::SizeOf)
@@ -1162,7 +1162,7 @@ abstract class Myc::Backend::AbstractVisitor
 
   protected def addr(value : Value) : Value
     raise error("Cannot take address of val, store it to LOCAL before") if value.val?
-    @bb.addr(value, mod.typer.to_ptr(value.type, loc))
+    @bb.addr(value, mod.typer.to_ptr(value.type))
   end
 
   protected def deref(value : Value) : Value

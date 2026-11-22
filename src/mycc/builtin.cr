@@ -164,7 +164,7 @@ class Myc::Mycc::CodeGenerator
     emit_op(Opcode::Store.new)
     emit_op(Opcode::Local.new(tmp_name))
     emit_op(Opcode::Addr.new)
-    emit_op(Opcode::As.new(typer.to_ptr(uint_ty, Location.new("", 0))))
+    emit_op(Opcode::As.new(typer.to_ptr(uint_ty)))
     emit_op(Opcode::Deref.new)
     emit_op(Opcode::Slot.new(slot))
   end

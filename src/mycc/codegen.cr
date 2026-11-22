@@ -610,7 +610,7 @@ class Myc::Mycc::CodeGenerator
     when Type::FlatType
       emit_op(Opcode::Addr.new)
       elem_type = type.target_type
-      emit_op Opcode::As.new(typer.to_ptr(elem_type, Location.new("", 0)))
+      emit_op Opcode::As.new(typer.to_ptr(elem_type))
     end
 
     emit_op(Opcode::Binary.new(:add))

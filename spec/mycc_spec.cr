@@ -59,9 +59,9 @@ context "mycc dump" do
         PUSH 2
         PUSH 1
         BINARY :add
-        LOCAL :__s0_x :i32
+        LOCAL :__s1_x :i32
         STORE
-        LOCAL :__s0_x
+        LOCAL :__s1_x
         RET
     ENDFUNC
     ______________RESULT
@@ -75,12 +75,12 @@ context "mycc dump" do
       }
     ______________SOURCE
     alloca:
-      %__s0_x = alloca i32, align 4
+      %__s1_x = alloca i32, align 4
       br label %body
 
     body:                                             ; preds = %alloca
-      store i32 3, ptr %__s0_x, align 4
-      %0 = load i32, ptr %__s0_x, align 4
+      store i32 3, ptr %__s1_x, align 4
+      %0 = load i32, ptr %__s1_x, align 4
       ret i32 %0
     }
     ______________RESULT
@@ -95,12 +95,12 @@ context "mycc dump" do
     ______________SOURCE
     export function w $main() {
     @start
-      %__s0_x =l alloc4 4
+      %__s1_x =l alloc4 4
       jmp @body
     @body
       %t1 =w add 1, 2
-      storew %t1, %__s0_x
-      %t2 =w loadw %__s0_x
+      storew %t1, %__s1_x
+      %t2 =w loadw %__s1_x
       ret %t2
     }
     ______________RESULT
@@ -139,10 +139,10 @@ context "mycc dump" do
     ______________SOURCE
     __attribute__((noinline)) int32_t main(int arg0, char *_arg1[]) {
     uint8_t** arg1 = (uint8_t**)_arg1;
-      int32_t __s0_x;
+      int32_t __s1_x;
       int32_t t1 = 1 + 2;
-      __s0_x = t1;
-      int32_t t2 = __s0_x;
+      __s1_x = t1;
+      int32_t t2 = __s1_x;
       return t2;
     }
     ______________RESULT
@@ -168,9 +168,9 @@ context "dump more" do
       BODY
         PUSH 42
         CREATE :Bla
-        LOCAL :__s0_bla :Bla
+        LOCAL :__s1_bla :Bla
         STORE
-        LOCAL :__s0_bla
+        LOCAL :__s1_bla
         FIELD 0
         RET
     ENDFUNC
@@ -201,9 +201,9 @@ context "dump more" do
         PUSH 42
         CREATE :Bla::x
         AS :Bla
-        LOCAL :__s0_bla :Bla
+        LOCAL :__s1_bla :Bla
         STORE
-        LOCAL :__s0_bla
+        LOCAL :__s1_bla
         AS :Bla::x
         FIELD 1
         RET
@@ -770,9 +770,9 @@ context "mycc inliner" do
       BODY
         GLOBAL :G
         ADDR
-        LOCAL :__s0_s :ptr<S>
+        LOCAL :__s1_s :ptr<S>
         STORE
-        LOCAL :__s0_s
+        LOCAL :__s1_s
         TO :ptr<S>
         SLOT :__empty_1_0_0
         PUSH 0
