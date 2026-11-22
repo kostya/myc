@@ -87,14 +87,14 @@ cd plugins/qbe; make; cd -
 crystal build src/cli/qbe.cr --release -o myc-qbe
 
 # compile Myc IR GM backend
-# requires cppgm 0.10.0 or later; GM loads lib/libcppgm_lowir from plugins/cppgm,
+# requires cppgm 0.10.3 or later; GM loads lib/libcppgm_lowir from plugins/cppgm,
 # or the library given by the GM_LIBRARY env variable, only when GM is selected
 
 # on linux x86-64
-mkdir -p plugins/cppgm && wget -qO- https://github.com/vishvananda/cppgm/releases/download/v0.10.0/cppgm-v0.10.0-linux-x86_64.tar.gz | tar -xz -C plugins/cppgm --strip-components=1
+mkdir -p plugins/cppgm && wget -qO- https://github.com/vishvananda/cppgm/releases/download/v0.10.3/cppgm-v0.10.3-linux-x86_64.tar.gz | tar -xz -C plugins/cppgm --strip-components=1
 
 # on macos-arm64
-mkdir -p plugins/cppgm && wget -qO- https://github.com/vishvananda/cppgm/releases/download/v0.10.0/cppgm-v0.10.0-macos-arm64.tar.gz | tar -xz -C plugins/cppgm --strip-components=1
+mkdir -p plugins/cppgm && wget -qO- https://github.com/vishvananda/cppgm/releases/download/v0.10.3/cppgm-v0.10.3-macos-arm64.tar.gz | tar -xz -C plugins/cppgm --strip-components=1
 
 crystal build src/cli/gm.cr --release -o myc-gm
 # or link the library statically

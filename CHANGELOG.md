@@ -1,15 +1,15 @@
-## HEAD
+## 0.13.0 (22.11.2026)
 * mycc: improve codegen speed by emitting opcodes directly instead of text
 * [BREAKING CHANGE] LOOP opcode remove INIT section
 
-## 0.12.3 (20.11.2206)
+## 0.12.3 (20.11.2026)
 * update GM to 0.10.0, support arm64 
 
-## 0.12.2 (18.11.2206)
+## 0.12.2 (18.11.2026)
 * update GM to 0.9.6
 * fix c unions payloads, #16
 
-## 0.12.1 (15.11.2206)
+## 0.12.1 (15.11.2026)
 * update GM to 0.9.0
 
 ## 0.12.0 (12.11.2026)
