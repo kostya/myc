@@ -97,8 +97,9 @@ context "mycc dump" do
     ______________RESULT
   end
 
-  it "test gm" do
-    mycc_dump(<<-'______________SOURCE', "GM").should contain <<-'______________RESULT'.strip
+  if GM_ENABLED && GM_SPEC_BACKEND
+    it "test gm" do
+      mycc_dump(<<-'______________SOURCE', "GM").should contain <<-'______________RESULT'.strip
       int main() {
         int x = 1 + 2;
         return x;
@@ -117,6 +118,7 @@ context "mycc dump" do
         return i32 %t2
     }
     ______________RESULT
+    end
   end
 
   it "test c" do
