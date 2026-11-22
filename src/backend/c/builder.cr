@@ -173,7 +173,17 @@ class Myc::Backend::C::Builder < Myc::Backend::AbstractBuilder
   end
 
   private def add_shared_header(io)
-    io << "#include \"stdint.h\"\n"
+    io << <<-TYPES
+    typedef unsigned char uint8_t;
+    typedef signed char int8_t;
+    typedef unsigned short uint16_t;
+    typedef signed short int16_t;
+    typedef unsigned int uint32_t;
+    typedef signed int int32_t;
+    typedef unsigned long uint64_t;
+    typedef signed long int64_t;
+
+    TYPES
     io << "#define NULL ((void*)0)\n"
     io << "#include <stdarg.h>\n" if use_valist_feature
     io << "void* memcpy(void* arg0, void* arg1, uint64_t arg2);\n" if use_memcpy_feature

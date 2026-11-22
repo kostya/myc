@@ -319,7 +319,7 @@ class Examples
       filtered_modes.reject! { |b, m| b == "GM" }
     end
 
-    puts "Test modes: #{filtered_modes.inspect}, CC: #{ENV["CC"]?}"
+    puts "Test modes: #{filtered_modes.inspect}, CC: #{Myc::Backend::AbstractBackend::CC}"
     filtered_modes.each do |backend, mode|
       examples.each do |example|
         example.register(backend, mode)

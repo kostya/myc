@@ -8,7 +8,7 @@ on:
 
 env:
   QBE_SHA: "fab6d40620ac8e23fa42cc9b945688ca5edeb091"
-  CPPGM: "0.10.0"
+  CPPGM: "0.10.3"
   INDEX_C_SHA: "019ddd8f9c4b2cac7d0512ebbf78d5b28aff63f5"
 
 jobs:
@@ -26,7 +26,6 @@ jobs:
           - { backend: qbe, cc: gcc }
           - { os: macos-latest, cc: gcc }
           - { os: macos-latest, backend: qbe }
-          - { os: macos-latest, backend: c }
           
     steps:
       - uses: actions/checkout@v4
