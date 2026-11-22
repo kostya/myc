@@ -178,14 +178,7 @@ class Myc::Mycc::CodeGenerator
     sign_shift = size == 64 ? 63_i64 : 31_i64
     frac_mask = size == 64 ? 0x000F_FFFF_FFFF_FFFF_i64 : 0x007F_FFFF_i64
 
-    attrs = Mod::FuncDef::Attr.new(0)
-    node = Source::Node.new(Opcode::Code::FUNC)
-    func_def = Mod::FuncDef.new(
-      node, mod, "__myc_builtin_isinf_sign_#{size}",
-      Type::Fn.new(Location.new("", 0), [float_ty], typer.i32), attrs
-    )
-
-    func_def.body = build_seq do
+    build_func_def("__myc_builtin_isinf_sign_#{size}", Type::Fn.new(Location.new("", 0), [float_ty], typer.i32)) do
       emit_op(Opcode::Param.new(0))
       emit_float_to_int("tmp", "slot", size)
 
@@ -230,8 +223,6 @@ class Myc::Mycc::CodeGenerator
       emit_op(push(0))
       emit_op(Opcode::Ret.new)
     end
-
-    mod.func_defs["__myc_builtin_isinf_sign_#{size}"] = func_def
   end
 
   private def isfinite(size : Int32)
@@ -241,14 +232,7 @@ class Myc::Mycc::CodeGenerator
     exp_mask = size == 64 ? 0x7FF_i64 : 0xFF_i64
     exp_shift = size == 64 ? 52_i64 : 23_i64
 
-    attrs = Mod::FuncDef::Attr.new(0)
-    node = Source::Node.new(Opcode::Code::FUNC)
-    func_def = Mod::FuncDef.new(
-      node, mod, "__myc_builtin_isfinite_#{size}",
-      Type::Fn.new(Location.new("", 0), [float_ty], typer.i32), attrs
-    )
-
-    func_def.body = build_seq do
+    build_func_def("__myc_builtin_isfinite_#{size}", Type::Fn.new(Location.new("", 0), [float_ty], typer.i32)) do
       emit_op(Opcode::Param.new(0))
       emit_float_to_int("tmp", "slot", size)
 
@@ -264,24 +248,14 @@ class Myc::Mycc::CodeGenerator
       emit_op(Opcode::As.new(typer.i32))
       emit_op(Opcode::Ret.new)
     end
-
-    mod.func_defs["__myc_builtin_isfinite_#{size}"] = func_def
   end
 
   private def signbit(size : Int32)
     float_ty = size == 64 ? typer.f64 : typer.f32
     uint_ty = size == 64 ? typer.u64 : typer.u32
-
     sign_shift = size == 64 ? 63_i64 : 31_i64
 
-    attrs = Mod::FuncDef::Attr.new(0)
-    node = Source::Node.new(Opcode::Code::FUNC)
-    func_def = Mod::FuncDef.new(
-      node, mod, "__myc_builtin_signbit_#{size}",
-      Type::Fn.new(Location.new("", 0), [float_ty], typer.i32), attrs
-    )
-
-    func_def.body = build_seq do
+    build_func_def("__myc_builtin_signbit_#{size}", Type::Fn.new(Location.new("", 0), [float_ty], typer.i32)) do
       emit_op(Opcode::Param.new(0))
       emit_float_to_int("tmp", "slot", size)
 
@@ -293,7 +267,5 @@ class Myc::Mycc::CodeGenerator
       emit_op(Opcode::As.new(typer.i32))
       emit_op(Opcode::Ret.new)
     end
-
-    mod.func_defs["__myc_builtin_signbit_#{size}"] = func_def
   end
 end

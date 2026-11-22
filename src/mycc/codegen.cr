@@ -18,16 +18,18 @@ class Myc::Mycc::CodeGenerator
   @func_def : Mod::FuncDef?
 
   def initialize(@typer, @builder, @mod)
-    @vars_stack = [Hash(String, VarInfo).new]
+    @vars_stack = [] of Hash(String, VarInfo)
+    @scope_counter = 0
+
     @params = Hash(String, Int32).new
     @globals = Hash(Tuple(String, String), TypedAST::VarDecl).new
     @local_marks = Set(String).new
     @switch_count = 0
-    @scope_counter = 0
     @temp_counter = 0_u64
     @current_function_name = ""
     @current_function = nil
     @seq = Opcode::Seq.new
+    @current_inline_stats = Mod::Inliner::Stats.new("")
   end
 
   def current_vars : Hash(String, VarInfo)
@@ -43,13 +45,12 @@ class Myc::Mycc::CodeGenerator
     nil
   end
 
-  def push_scope
+  private def scope(&)
     @vars_stack.push(Hash(String, VarInfo).new)
     @scope_counter += 1
-  end
-
-  def pop_scope
+    res = yield
     @vars_stack.pop
+    res
   end
 
   def mangled_name(name : String) : String
@@ -85,7 +86,7 @@ class Myc::Mycc::CodeGenerator
       @globals[{var.func_name, var.name}] = var
     end
 
-    program.functions.each_value { |f| generate_function(f) }
+    program.functions.each_value { |f| f.body ? generate_function(f) : generate_decl(f) }
   end
 
   private def emit_init_element(values : Array(Source::Token::Value), elem : TypedAST::Node, func_name : String)
@@ -151,35 +152,37 @@ class Myc::Mycc::CodeGenerator
     attrs = Mod::FuncDef::Attr.new(0)
     attrs |= Mod::FuncDef::Attr::Vaarg if func.vaarg
     attrs |= Mod::FuncDef::Attr::Private if func.is_static
-    node = Source::Node.new(Opcode::Code::FUNC)
-    func_def = Mod::FuncDef.new(node, mod, func.name, func.type_fn, attrs)
 
-    if body = func.body
-      @func_def = func_def
-
-      func_def.body = build_seq do
-        func.params.each_value do |p|
-          if p.changed
-            m_name = mangled_name(p.name)
-            current_vars[p.name] = VarInfo.new(p.type, m_name)
-            emit_op Opcode::Param.new(p.index)
-            emit_local(m_name, p.type)
-            emit_op Opcode::Store.new
-          else
-            @params[p.name] = p.index
-          end
+    build_func_def(func.name, func.type_fn, attrs) do
+      func.params.each_value do |p|
+        if p.changed
+          m_name = mangled_name(p.name)
+          current_vars[p.name] = VarInfo.new(p.type, m_name)
+          emit_op Opcode::Param.new(p.index)
+          emit_local(m_name, p.type)
+          emit_op Opcode::Store.new
+        else
+          @params[p.name] = p.index
         end
-
-        body.each { |stmt| generate_stmt(stmt) }
       end
-      func_def.inline_stats.finish(func_def)
-      @func_def = nil
-    end
 
-    mod.func_defs[func.name] = func_def
+      func.body.not_nil!.each { |stmt| generate_stmt(stmt) }
+    end
 
     @current_function_name = ""
     @current_function = nil
+  end
+
+  def generate_decl(func : TypedAST::Function)
+    attrs = Mod::FuncDef::Attr.new(0)
+    attrs |= Mod::FuncDef::Attr::Vaarg if func.vaarg
+    attrs |= Mod::FuncDef::Attr::Private if func.is_static
+    node = Source::Node.new(Opcode::Code::FUNC)
+    type_fn = func.type_fn
+    name = func.name
+    node.offset = type_fn.loc.offset
+    func_def = Mod::FuncDef.new(node, mod, name, type_fn, attrs)
+    mod.func_defs[name] = func_def
   end
 
   def generate_stmt(stmt : TypedAST::ExprStmt)
@@ -195,9 +198,9 @@ class Myc::Mycc::CodeGenerator
   end
 
   def generate_stmt(stmt : TypedAST::Block)
-    push_scope
-    stmt.body.each { |s| generate_stmt(s) }
-    pop_scope
+    scope do
+      stmt.body.each { |s| generate_stmt(s) }
+    end
   end
 
   def generate_stmt(stmt : TypedAST::VarDecl)
@@ -304,30 +307,19 @@ class Myc::Mycc::CodeGenerator
 
   def generate_stmt(stmt : TypedAST::If)
     generate_expr(stmt.condition)
-
-    push_scope
     then_seq = build_seq { stmt.then_body.each { |s| generate_stmt(s) } }
-    pop_scope
-
     unless stmt.else_body.empty?
-      push_scope
       else_seq = build_seq { stmt.else_body.each { |s| generate_stmt(s) } }
-      pop_scope
     else
       else_seq = Opcode::Seq.new
     end
-
     emit_op Opcode::If.new(then_seq, else_seq)
   end
 
   def generate_stmt(stmt : TypedAST::While)
     step_seq = Opcode::Seq.new
-
     cond_seq = build_seq { generate_expr(stmt.condition) }
-    push_scope
     body_seq = build_seq { stmt.body.each { |s| generate_stmt(s) } }
-    pop_scope
-
     emit_op Opcode::Loop.new(cond_seq, body_seq, step_seq)
   end
 
@@ -342,27 +334,22 @@ class Myc::Mycc::CodeGenerator
       end
     end
 
-    push_scope
     body_seq = build_seq { stmt.body.each { |s| generate_stmt(s) } }
-    pop_scope
-
     step_seq = build_seq { stmt.update.each { |s| generate_stmt(s) } }
     emit_op Opcode::Loop.new(cond_seq, body_seq, step_seq)
   end
 
   def generate_stmt(stmt : TypedAST::DoWhile)
     step_seq = Opcode::Seq.new
-    cond_seq = Opcode::Seq.new.tap { |seq| seq << push(true) }
+    cond_seq = build_seq { emit_op push(true) }
 
-    push_scope
     body_seq = build_seq do
       stmt.body.each { |s| generate_stmt(s) }
 
       generate_expr(stmt.condition)
       emit_op Opcode::Unary.new(:lnot)
-      emit_op Opcode::If.new(Opcode::Seq.new.tap { |seq| seq << Opcode::Break.new }, Opcode::Seq.new)
+      emit_op Opcode::If.new(build_seq { emit_op Opcode::Break.new }, Opcode::Seq.new)
     end
-    pop_scope
 
     emit_op Opcode::Loop.new(cond_seq, body_seq, step_seq)
   end
@@ -403,7 +390,7 @@ class Myc::Mycc::CodeGenerator
         emit_op push(val, stmt.value.type)
         emit_local(switch_val, stmt.value.type)
         emit_op Opcode::Binary.new(:eq)
-        emit_op Opcode::If.new(Opcode::Seq.new.tap { |seq| seq << Opcode::Goto.new([c.label]) }, Opcode::Seq.new)
+        emit_op Opcode::If.new(build_seq { emit_op Opcode::Goto.new([c.label]) }, Opcode::Seq.new)
       else
         emit_op Opcode::Goto.new([c.label])
       end
@@ -746,13 +733,13 @@ class Myc::Mycc::CodeGenerator
   end
 
   def generate_expr(expr : TypedAST::StmtExpr)
-    push_scope
-    expr.body.each { |s| generate_stmt(s) }
+    scope do
+      expr.body.each { |s| generate_stmt(s) }
 
-    if result = expr.result
-      generate_expr(result)
+      if result = expr.result
+        generate_expr(result)
+      end
     end
-    pop_scope
   end
 
   private def returns_void?(call : TypedAST::Call) : Bool
@@ -780,16 +767,35 @@ class Myc::Mycc::CodeGenerator
 
   private def emit_op(op : Opcode)
     @seq << op
-    @func_def.try &.inline_stats.update(op, @mod)
+    @current_inline_stats.update(op, @mod)
   end
 
   private def build_seq(&) : Opcode::Seq
-    s = Opcode::Seq.new
-    was_seq = @seq
-    @seq = s
-    yield
-    @seq = was_seq
-    s
+    scope do
+      s = Opcode::Seq.new
+      was_seq = @seq
+      @seq = s
+      yield
+      @seq = was_seq
+      s
+    end
+  end
+
+  private def build_func_def(name : String, type_fn : Type::Fn, attrs : Mod::FuncDef::Attr = Mod::FuncDef::Attr.new(0), &)
+    was_inline_stats = @current_inline_stats
+
+    node = Source::Node.new(Opcode::Code::FUNC)
+    node.offset = type_fn.loc.offset
+    func_def = Mod::FuncDef.new(node, mod, name, type_fn, attrs)
+    @current_inline_stats = func_def.inline_stats
+
+    func_def.body = build_seq do
+      yield
+    end
+
+    @current_inline_stats.finish(func_def)
+    mod.func_defs[name] = func_def
+    @current_inline_stats = was_inline_stats
   end
 
   private def push(v : Int, type = nil)
