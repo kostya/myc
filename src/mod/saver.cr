@@ -273,12 +273,6 @@ class Myc::Mod::Saver
   private def save_loop(op : Opcode::Loop, locals_saved)
     node = container(Opcode::Code::LOOP)
 
-    if op.init_seq && op.init_seq.list.any?
-      init_node = sequence(Opcode::Code::INIT)
-      node.sections << init_node
-      save_seq_list(op.init_seq, init_node, locals_saved)
-    end
-
     if op.cond_seq && op.cond_seq.list.any?
       cond_node = sequence(Opcode::Code::COND)
       node.sections << cond_node

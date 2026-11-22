@@ -348,22 +348,6 @@ context "Validate" do
       end
     end
 
-    it "error: duplicate INIT in LOOP" do
-      expect_raises(Myc::Error::ErrorLoc, /INIT already defined/) do
-        validate(<<-'_____________________________src')
-      FUNC test
-      BODY
-        LOOP
-          INIT PUSH 0
-          INIT PUSH 1
-          COND PUSH true
-          BODY PUSH 1
-        ENDLOOP
-      ENDFUNC
-      _____________________________src
-      end
-    end
-
     it "error: duplicate COND in LOOP" do
       expect_raises(Myc::Error::ErrorLoc, /COND already defined/) do
         validate(<<-'_____________________________src')
@@ -666,16 +650,12 @@ context "Validate" do
           PUSH 2
         COND
           PUSH 3
-        INIT
-          PUSH 4
       ENDLOOP
     ENDFUNC
     _____________________________src
     FUNC :test
       BODY
         LOOP
-          INIT
-            PUSH 4
           COND
             PUSH 3
           BODY
@@ -708,11 +688,10 @@ context "Validate" do
           PUSH "no"
           PRINTF 1
       ENDIF
+      LOCAL x :i32
+      PUSH 0
+      STORE
       LOOP
-        INIT
-          LOCAL x :i32
-          PUSH 0
-          STORE
         COND
           LOCAL x :i32
           PUSH 10
@@ -795,11 +774,10 @@ context "Validate" do
             PUSH :no
             PRINTF 1
         ENDIF
+        LOCAL :x :i32
+        PUSH 0
+        STORE
         LOOP
-          INIT
-            LOCAL :x :i32
-            PUSH 0
-            STORE
           COND
             LOCAL :x
             PUSH 10

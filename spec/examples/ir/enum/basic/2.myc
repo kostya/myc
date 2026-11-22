@@ -1,10 +1,9 @@
 FUNC :main
   BODY
+    PUSH 0
+    LOCAL :x :i32
+    STORE
     LOOP
-      INIT
-        PUSH 0
-        LOCAL :x :i32
-        STORE
       COND
         PUSH 6
         LOCAL :x

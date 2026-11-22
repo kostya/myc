@@ -23,7 +23,6 @@ class Myc::Opcode::Seq < Myc::Opcode
         op.then_seq.deep_walk(&block)
         op.else_seq.deep_walk(&block)
       when Opcode::Loop
-        op.init_seq.deep_walk(&block)
         op.cond_seq.deep_walk(&block)
         op.body_seq.deep_walk(&block)
         op.step_seq.deep_walk(&block)

@@ -277,7 +277,7 @@ class Myc::Mycc::CodeGenerator
       emit_op(Opcode::Store.new)
     end
 
-    emit_op(Opcode::Loop.new(Opcode::Seq.new, cond_seq, body_seq, step_seq))
+    emit_op(Opcode::Loop.new(cond_seq, body_seq, step_seq))
   end
 
   def generate_stmt(stmt : TypedAST::If)
@@ -299,7 +299,6 @@ class Myc::Mycc::CodeGenerator
   end
 
   def generate_stmt(stmt : TypedAST::While)
-    init_seq = Opcode::Seq.new
     step_seq = Opcode::Seq.new
 
     cond_seq = build_seq { generate_expr(stmt.condition) }
@@ -307,13 +306,11 @@ class Myc::Mycc::CodeGenerator
     body_seq = build_seq { stmt.body.each { |s| generate_stmt(s) } }
     pop_scope
 
-    emit_op Opcode::Loop.new(init_seq, cond_seq, body_seq, step_seq)
+    emit_op Opcode::Loop.new(cond_seq, body_seq, step_seq)
   end
 
   def generate_stmt(stmt : TypedAST::For)
     stmt.init.each { |s| generate_stmt(s) }
-
-    init_seq = Opcode::Seq.new
 
     cond_seq = build_seq do
       if cond = stmt.condition
@@ -328,13 +325,11 @@ class Myc::Mycc::CodeGenerator
     pop_scope
 
     step_seq = build_seq { stmt.update.each { |s| generate_stmt(s) } }
-    emit_op Opcode::Loop.new(init_seq, cond_seq, body_seq, step_seq)
+    emit_op Opcode::Loop.new(cond_seq, body_seq, step_seq)
   end
 
   def generate_stmt(stmt : TypedAST::DoWhile)
-    init_seq = Opcode::Seq.new
     step_seq = Opcode::Seq.new
-
     cond_seq = Opcode::Seq.new.tap { |seq| seq << push(true) }
 
     push_scope
@@ -347,7 +342,7 @@ class Myc::Mycc::CodeGenerator
     end
     pop_scope
 
-    emit_op Opcode::Loop.new(init_seq, cond_seq, body_seq, step_seq)
+    emit_op Opcode::Loop.new(cond_seq, body_seq, step_seq)
   end
 
   def generate_stmt(stmt : TypedAST::Break)

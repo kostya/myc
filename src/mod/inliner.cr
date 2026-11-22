@@ -196,7 +196,6 @@ class Myc::Mod::Inliner
           check(op.then_seq)
           check(op.else_seq)
         when Opcode::Loop
-          check(op.init_seq)
           check(op.cond_seq)
           check(op.body_seq)
           check(op.step_seq)
@@ -252,7 +251,6 @@ class Myc::Mod::Inliner
           )
         when Opcode::Loop
           new_list << Opcode::Loop.new(
-            _get_dup_seq(op.init_seq),
             _get_dup_seq(op.cond_seq),
             _get_dup_seq(op.body_seq),
             _get_dup_seq(op.step_seq),

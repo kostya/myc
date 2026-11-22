@@ -342,7 +342,6 @@ class Myc::Mod::Loader
   private def load_loop(node, func_def : FuncDef) : Opcode::Loop
     expect_zero_values(node)
 
-    init_seq = nil
     cond_seq = nil
     body_seq = nil
     step_seq = nil
@@ -350,8 +349,7 @@ class Myc::Mod::Loader
     node.as(Source::Node::Container).sections.each do |section|
       case section.code
       when Opcode::Code::INIT
-        raise error("INIT already defined", section) if init_seq
-        init_seq = load_seq(section.as(Source::Node::Sequence), func_def)
+        raise error("INIT section was deleted", section)
       when Opcode::Code::COND
         raise error("COND already defined", section) if cond_seq
         cond_seq = load_seq(section.as(Source::Node::Sequence), func_def)
@@ -367,10 +365,9 @@ class Myc::Mod::Loader
     end
 
     if body_seq
-      init_seq ||= Opcode::Seq.new
       cond_seq ||= Opcode::Seq.new
       step_seq ||= Opcode::Seq.new
-      Opcode::Loop.new(init_seq, cond_seq, body_seq, step_seq).with_position(node)
+      Opcode::Loop.new(cond_seq, body_seq, step_seq).with_position(node)
     else
       raise error("LOOP should have at least BODY", node)
     end

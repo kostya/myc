@@ -492,7 +492,6 @@ abstract class Myc::Backend::AbstractVisitor
   end
 
   def visit(op : Opcode::Loop)
-    init_bb = func.new_bb("init")
     cond_bb = func.new_bb("cond")
     body_bb = func.new_bb("body")
     step_bb = func.new_bb("step")
@@ -501,11 +500,7 @@ abstract class Myc::Backend::AbstractVisitor
     loop_finish_stack << finish_bb
     loop_step_stack << step_bb
 
-    @bb.jmp(init_bb)
-    @bb = init_bb
-    visit(op.init_seq)
     @bb.jmp(cond_bb)
-
     @bb = cond_bb
     visit(op.cond_seq)
     cond = pop_rhs

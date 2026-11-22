@@ -1,17 +1,16 @@
 # LOOP - Structured Loop
 #
-# INIT (once) - COND - BODY - STEP - COND ...
+# COND - BODY - STEP - COND ...
 # COND must push bool.
 # BREAK exits, NEXT jumps to STEP.
 #
 # STACK: balanced within each section (except COND).
 #
 #   ; for i = 0; i < 10; i++
+#   PUSH 0
+#   LOCAL :i :i32
+#   STORE              ; i = 0
 #   LOOP
-#     INIT
-#       PUSH 0
-#       LOCAL :i :i32
-#       STORE              ; i = 0
 #     COND
 #       PUSH 10
 #       LOCAL :i
@@ -32,12 +31,11 @@
 #   LOOP COND PUSH true BODY BREAK ENDLOOP
 #
 class Myc::Opcode::Loop < Myc::Opcode
-  property init_seq : Seq
   property cond_seq : Seq
   property body_seq : Seq
   property step_seq : Seq
 
-  def initialize(@init_seq, @cond_seq, @body_seq, @step_seq)
+  def initialize(@cond_seq, @body_seq, @step_seq)
     @cond_seq.stack_balance = 1
   end
 end
