@@ -15,6 +15,7 @@ class Myc::Mycc::CodeGenerator
   end
 
   @current_function : TypedAST::Function?
+  @func_def : Mod::FuncDef?
 
   def initialize(@typer, @builder, @mod)
     @vars_stack = [Hash(String, VarInfo).new]
@@ -137,6 +138,8 @@ class Myc::Mycc::CodeGenerator
     func_def = Mod::FuncDef.new(node, mod, func.name, func.type_fn, attrs)
 
     if body = func.body
+      @func_def = func_def
+
       func_def.body = build_seq do
         func.params.each_value do |p|
           if p.changed
@@ -152,6 +155,8 @@ class Myc::Mycc::CodeGenerator
 
         body.each { |stmt| generate_stmt(stmt) }
       end
+      func_def.inline_stats.finish(func_def)
+      @func_def = nil
     end
 
     mod.func_defs[func.name] = func_def
@@ -758,6 +763,7 @@ class Myc::Mycc::CodeGenerator
 
   private def emit_op(op : Opcode)
     @seq << op
+    @func_def.try &.inline_stats.update(op, @mod)
   end
 
   private def build_seq(&) : Opcode::Seq
