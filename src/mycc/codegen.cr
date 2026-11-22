@@ -57,6 +57,23 @@ class Myc::Mycc::CodeGenerator
   end
 
   def generate(program : TypedAST::Program)
+    program.structs.each do |name, fields|
+      struct_type = typer.map[name].as(Type::StructType)
+
+      node = Source::Node.new(Opcode::Code::STRUCT)
+      node.offset = struct_type.loc.offset
+      mod.type_defs[name] = Mod::TypeDef.new(@mod, node, struct_type)
+    end
+
+    program.unions.each do |name, fields|
+      enum_type = typer.map[name].as(Type::EnumType)
+
+      node = Source::Node.new(Opcode::Code::ENUM)
+      node.offset = enum_type.loc.offset
+
+      mod.type_defs[name] = Mod::TypeDef.new(@mod, node, enum_type)
+    end
+
     program.globals.each do |var|
       node = Source::Node.new(Opcode::Code::GLOBAL)
       values = Array(Source::Token::Value).new
