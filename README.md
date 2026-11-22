@@ -47,9 +47,9 @@ ENDFUNC
 
 ## Benchmark: compare C compilers on index-c benchmark.
 
-![plot](https://github.com/kostya/myc-benchmarks/blob/master/plot1.png?raw=true)
+![plot](https://raw.githubusercontent.com/kostya/stuff/master/index-c/experiment2_plot1.png)
 
-This scatter plot shows the tradeoff between compile time and runtime. The ideal is the bottom-left corner: fast compiles, fast runtime. [Link to benchmark and reproduce steps](https://github.com/kostya/myc-benchmarks#1-c-compilers-on-index-c-clang-gcc-mycc-cproc).
+This scatter plot shows the tradeoff between compile time and runtime. The ideal is the bottom-left corner: fast compiles, fast runtime. [Link to benchmark](https://github.com/kostya/index-c/tree/master#experiment2-compare-c-compilers-on-indexc).
 
 ## mycIR
 
